@@ -42,7 +42,7 @@ export default function DashboardPage() {
     setCreating(true)
     const { data, error } = await sb
       .from('brief_sessions')
-      .insert({ client_name: clientName, client_email: clientEmail })
+      .insert({ client_name: clientName, client_email: clientEmail, consultant_email: user?.email })
       .select()
       .single()
 
