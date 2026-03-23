@@ -37,6 +37,28 @@ export default function LoginPage() {
              className="absolute inset-0 w-full h-full object-cover select-none" />
       </div>
 
+      {/* Doings logo — top-left corner */}
+      <div className="fixed top-5 left-5 z-30 pointer-events-none select-none">
+        <img
+          src="/doings-logo-white.svg"
+          alt="Doings"
+          width={44}
+          draggable={false}
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(30,14,46,0.45)) drop-shadow(0 0 12px rgba(107,45,130,0.3))' }}
+        />
+      </div>
+
+      {/* Lab flasks — bottom-right corner */}
+      <div className="fixed bottom-0 right-0 z-0 pointer-events-none select-none">
+        <img
+          src="/lab-flasks.png"
+          alt=""
+          aria-hidden
+          draggable={false}
+          style={{ width: 230, opacity: 0.80 }}
+        />
+      </div>
+
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
 
         {/* Logo */}

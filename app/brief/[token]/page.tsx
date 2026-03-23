@@ -54,22 +54,46 @@ const CheckIcon = ({ size = 24 }: { size?: number }) => (
 // Full-bleed background layers that cross-fade with CSS
 function Background({ index }: { index: number }) {
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      {BACKGROUNDS.map((src, i) => (
+    <>
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        {BACKGROUNDS.map((src, i) => (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover select-none"
+            style={{
+              opacity: i === index ? 1 : 0,
+              transition: 'opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Doings logo — top-left corner */}
+      <div className="fixed top-5 left-5 z-30 pointer-events-none select-none">
         <img
-          key={src}
-          src={src}
+          src="/doings-logo-white.svg"
+          alt="Doings"
+          width={44}
+          draggable={false}
+          style={{ filter: 'drop-shadow(0 1px 3px rgba(30,14,46,0.45)) drop-shadow(0 0 12px rgba(107,45,130,0.3))' }}
+        />
+      </div>
+
+      {/* Lab flasks — bottom-right corner */}
+      <div className="fixed bottom-0 right-0 z-0 pointer-events-none select-none">
+        <img
+          src="/lab-flasks.png"
           alt=""
           aria-hidden
           draggable={false}
-          className="absolute inset-0 w-full h-full object-cover select-none"
-          style={{
-            opacity: i === index ? 1 : 0,
-            transition: 'opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
+          style={{ width: 230, opacity: 0.80 }}
         />
-      ))}
-    </div>
+      </div>
+    </>
   )
 }
 
