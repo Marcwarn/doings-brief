@@ -43,7 +43,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-3 mb-8">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-bold"
-            style={{ background: 'linear-gradient(145deg, #3d1a47, #6b2d82)', boxShadow: '0 6px 24px rgba(107,45,130,0.35)' }}
+            style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 6px 24px rgba(107,45,130,0.35)' }}
           >
             D
           </div>
@@ -84,7 +84,7 @@ export default function LoginPage() {
                   disabled={loading}
                   className="w-full py-3.5 rounded-xl font-semibold text-sm text-white
                              transition-all disabled:opacity-40"
-                  style={{ background: 'linear-gradient(145deg, #3d1a47, #6b2d82)', boxShadow: '0 4px 20px rgba(107,45,130,0.30)' }}
+                  style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 4px 20px rgba(107,45,130,0.30)' }}
                 >
                   {loading ? 'Skickar…' : 'Skicka inloggningslänk'}
                 </button>
@@ -94,7 +94,7 @@ export default function LoginPage() {
             <div className="text-center py-2">
               {/* Mail icon — no emoji */}
               <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center"
-                   style={{ background: 'linear-gradient(145deg, #3d1a47, #6b2d82)', boxShadow: '0 6px 24px rgba(107,45,130,0.32)' }}>
+                   style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 6px 24px rgba(107,45,130,0.32)' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                      stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <rect x="2" y="4" width="20" height="16" rx="2" />

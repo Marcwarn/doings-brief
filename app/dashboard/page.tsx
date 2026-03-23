@@ -100,7 +100,7 @@ export default function DashboardPage() {
       <header className="bg-white border-b border-doings-purple-light/50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-               style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>D</div>
+               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>D</div>
           <div>
             <span className="font-semibold text-doings-purple-dark text-sm block">Doings Brief</span>
             <span className="text-xs text-doings-muted">{user?.email}</span>
@@ -135,7 +135,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-doings-purple-dark">Mina briefs</h1>
           <button onClick={() => { setShowForm(!showForm); setNewSession(null) }}
                   className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
-                  style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>
+                  style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
             + Ny brief
           </button>
         </div>
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                 </button>
                 <button type="submit" disabled={creating}
                         className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-all"
-                        style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>
+                        style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
                   {creating ? 'Skapar…' : 'Skapa & skicka länk →'}
                 </button>
               </div>

@@ -247,7 +247,7 @@ export default function BriefPage({ params }: { params: { token: string } }) {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="glass-card max-w-sm w-full text-center p-12">
           <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center"
-               style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>
+               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
             <CheckIcon size={22} />
           </div>
           <h1 className="text-xl font-semibold text-doings-purple-dark mb-2">Brief redan inlämnad</h1>
@@ -264,7 +264,7 @@ export default function BriefPage({ params }: { params: { token: string } }) {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="glass-card max-w-sm w-full text-center p-14 slide-in">
           <div className="w-16 h-16 rounded-full mx-auto mb-6 flex items-center justify-center"
-               style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>
+               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
             <CheckIcon size={26} />
           </div>
           <h1 className="text-2xl font-bold text-doings-purple-dark mb-3">Tack — briefen är skickad</h1>
@@ -286,7 +286,7 @@ export default function BriefPage({ params }: { params: { token: string } }) {
         <div className="max-w-2xl mx-auto">
           <div className="glass-header px-5 py-3 flex items-center gap-3 mb-10">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                 style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>D</div>
+                 style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>D</div>
             <span className="font-semibold text-doings-purple-dark text-sm">Doings Brief</span>
           </div>
 
@@ -334,7 +334,7 @@ export default function BriefPage({ params }: { params: { token: string } }) {
             <button onClick={submitBrief} disabled={step === 'sending'}
                     className="flex-[2] py-3.5 rounded-xl font-semibold text-sm text-white
                                transition-all disabled:opacity-40"
-                    style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>
+                    style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
               {step === 'sending' ? 'Skickar…' : 'Skicka briefen'}
             </button>
           </div>
@@ -359,7 +359,7 @@ export default function BriefPage({ params }: { params: { token: string } }) {
         <div className="max-w-lg mx-auto glass-header px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md flex items-center justify-center text-white text-xs font-bold"
-                 style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}>D</div>
+                 style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>D</div>
             <span className="font-semibold text-doings-purple-dark text-sm">Doings Brief</span>
             {sessionData?.client_name && (
               <span className="text-xs text-doings-muted hidden sm:inline ml-0.5">
@@ -535,7 +535,7 @@ export default function BriefPage({ params }: { params: { token: string } }) {
               className="w-12 h-12 rounded-xl font-semibold text-sm text-white shrink-0
                          transition-all disabled:opacity-30 disabled:cursor-not-allowed
                          flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #3d1a47, #6b2d82)' }}
+              style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}
               aria-label={current === QUESTIONS.length - 1 ? 'Granska brief' : 'Nästa fråga'}
             >
               {current === QUESTIONS.length - 1 ? (

@@ -63,7 +63,7 @@ body {
 
 /* ── Premium mic button ──────────────────────────────────────── */
 .mic-btn {
-  background: linear-gradient(145deg, #3d1a47, #6b2d82);
+  background: linear-gradient(145deg, #6b2d82, #C62368);
   box-shadow: 0 6px 28px rgba(107, 45, 130, 0.38);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
               box-shadow 0.2s ease;
