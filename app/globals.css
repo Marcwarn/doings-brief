@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,50 +12,133 @@
   --bg:           #f5f4f8;
   --text:         #0a0a0f;
   --muted:        #606070;
+  --accent:       #C62368;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Waveform bars */
-.wave-bar {
-  width: 4px;
-  border-radius: 2px;
-  background: #6b2d82;
-  animation: wave 0.8s ease-in-out infinite alternate;
+/* ── Glass card ──────────────────────────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 40px rgba(30, 14, 46, 0.10),
+    0 1px 0 rgba(255,255,255,0.6) inset;
 }
-.wave-bar:nth-child(1) { animation-delay: 0s;    height: 16px; }
-.wave-bar:nth-child(2) { animation-delay: 0.1s;  height: 24px; }
-.wave-bar:nth-child(3) { animation-delay: 0.2s;  height: 32px; }
-.wave-bar:nth-child(4) { animation-delay: 0.3s;  height: 20px; }
-.wave-bar:nth-child(5) { animation-delay: 0.4s;  height: 28px; }
-.wave-bar:nth-child(6) { animation-delay: 0.2s;  height: 16px; }
-.wave-bar:nth-child(7) { animation-delay: 0.1s;  height: 24px; }
+
+/* ── Glass header pill ───────────────────────────────────────── */
+.glass-header {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(30, 14, 46, 0.08);
+}
+
+/* ── Glass outline button ────────────────────────────────────── */
+.glass-btn-outline {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(107, 45, 130, 0.22);
+  color: #3d1a47;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.glass-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(107, 45, 130, 0.45);
+}
+
+/* ── Premium mic button ──────────────────────────────────────── */
+.mic-btn {
+  background: linear-gradient(145deg, #3d1a47, #6b2d82);
+  box-shadow: 0 6px 28px rgba(107, 45, 130, 0.38);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease;
+}
+.mic-btn:hover {
+  transform: scale(1.07);
+  box-shadow: 0 10px 36px rgba(107, 45, 130, 0.52);
+}
+.mic-btn:active { transform: scale(0.96); }
+
+.mic-btn--recording {
+  background: linear-gradient(145deg, #8c1540, #C62368);
+  box-shadow: 0 6px 28px rgba(198, 35, 104, 0.45);
+  animation: mic-glow 1.6s ease-in-out infinite;
+}
+
+/* ── Pulse rings (recording) ─────────────────────────────────── */
+.pulse-ring {
+  background: rgba(198, 35, 104, 0.18);
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* ── Idle hint ring ──────────────────────────────────────────── */
+.idle-ring {
+  background: rgba(107, 45, 130, 0.08);
+  animation: idle-ring 2.5s ease-in-out infinite;
+}
+
+@keyframes idle-ring {
+  0%, 100% { transform: scale(1);   opacity: 0; }
+  50%       { transform: scale(1.5); opacity: 1; }
+}
+
+@keyframes mic-glow {
+  0%, 100% { box-shadow: 0 6px 28px rgba(198, 35, 104, 0.45); }
+  50%       { box-shadow: 0 6px 48px rgba(198, 35, 104, 0.72); }
+}
+
+/* ── Waveform bars ───────────────────────────────────────────── */
+.wave-bar {
+  width: 3px;
+  border-radius: 2px;
+  background: #C62368;
+  animation: wave 0.7s ease-in-out infinite alternate;
+}
+.wave-bar:nth-child(1) { animation-delay: 0s;    height: 10px; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s;  height: 18px; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s;  height: 26px; }
+.wave-bar:nth-child(4) { animation-delay: 0.05s; height: 14px; }
+.wave-bar:nth-child(5) { animation-delay: 0.15s; height: 22px; }
+.wave-bar:nth-child(6) { animation-delay: 0.25s; height: 16px; }
+.wave-bar:nth-child(7) { animation-delay: 0.1s;  height: 10px; }
 
 @keyframes wave {
-  0%   { transform: scaleY(0.3); opacity: 0.6; }
-  100% { transform: scaleY(1);   opacity: 1; }
+  0%   { transform: scaleY(0.25); opacity: 0.5; }
+  100% { transform: scaleY(1);    opacity: 1; }
 }
 
-/* PIN input */
-.pin-input {
-  letter-spacing: 0.5em;
-  text-align: center;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-/* Smooth transitions */
+/* ── Slide-in entrance ───────────────────────────────────────── */
 .slide-in {
-  animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: slideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes slideIn {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Textarea styling ────────────────────────────────────────── */
+textarea {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
