@@ -10,7 +10,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [email,   setEmail]   = useState('')
   const [code,    setCode]    = useState('')
-  const CODE_MIN = 6
+  const CODE_MIN = 8
   const [step,    setStep]    = useState<'email' | 'code'>('email')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
@@ -95,7 +95,7 @@ export default function LoginPage() {
                 Logga in
               </h1>
               <p className="text-doings-muted text-sm text-center mb-8 leading-relaxed">
-                Ange din Doings-e-post så skickar vi en sexsiffrig kod.
+                Ange din Doings-e-post så skickar vi en engångskod.
               </p>
 
               <form onSubmit={handleSendCode} className="flex flex-col gap-3.5">
@@ -141,7 +141,7 @@ export default function LoginPage() {
                 Ange koden
               </h2>
               <p className="text-doings-muted text-sm text-center mb-6 leading-relaxed">
-                Vi skickade en 6-siffrig kod till{' '}
+                Vi skickade en 8-siffrig kod till{' '}
                 <span className="font-medium text-doings-purple-dark">{email}</span>.
               </p>
 
@@ -152,7 +152,7 @@ export default function LoginPage() {
                   maxLength={8}
                   value={code}
                   onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
+                  placeholder="12345678"
                   autoFocus
                   required
                   className="w-full rounded-xl px-4 py-3.5 text-center text-2xl font-bold tracking-[0.35em]
