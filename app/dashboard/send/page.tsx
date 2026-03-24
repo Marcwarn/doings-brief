@@ -46,6 +46,7 @@ function SendBriefInner() {
     const { data: session, error: sessErr } = await sb
       .from('brief_sessions')
       .insert({
+        consultant_id: user?.id,
         client_name: clientName.trim(),
         client_email: clientEmail.trim(),
         consultant_email: user?.email,
