@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [email,   setEmail]   = useState('')
   const [code,    setCode]    = useState('')
+  const CODE_MIN = 6
   const [step,    setStep]    = useState<'email' | 'code'>('email')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
@@ -148,8 +149,7 @@ export default function LoginPage() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
+                  maxLength={8}
                   value={code}
                   onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="123456"
@@ -165,7 +165,7 @@ export default function LoginPage() {
                 )}
                 <button
                   type="submit"
-                  disabled={loading || code.length < 6}
+                  disabled={loading || code.length < CODE_MIN}
                   className="w-full py-3.5 rounded-xl font-semibold text-sm text-white
                              transition-all disabled:opacity-40"
                   style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 4px 20px rgba(107,45,130,0.30)' }}
