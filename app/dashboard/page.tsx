@@ -48,8 +48,8 @@ export default function DashboardPage() {
         ].map(({ n, label, accent }) => (
           <div key={label} style={{ background: 'var(--surface)', padding: '22px 26px' }}>
             <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 800,
-              color: accent ? '#16a34a' : 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1,
+              fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 600,
+              color: accent ? '#16a34a' : 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1,
             }}>
               {n}
             </div>
