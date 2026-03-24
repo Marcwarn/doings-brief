@@ -30,26 +30,16 @@ function CallbackInner() {
 
   if (hasError) {
     return (
-      <p style={{ fontFamily: 'DM Sans, sans-serif', color: '#dc2626', fontSize: 14 }}>
+      <p style={{ fontFamily: 'var(--font-sans)', color: '#dc2626', fontSize: 14 }}>
         Inloggning misslyckades — omdirigerar…
       </p>
     )
   }
 
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
+    <div style={{ display: 'flex', gap: 5 }}>
       {[0, 1, 2].map(i => (
-        <span
-          key={i}
-          style={{
-            display: 'inline-block',
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: '#6b2d82',
-            animation: `bounce 0.6s ${i * 0.15}s ease-in-out infinite alternate`,
-          }}
-        />
+        <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `bounce 1s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }} />
       ))}
     </div>
   )
@@ -63,7 +53,7 @@ export default function AuthCallbackPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#F7CACA',
+        background: 'var(--bg)',
       }}
     >
       <Suspense fallback={null}>
