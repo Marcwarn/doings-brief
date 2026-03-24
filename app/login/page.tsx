@@ -2,31 +2,59 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
-// Use a calm, centred background for the login screen
 const BG_SRC = '/bg/bg-13.svg'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email,   setEmail]   = useState('')
-  const [sent,    setSent]    = useState(false)
+  const [code,    setCode]    = useState('')
+  const [step,    setStep]    = useState<'email' | 'code'>('email')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Step 1 — send OTP code to email (no magic link)
+  async function handleSendCode(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError('')
     const sb = createClient()
     const { error: err } = await sb.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { shouldCreateUser: false },
     })
     if (err) {
-      setError('Kunde inte skicka länk. Kontrollera e-postadressen.')
+      // shouldCreateUser=false gives error for unknown emails — allow it and show code step anyway
+      // so we don't leak which emails exist
+      if (err.message?.toLowerCase().includes('signup')) {
+        setError('Den e-postadressen är inte registrerad i systemet.')
+      } else {
+        setError('Kunde inte skicka koden. Försök igen.')
+      }
     } else {
-      setSent(true)
+      setStep('code')
     }
     setLoading(false)
+  }
+
+  // Step 2 — verify the 6-digit code
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const sb = createClient()
+    const { error: err } = await sb.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: 'email',
+    })
+    if (err) {
+      setError('Fel kod eller koden har gått ut. Försök igen.')
+      setLoading(false)
+    } else {
+      router.replace('/dashboard')
+    }
   }
 
   return (
@@ -59,16 +87,17 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="glass-card w-full max-w-sm p-8">
-          {!sent ? (
+
+          {step === 'email' ? (
             <>
               <h1 className="text-[1.4rem] font-bold text-doings-purple-dark mb-1.5 text-center tracking-tight">
                 Logga in
               </h1>
               <p className="text-doings-muted text-sm text-center mb-8 leading-relaxed">
-                Ange din Doings-e-post så skickar vi en inloggningslänk.
+                Ange din Doings-e-post så skickar vi en sexsiffrig kod.
               </p>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
+              <form onSubmit={handleSendCode} className="flex flex-col gap-3.5">
                 <input
                   type="email"
                   value={email}
@@ -91,13 +120,13 @@ export default function LoginPage() {
                              transition-all disabled:opacity-40"
                   style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 4px 20px rgba(107,45,130,0.30)' }}
                 >
-                  {loading ? 'Skickar…' : 'Skicka inloggningslänk'}
+                  {loading ? 'Skickar…' : 'Skicka kod'}
                 </button>
               </form>
             </>
           ) : (
-            <div className="text-center py-2">
-              {/* Mail icon — no emoji */}
+            <>
+              {/* Mail icon */}
               <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center"
                    style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 6px 24px rgba(107,45,130,0.32)' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -106,24 +135,55 @@ export default function LoginPage() {
                   <path d="m2 7 10 7 10-7" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-doings-purple-dark mb-2.5 tracking-tight">
-                Kolla din e-post
-              </h2>
-              <p className="text-doings-muted text-sm leading-relaxed">
-                Vi skickade en inloggningslänk till{' '}
-                <span className="font-medium text-doings-purple-dark">{email}</span>.
-                Klicka på länken för att komma in.
-              </p>
-              <button
-                onClick={() => { setSent(false); setEmail('') }}
-                className="mt-6 text-xs text-doings-muted underline hover:no-underline transition-all"
-              >
-                Fel adress? Försök igen
-              </button>
-            </div>
-          )}
-        </div>
 
+              <h2 className="text-xl font-bold text-doings-purple-dark mb-1.5 tracking-tight text-center">
+                Ange koden
+              </h2>
+              <p className="text-doings-muted text-sm text-center mb-6 leading-relaxed">
+                Vi skickade en 6-siffrig kod till{' '}
+                <span className="font-medium text-doings-purple-dark">{email}</span>.
+              </p>
+
+              <form onSubmit={handleVerifyCode} className="flex flex-col gap-3.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  autoFocus
+                  required
+                  className="w-full rounded-xl px-4 py-3.5 text-center text-2xl font-bold tracking-[0.35em]
+                             text-doings-purple-dark bg-white/60 border border-doings-purple-light/70
+                             focus:outline-none focus:border-doings-purple transition-colors
+                             placeholder:text-doings-muted/30 placeholder:font-normal placeholder:tracking-normal"
+                />
+                {error && (
+                  <p className="text-red-500 text-xs text-center">{error}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading || code.length < 6}
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm text-white
+                             transition-all disabled:opacity-40"
+                  style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 4px 20px rgba(107,45,130,0.30)' }}
+                >
+                  {loading ? 'Verifierar…' : 'Logga in'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStep('email'); setCode(''); setError('') }}
+                  className="text-xs text-doings-muted underline hover:no-underline transition-all"
+                >
+                  Fel adress? Gå tillbaka
+                </button>
+              </form>
+            </>
+          )}
+
+        </div>
       </div>
     </>
   )
