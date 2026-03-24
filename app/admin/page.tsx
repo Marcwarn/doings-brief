@@ -101,14 +101,14 @@ export default function AdminPage() {
             </p>
           </div>
           <button onClick={() => setAdding(!adding)} style={{
-            padding: '10px 18px', borderRadius: 8, border: 'none',
+            padding: '10px 18px', borderRadius: 8,
+            border: adding ? '1px solid var(--border)' : 'none',
             background: adding ? 'var(--bg)' : 'var(--accent)',
-            border: adding ? '1px solid var(--border)' : 'none' as any,
             fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
             letterSpacing: '0.01em', color: adding ? 'var(--text-2)' : '#fff',
             cursor: 'pointer',
             boxShadow: adding ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
-          } as React.CSSProperties}>
+          }}>
             {adding ? 'Avbryt' : '+ Bjud in kollega'}
           </button>
         </div>
