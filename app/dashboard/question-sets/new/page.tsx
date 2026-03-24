@@ -6,11 +6,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 
 const F: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', borderRadius: 8,
-  border: '1px solid #e5e7eb', background: '#fff',
-  fontSize: 13.5, color: '#111', outline: 'none',
-  fontFamily: 'DM Sans, sans-serif',
-  transition: 'border-color 0.15s',
+  width: '100%', padding: '10px 14px', borderRadius: 7,
+  border: '1px solid var(--border)', background: 'var(--bg)',
+  fontSize: 13.5, color: 'var(--text)', outline: 'none',
+  fontFamily: 'var(--font-sans)', transition: 'border-color 0.15s, box-shadow 0.15s',
 }
 
 export default function NewQuestionSetPage() {
@@ -56,54 +55,58 @@ export default function NewQuestionSetPage() {
   }
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 680, fontFamily: 'DM Sans, sans-serif' }}>
+    <div style={{ padding: '40px 44px', maxWidth: 700, animation: 'fadeUp 0.35s ease both' }}>
+
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 13 }}>
-        <Link href="/dashboard/question-sets" style={{ color: '#9ca3af', textDecoration: 'none' }}>Frågebatterier</Link>
-        <span style={{ color: '#d1d5db' }}>/</span>
-        <span style={{ color: '#111', fontWeight: 500 }}>Nytt batteri</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, fontSize: 12.5 }}>
+        <Link href="/dashboard/question-sets" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Frågebatterier</Link>
+        <span style={{ color: 'var(--border)' }}>/</span>
+        <span style={{ color: 'var(--text)', fontWeight: 500 }}>Nytt batteri</span>
       </div>
 
-      <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: '0 0 28px' }}>Nytt frågebatteri</h1>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: '0 0 32px' }}>
+        Nytt frågebatteri
+      </h1>
 
       <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
         {/* Name + description */}
         <Section>
           <Field label="Namn *">
             <input value={name} onChange={e => setName(e.target.value)}
                    placeholder="T.ex. Inledande kundintervju" required autoFocus
                    style={F}
-                   onFocus={e => (e.target.style.borderColor = '#C62368')}
-                   onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+                   onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                   onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
           </Field>
           <Field label="Beskrivning (valfri)">
             <input value={description} onChange={e => setDescription(e.target.value)}
                    placeholder="Kort beskrivning av när det används"
                    style={F}
-                   onFocus={e => (e.target.style.borderColor = '#C62368')}
-                   onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+                   onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                   onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
           </Field>
         </Section>
 
         {/* Questions */}
         <Section>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Frågor ({questions.filter(q => q.trim()).length})
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {questions.map((q, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#d1d5db', width: 18, textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', width: 20, textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
                 <input value={q} onChange={e => updateQuestion(i, e.target.value)}
                        placeholder={`Fråga ${i + 1}…`}
                        style={{ ...F, flex: 1, width: 'auto' }}
-                       onFocus={e => (e.target.style.borderColor = '#C62368')}
-                       onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+                       onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
                 {questions.length > 1 && (
                   <button type="button" onClick={() => removeQuestion(i)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#d1d5db' }}>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-3)', flexShrink: 0 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
@@ -115,8 +118,9 @@ export default function NewQuestionSetPage() {
           <button type="button" onClick={addQuestion}
                   style={{
                     marginTop: 12, background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 13, color: '#C62368', fontWeight: 500, padding: 0, display: 'flex', alignItems: 'center', gap: 5,
-                    fontFamily: 'DM Sans, sans-serif',
+                    fontSize: 13, color: 'var(--accent)', fontWeight: 600, padding: 0,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontFamily: 'var(--font-sans)',
                   }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -125,23 +129,27 @@ export default function NewQuestionSetPage() {
           </button>
         </Section>
 
-        {error && <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>}
+        {error && (
+          <p style={{ fontSize: 13, color: '#dc2626', margin: 0, padding: '10px 14px', background: '#fef2f2', borderRadius: 7, border: '1px solid #fecaca' }}>
+            {error}
+          </p>
+        )}
 
         <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
           <Link href="/dashboard/question-sets" style={{
-            flex: 1, padding: '11px 0', borderRadius: 8, textAlign: 'center',
-            border: '1px solid #e5e7eb', background: '#fff',
-            fontSize: 13.5, fontWeight: 500, color: '#374151', textDecoration: 'none',
+            flex: 1, padding: '11px 0', borderRadius: 7, textAlign: 'center',
+            border: '1px solid var(--border)', background: 'var(--surface)',
+            fontSize: 13.5, fontWeight: 500, color: 'var(--text-2)', textDecoration: 'none',
           }}>
             Avbryt
           </Link>
           <button type="submit" disabled={saving} style={{
-            flex: 2, padding: '11px 0', borderRadius: 8,
-            background: saving ? '#e08aaa' : '#C62368', border: 'none',
-            fontSize: 13.5, fontWeight: 500, color: '#fff',
+            flex: 2, padding: '11px 0', borderRadius: 7, border: 'none',
+            background: saving ? 'rgba(198,35,104,0.5)' : 'var(--accent)',
+            fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
+            letterSpacing: '0.01em', color: '#fff',
             cursor: saving ? 'not-allowed' : 'pointer',
-            fontFamily: 'DM Sans, sans-serif',
-            boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
+            boxShadow: saving ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
           }}>
             {saving ? 'Sparar…' : 'Spara frågebatteri'}
           </button>
@@ -154,9 +162,9 @@ export default function NewQuestionSetPage() {
 function Section({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      background: '#fff', borderRadius: 12, padding: '20px 22px',
+      background: 'var(--surface)', borderRadius: 10, padding: '20px 22px',
       display: 'flex', flexDirection: 'column', gap: 14,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+      border: '1px solid var(--border)',
     }}>
       {children}
     </div>
@@ -167,8 +175,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return (
     <div>
       <label style={{
-        display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280',
-        textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7,
+        display: 'block', fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
+        color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
       }}>
         {label}
       </label>

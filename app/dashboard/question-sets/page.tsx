@@ -23,73 +23,95 @@ export default function QuestionSetsPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 800, fontFamily: 'DM Sans, sans-serif' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+    <div style={{ padding: '40px 44px', maxWidth: 860, animation: 'fadeUp 0.35s ease both' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>Frågebatterier</h1>
-          <p style={{ fontSize: 13.5, color: '#9ca3af', margin: '4px 0 0' }}>Skapa och hantera dina frågeuppsättningar</p>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
+            Frågebatterier
+          </h1>
+          <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, fontWeight: 400 }}>
+            Skapa och hantera dina frågeuppsättningar
+          </p>
         </div>
         <Link href="/dashboard/question-sets/new" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '9px 16px', borderRadius: 8,
-          background: '#C62368', color: '#fff',
-          fontSize: 13.5, fontWeight: 500, textDecoration: 'none',
-          boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
-        }}>
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nytt batteri
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '10px 18px', borderRadius: 8,
+          background: 'var(--accent)', color: '#fff',
+          fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+          letterSpacing: '0.01em', textDecoration: 'none',
+          boxShadow: '0 4px 16px rgba(198,35,104,0.22)',
+          transition: 'transform 0.15s, box-shadow 0.15s',
+        }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-1px)'; el.style.boxShadow = '0 6px 20px rgba(198,35,104,0.30)' }}
+        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = ''; el.style.boxShadow = '0 4px 16px rgba(198,35,104,0.22)' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nytt batteri
         </Link>
       </div>
 
       {sets.length === 0 ? (
         <div style={{
-          background: '#fff', borderRadius: 12, padding: '60px 24px', textAlign: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+          background: 'var(--surface)', borderRadius: 10, padding: '64px 24px', textAlign: 'center',
+          border: '1px solid var(--border)',
         }}>
-          <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
-          <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 16px' }}>Inga frågebatterier ännu.</p>
-          <Link href="/dashboard/question-sets/new" style={{
-            fontSize: 13.5, fontWeight: 500, color: '#C62368', textDecoration: 'none',
-          }}>
+          <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 16px', fontStyle: 'italic' }}>
+            Inga frågebatterier skapade ännu.
+          </p>
+          <Link href="/dashboard/question-sets/new" style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>
             Skapa ditt första →
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {sets.map(s => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          {sets.map((s, idx) => (
             <div key={s.id} style={{
-              background: '#fff', borderRadius: 12,
-              padding: '16px 20px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{s.name}</div>
-                {s.description && <div style={{ fontSize: 12.5, color: '#9ca3af', marginTop: 2 }}>{s.description}</div>}
-                <div style={{ fontSize: 11.5, color: '#d1d5db', marginTop: 4 }}>
+              background: 'var(--surface)', padding: '16px 22px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+              transition: 'background 0.1s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-dim)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {s.name}
+                </div>
+                {s.description && (
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{s.description}</div>
+                )}
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4, opacity: 0.7 }}>
                   Uppdaterat {new Date(s.updated_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <Link href={`/dashboard/send?set=${s.id}`} style={{
-                  padding: '6px 14px', borderRadius: 7,
-                  background: '#C62368', color: '#fff',
-                  fontSize: 12.5, fontWeight: 500, textDecoration: 'none',
+                  padding: '7px 14px', borderRadius: 6,
+                  background: 'var(--accent)', color: '#fff',
+                  fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                  letterSpacing: '0.01em', textDecoration: 'none',
                 }}>
                   Skicka
                 </Link>
                 <Link href={`/dashboard/question-sets/${s.id}`} style={{
-                  padding: '6px 14px', borderRadius: 7,
-                  background: '#f5f4f6', color: '#374151',
+                  padding: '7px 14px', borderRadius: 6,
+                  background: 'var(--bg)', color: 'var(--text-2)',
                   fontSize: 12.5, fontWeight: 500, textDecoration: 'none',
-                  border: '1px solid #ececec',
+                  border: '1px solid var(--border)',
                 }}>
                   Redigera
                 </Link>
                 <button onClick={() => deleteSet(s.id)} style={{
-                  padding: '6px 10px', borderRadius: 7,
-                  background: 'none', border: 'none',
+                  padding: '7px 10px', borderRadius: 6,
+                  background: 'none', border: '1px solid transparent',
                   fontSize: 12.5, color: '#dc2626', cursor: 'pointer',
-                }}>
+                  fontFamily: 'var(--font-sans)',
+                  transition: 'border-color 0.1s, background 0.1s',
+                }}
+                onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = '#fecaca'; el.style.background = '#fef2f2' }}
+                onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'transparent'; el.style.background = 'none' }}>
                   Radera
                 </button>
               </div>
@@ -103,13 +125,10 @@ export default function QuestionSetsPage() {
 
 function PageLoader() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-      <div style={{ display: 'flex', gap: 6 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '70vh' }}>
+      <div style={{ display: 'flex', gap: 5 }}>
         {[0,1,2].map(i => (
-          <div key={i} style={{
-            width: 8, height: 8, borderRadius: '50%', background: '#C62368',
-            animation: 'bounce 0.9s ease-in-out infinite', animationDelay: `${i * 0.18}s`,
-          }} />
+          <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
     </div>

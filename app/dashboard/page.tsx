@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient, type BriefSession, type QuestionSet } from '@/lib/supabase'
 
-const S: React.CSSProperties = { fontFamily: 'DM Sans, sans-serif' }
-
 export default function DashboardPage() {
   const sb = createClient()
   const [sessions, setSessions]         = useState<BriefSession[]>([])
@@ -15,7 +13,7 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(6),
-      sb.from('question_sets').select('*').order('created_at', { ascending: false }).limit(5),
+      sb.from('question_sets').select('*').order('created_at', { ascending: false }).limit(6),
     ]).then(([{ data: sess }, { data: qs }]) => {
       setSessions(sess || [])
       setQuestionSets(qs || [])
@@ -23,157 +21,135 @@ export default function DashboardPage() {
     })
   }, [])
 
-  const submitted = sessions.filter(s => s.status === 'submitted').length
+  const answered = sessions.filter(s => s.status === 'submitted').length
+  const pending  = sessions.filter(s => s.status !== 'submitted').length
 
-  if (loading) return <PageLoader />
+  if (loading) return <Loader />
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 880, ...S }}>
+    <div style={{ padding: '40px 44px', maxWidth: 900, animation: 'fadeUp 0.35s ease both' }}>
 
-      {/* Page title */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>Översikt</h1>
-        <p style={{ fontSize: 13.5, color: '#9ca3af', margin: '4px 0 0' }}>Välkommen till Doings Brief</p>
+      {/* Header */}
+      <div style={{ marginBottom: 36 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+          Översikt
+        </h1>
+        <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, fontWeight: 400 }}>
+          Doings Brief — hantera och skicka kundintervjuer
+        </p>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
-        <StatCard label="Skickade briefs"  value={sessions.length}  />
-        <StatCard label="Besvarade"        value={submitted}        color="#16a34a" />
-        <StatCard label="Frågebatterier"   value={questionSets.length} />
+      {/* Stat strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, marginBottom: 32, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+        {[
+          { n: sessions.length, label: 'Skickade briefs' },
+          { n: answered,        label: 'Besvarade',      accent: answered > 0 },
+          { n: questionSets.length, label: 'Frågebatterier' },
+        ].map(({ n, label, accent }) => (
+          <div key={label} style={{ background: 'var(--surface)', padding: '22px 26px' }}>
+            <div style={{
+              fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 800,
+              color: accent ? '#16a34a' : 'var(--text)', letterSpacing: '-0.04em', lineHeight: 1,
+            }}>
+              {n}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 7, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {label}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 32 }}>
-        <ActionCard
-          href="/dashboard/send"
-          title="Skicka ny brief"
-          desc="Välj frågebatteri och klientmail"
-          icon={<ArrowUpRight />}
-          primary
-        />
-        <ActionCard
-          href="/dashboard/question-sets/new"
-          title="Nytt frågebatteri"
-          desc="Skapa och spara frågor"
-          icon={<PlusIcon />}
-        />
+      {/* Action row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 32 }}>
+        <Link href="/dashboard/send" style={{
+          display: 'block', padding: '20px 22px', borderRadius: 10,
+          background: 'var(--accent)', textDecoration: 'none',
+          boxShadow: '0 4px 20px rgba(198,35,104,0.20)',
+          transition: 'transform 0.15s, box-shadow 0.15s',
+        }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 28px rgba(198,35,104,0.28)' }}
+        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = ''; el.style.boxShadow = '0 4px 20px rgba(198,35,104,0.20)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>
+            Skicka ny brief
+          </div>
+          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)', marginTop: 4 }}>
+            Välj frågebatteri och klientmail
+          </div>
+        </Link>
+
+        <Link href="/dashboard/question-sets/new" style={{
+          display: 'block', padding: '20px 22px', borderRadius: 10,
+          background: 'var(--surface)', textDecoration: 'none',
+          border: '1px solid var(--border)',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--accent)'; el.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.boxShadow = '' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
+            Nytt frågebatteri
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4 }}>
+            Skapa och spara frågor
+          </div>
+        </Link>
       </div>
 
+      {/* Two-col feed */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Recent briefs */}
-        <Card title="Senaste briefs" linkHref="/dashboard/briefs" linkLabel="Visa alla">
+        <Panel title="Senaste briefs" href="/dashboard/briefs" linkText="Visa alla">
           {sessions.length === 0
-            ? <Empty text="Inga briefs skickade ännu." />
+            ? <Empty text="Inga briefs skickade ännu" />
             : sessions.slice(0, 5).map(s => (
-              <Link key={s.id} href={`/dashboard/briefs/${s.id}`} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '9px 0', borderBottom: '1px solid #f4f4f4', textDecoration: 'none',
-              }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#111' }}>{s.client_name}</div>
-                  <div style={{ fontSize: 11.5, color: '#9ca3af', marginTop: 1 }}>{s.client_email}</div>
+              <Link key={s.id} href={`/dashboard/briefs/${s.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-sub)', textDecoration: 'none' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.client_name}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>{s.client_email}</div>
                 </div>
-                <StatusBadge status={s.status} />
+                <Pill ok={s.status === 'submitted'} />
               </Link>
-            ))
-          }
-        </Card>
+            ))}
+        </Panel>
 
         {/* Question sets */}
-        <Card title="Frågebatterier" linkHref="/dashboard/question-sets" linkLabel="Hantera">
+        <Panel title="Frågebatterier" href="/dashboard/question-sets" linkText="Hantera">
           {questionSets.length === 0
-            ? <Empty text="Inga frågebatterier ännu." />
-            : questionSets.map(qs => (
-              <Link key={qs.id} href={`/dashboard/question-sets/${qs.id}`} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '9px 0', borderBottom: '1px solid #f4f4f4', textDecoration: 'none',
-              }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#111' }}>{qs.name}</div>
-                <div style={{ fontSize: 11.5, color: '#9ca3af' }}>
+            ? <Empty text="Inga frågebatterier skapade ännu" />
+            : questionSets.slice(0, 5).map(qs => (
+              <Link key={qs.id} href={`/dashboard/question-sets/${qs.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-sub)', textDecoration: 'none' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text)' }}>{qs.name}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', flexShrink: 0, marginLeft: 12 }}>
                   {new Date(qs.updated_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
                 </div>
               </Link>
-            ))
-          }
-        </Card>
+            ))}
+        </Panel>
       </div>
     </div>
   )
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, color = '#C62368' }: { label: string; value: number; color?: string }) {
+function Panel({ title, href, linkText, children }: { title: string; href: string; linkText: string; children: React.ReactNode }) {
   return (
-    <div style={{
-      background: '#fff', borderRadius: 12, padding: '20px 22px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-    }}>
-      <div style={{ fontSize: 32, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 12.5, color: '#9ca3af', marginTop: 6 }}>{label}</div>
+    <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>{title}</span>
+        <Link href={href} style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>{linkText} →</Link>
+      </div>
+      <div style={{ padding: '0 18px 6px' }}>{children}</div>
     </div>
   )
 }
 
-function ActionCard({ href, title, desc, icon, primary }: {
-  href: string; title: string; desc: string; icon: React.ReactNode; primary?: boolean
-}) {
-  return (
-    <Link href={href} style={{
-      display: 'flex', alignItems: 'center', gap: 14,
-      background: primary ? '#C62368' : '#fff',
-      borderRadius: 12, padding: '18px 20px', textDecoration: 'none',
-      boxShadow: primary
-        ? '0 4px 14px rgba(198,35,104,0.25)'
-        : '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-      transition: 'transform 0.15s, box-shadow 0.15s',
-    }}
-    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)' }}
-    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)' }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-        background: primary ? 'rgba(255,255,255,0.18)' : '#FFF0F4',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: primary ? '#fff' : '#C62368',
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: primary ? '#fff' : '#111' }}>{title}</div>
-        <div style={{ fontSize: 12, marginTop: 2, color: primary ? 'rgba(255,255,255,0.7)' : '#9ca3af' }}>{desc}</div>
-      </div>
-    </Link>
-  )
-}
-
-function Card({ title, children, linkHref, linkLabel }: {
-  title: string; children: React.ReactNode; linkHref: string; linkLabel: string
-}) {
-  return (
-    <div style={{
-      background: '#fff', borderRadius: 12, overflow: 'hidden',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-    }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 18px', borderBottom: '1px solid #f4f4f4',
-      }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>{title}</span>
-        <Link href={linkHref} style={{ fontSize: 12, color: '#C62368', textDecoration: 'none' }}>{linkLabel} →</Link>
-      </div>
-      <div style={{ padding: '2px 18px 4px' }}>{children}</div>
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const ok = status === 'submitted'
+function Pill({ ok }: { ok: boolean }) {
   return (
     <span style={{
-      fontSize: 11, fontWeight: 500, padding: '3px 8px', borderRadius: 20,
-      background: ok ? '#dcfce7' : '#f3f4f6',
-      color: ok ? '#15803d' : '#6b7280',
+      fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+      letterSpacing: '0.04em', textTransform: 'uppercase',
+      background: ok ? '#f0fdf4' : '#f5f5f4',
+      color: ok ? '#16a34a' : '#a8a29e',
+      flexShrink: 0, marginLeft: 10,
     }}>
       {ok ? 'Besvarad' : 'Inväntar'}
     </span>
@@ -181,33 +157,17 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p style={{ fontSize: 12.5, color: '#d1d5db', padding: '16px 0', margin: 0 }}>{text}</p>
+  return <p style={{ fontSize: 12.5, color: 'var(--text-3)', padding: '18px 0', fontStyle: 'italic' }}>{text}</p>
 }
 
-function PageLoader() {
+function Loader() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {[0,1,2].map(i => (
-          <div key={i} style={{
-            width: 8, height: 8, borderRadius: '50%', background: '#C62368',
-            animation: 'bounce 0.9s ease-in-out infinite',
-            animationDelay: `${i * 0.18}s`,
-          }} />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '70vh' }}>
+      <div style={{ display: 'flex', gap: 5 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
     </div>
   )
 }
-
-// Icons
-const ArrowUpRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>
-  </svg>
-)
-const PlusIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-  </svg>
-)
