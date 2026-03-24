@@ -1,216 +1,161 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient, type BriefSession } from '@/lib/supabase'
+import Link from 'next/link'
+import { createClient, type BriefSession, type QuestionSet } from '@/lib/supabase'
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<{ email: string } | null>(null)
-  const [sessions, setSessions] = useState<BriefSession[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // New brief form
-  const [showForm, setShowForm] = useState(false)
-  const [clientName, setClientName] = useState('')
-  const [clientEmail, setClientEmail] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [newSession, setNewSession] = useState<BriefSession | null>(null)
-  const [copied, setCopied] = useState(false)
-
   const sb = createClient()
+  const [sessions, setSessions]       = useState<BriefSession[]>([])
+  const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
+  const [loading, setLoading]         = useState(true)
 
   useEffect(() => {
-    sb.auth.getSession().then(async ({ data }) => {
-      if (!data.session) { router.replace('/login'); return }
-      setUser({ email: data.session.user.email! })
-      await loadSessions()
+    Promise.all([
+      sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(5),
+      sb.from('question_sets').select('*').order('created_at', { ascending: false }).limit(5),
+    ]).then(([{ data: sess }, { data: qs }]) => {
+      setSessions(sess || [])
+      setQuestionSets(qs || [])
       setLoading(false)
     })
   }, [])
 
-  async function loadSessions() {
-    const { data } = await sb
-      .from('brief_sessions')
-      .select('*')
-      .order('created_at', { ascending: false })
-    setSessions(data || [])
-  }
+  const submitted = sessions.filter(s => s.status === 'submitted').length
 
-  async function createSession(e: React.FormEvent) {
-    e.preventDefault()
-    setCreating(true)
-    const { data, error } = await sb
-      .from('brief_sessions')
-      .insert({ client_name: clientName, client_email: clientEmail, consultant_email: user?.email })
-      .select()
-      .single()
+  if (loading) return <LoadingDots />
 
-    if (!error && data) {
-      setNewSession(data)
-      setSessions(prev => [data, ...prev])
-      setClientName('')
-      setClientEmail('')
-      setShowForm(false)
+  return (
+    <div className="p-8 max-w-4xl">
+      <h1 className="text-2xl font-bold text-[#1e0e2e] mb-1">Välkommen</h1>
+      <p className="text-purple-400 text-sm mb-8">Här är en översikt av ditt arbete.</p>
 
-      // Optionally send email to client
-      await fetch('/api/send-brief-invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientName: data.client_name,
-          clientEmail: data.client_email,
-          token: data.token,
-          consultantEmail: user?.email,
-        }),
-      })
-    }
-    setCreating(false)
-  }
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-4 mb-10">
+        <StatCard label="Skickade briefs" value={sessions.length} />
+        <StatCard label="Besvarade" value={submitted} color="#16a34a" />
+        <StatCard label="Frågebatterier" value={questionSets.length} />
+      </div>
 
-  async function signOut() {
-    await sb.auth.signOut()
-    router.replace('/login')
-  }
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 gap-4 mb-10">
+        <Link href="/dashboard/send"
+              className="flex items-center gap-3 bg-white rounded-2xl p-5 border border-purple-100
+                         hover:border-purple-300 hover:shadow-sm transition-all group">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
+               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-semibold text-[#1e0e2e] text-sm">Skicka ny brief</p>
+            <p className="text-xs text-purple-400">Välj frågebatteri och klientmail</p>
+          </div>
+        </Link>
 
-  function briefUrl(token: string) {
-    return `${window.location.origin}/brief/${token}`
-  }
+        <Link href="/dashboard/question-sets/new"
+              className="flex items-center gap-3 bg-white rounded-2xl p-5 border border-purple-100
+                         hover:border-purple-300 hover:shadow-sm transition-all group">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
+               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-semibold text-[#1e0e2e] text-sm">Nytt frågebatteri</p>
+            <p className="text-xs text-purple-400">Skapa och spara frågor</p>
+          </div>
+        </Link>
+      </div>
 
-  function copyLink(token: string) {
-    navigator.clipboard.writeText(briefUrl(token))
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+      {/* Recent briefs */}
+      <Section title="Senaste briefs" linkHref="/dashboard/briefs" linkLabel="Visa alla">
+        {sessions.length === 0
+          ? <EmptyState text="Inga briefs skickade ännu." />
+          : sessions.map(s => (
+            <Link key={s.id} href={`/dashboard/briefs/${s.id}`}
+                  className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-purple-50 transition-colors">
+              <div>
+                <span className="font-medium text-[#1e0e2e] text-sm">{s.client_name}</span>
+                <span className="text-xs text-purple-400 ml-2">{s.client_email}</span>
+              </div>
+              <StatusBadge status={s.status} />
+            </Link>
+          ))
+        }
+      </Section>
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-doings-bg">
+      {/* Question sets */}
+      <Section title="Frågebatterier" linkHref="/dashboard/question-sets" linkLabel="Hantera alla">
+        {questionSets.length === 0
+          ? <EmptyState text="Inga frågebatterier än — skapa ett för att komma igång." />
+          : questionSets.map(qs => (
+            <Link key={qs.id} href={`/dashboard/question-sets/${qs.id}`}
+                  className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-purple-50 transition-colors">
+              <span className="font-medium text-[#1e0e2e] text-sm">{qs.name}</span>
+              <span className="text-xs text-purple-400">
+                {new Date(qs.updated_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
+              </span>
+            </Link>
+          ))
+        }
+      </Section>
+    </div>
+  )
+}
+
+function StatCard({ label, value, color = '#6b2d82' }: { label: string; value: number; color?: string }) {
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-purple-100">
+      <p className="text-3xl font-bold" style={{ color }}>{value}</p>
+      <p className="text-xs text-purple-400 mt-1">{label}</p>
+    </div>
+  )
+}
+
+function Section({ title, children, linkHref, linkLabel }: {
+  title: string; children: React.ReactNode; linkHref: string; linkLabel: string
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-purple-100 mb-6">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-purple-50">
+        <h2 className="font-semibold text-[#1e0e2e] text-sm">{title}</h2>
+        <Link href={linkHref} className="text-xs text-purple-500 hover:text-purple-700 transition-colors">
+          {linkLabel} →
+        </Link>
+      </div>
+      <div className="px-1 py-2">{children}</div>
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+      status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-600'
+    }`}>
+      {status === 'submitted' ? 'Besvarad' : 'Inväntar'}
+    </span>
+  )
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <p className="text-sm text-purple-300 text-center py-6">{text}</p>
+}
+
+function LoadingDots() {
+  return (
+    <div className="flex items-center justify-center h-64">
       <div className="flex gap-1.5">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full bg-doings-purple animate-bounce"
+        {[0,1,2].map(i => (
+          <div key={i} className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-bounce"
                style={{ animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
-    </div>
-  )
-
-  return (
-    <div className="min-h-screen bg-doings-bg">
-      {/* Header */}
-      <header className="bg-white border-b border-doings-purple-light/50 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>D</div>
-          <div>
-            <span className="font-semibold text-doings-purple-dark text-sm block">Doings Brief</span>
-            <span className="text-xs text-doings-muted">{user?.email}</span>
-          </div>
-        </div>
-        <button onClick={signOut}
-                className="text-sm text-doings-muted hover:text-doings-purple transition-colors">
-          Logga ut
-        </button>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-10">
-
-        {/* New brief created confirmation */}
-        {newSession && (
-          <div className="bg-white border border-green-200 rounded-2xl p-6 mb-6 slide-in">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-semibold text-green-700 mb-1">✓ Brief skapad & länk skickad till {newSession.client_email}</p>
-                <p className="text-xs text-doings-muted font-mono break-all">{briefUrl(newSession.token)}</p>
-              </div>
-              <button onClick={() => copyLink(newSession.token)}
-                      className="ml-4 shrink-0 text-xs px-3 py-1.5 rounded-lg border border-doings-purple-light text-doings-purple hover:bg-doings-purple-pale transition-colors">
-                {copied ? 'Kopierad!' : 'Kopiera'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Create new brief */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-doings-purple-dark">Mina briefs</h1>
-          <button onClick={() => { setShowForm(!showForm); setNewSession(null) }}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
-                  style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
-            + Ny brief
-          </button>
-        </div>
-
-        {showForm && (
-          <form onSubmit={createSession}
-                className="bg-white rounded-2xl shadow-sm p-6 mb-6 slide-in border border-doings-purple-light/50">
-            <h2 className="font-semibold text-doings-purple-dark mb-4">Skapa brief för klient</h2>
-            <div className="flex flex-col gap-3">
-              <input
-                value={clientName}
-                onChange={e => setClientName(e.target.value)}
-                placeholder="Klientens namn eller organisation"
-                required autoFocus
-                className="w-full border border-doings-purple-light rounded-xl px-4 py-2.5 text-sm
-                           focus:outline-none focus:border-doings-purple transition-colors"
-              />
-              <input
-                type="email"
-                value={clientEmail}
-                onChange={e => setClientEmail(e.target.value)}
-                placeholder="klient@foretag.se"
-                required
-                className="w-full border border-doings-purple-light rounded-xl px-4 py-2.5 text-sm
-                           focus:outline-none focus:border-doings-purple transition-colors"
-              />
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowForm(false)}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 border-doings-purple-light text-doings-purple hover:bg-doings-purple-pale transition-colors">
-                  Avbryt
-                </button>
-                <button type="submit" disabled={creating}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-all"
-                        style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
-                  {creating ? 'Skapar…' : 'Skapa & skicka länk →'}
-                </button>
-              </div>
-            </div>
-          </form>
-        )}
-
-        {/* Sessions list */}
-        {sessions.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center shadow-sm">
-            <p className="text-doings-muted text-sm">Inga briefs ännu — klicka på <strong>+ Ny brief</strong> för att börja.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {sessions.map(s => (
-              <div key={s.id} className="bg-white rounded-2xl shadow-sm p-5 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-doings-purple-dark text-sm truncate">{s.client_name}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      s.status === 'submitted'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-doings-purple-pale text-doings-purple'
-                    }`}>
-                      {s.status === 'submitted' ? 'Inlämnad' : 'Inväntar svar'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-doings-muted truncate">{s.client_email}</p>
-                  <p className="text-xs text-doings-muted mt-0.5">
-                    {new Date(s.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
-                <button onClick={() => copyLink(s.token)}
-                        className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-doings-purple-light text-doings-purple hover:bg-doings-purple-pale transition-colors">
-                  Kopiera länk
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
     </div>
   )
 }
