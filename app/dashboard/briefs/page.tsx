@@ -8,8 +8,10 @@ import { createClient, type BriefSession } from '@/lib/supabase'
 export default function BriefsPage() {
   const sb = createClient()
   const router = useRouter()
-  const [sessions, setSessions] = useState<BriefSession[]>([])
-  const [loading, setLoading]   = useState(true)
+  const [sessions, setSessions]     = useState<BriefSession[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [confirming, setConfirming] = useState<string | null>(null)
+  const [deleting, setDeleting]     = useState<string | null>(null)
 
   function load() {
     setLoading(true)
@@ -20,10 +22,11 @@ export default function BriefsPage() {
   useEffect(() => { load() }, [])
 
   async function deleteSession(id: string) {
-    if (!confirm('Radera den här briefen? Alla svar raderas också.')) return
+    setDeleting(id)
     const { error } = await sb.from('brief_sessions').delete().eq('id', id)
-    if (error) { alert(`Kunde inte radera: ${error.message}`); return }
+    if (error) { setDeleting(null); setConfirming(null); return }
     setSessions(prev => prev.filter(s => s.id !== id))
+    setConfirming(null); setDeleting(null)
     router.refresh()
   }
 
@@ -113,16 +116,38 @@ export default function BriefsPage() {
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
                   Kopiera länk
                 </button>
-                <button onClick={() => deleteSession(s.id)} style={{
-                  padding: '7px 10px', borderRadius: 6,
-                  background: 'none', border: '1px solid transparent',
-                  fontSize: 12.5, color: 'var(--text-3)', cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)', transition: 'border-color 0.1s, color 0.1s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}>
-                  Radera
-                </button>
+                {confirming === s.id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>Radera?</span>
+                    <button onClick={() => deleteSession(s.id)} disabled={deleting === s.id} style={{
+                      padding: '5px 10px', borderRadius: 6, border: 'none',
+                      background: 'var(--text)', color: 'var(--bg)',
+                      fontSize: 12, fontWeight: 600, cursor: deleting === s.id ? 'not-allowed' : 'pointer',
+                      fontFamily: 'var(--font-sans)', opacity: deleting === s.id ? 0.5 : 1,
+                    }}>
+                      {deleting === s.id ? '…' : 'Ja'}
+                    </button>
+                    <button onClick={() => setConfirming(null)} style={{
+                      padding: '5px 10px', borderRadius: 6,
+                      border: '1px solid var(--border)', background: 'none',
+                      fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                      fontFamily: 'var(--font-sans)',
+                    }}>
+                      Avbryt
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirming(s.id)} style={{
+                    padding: '7px 10px', borderRadius: 6,
+                    background: 'none', border: '1px solid transparent',
+                    fontSize: 12.5, color: 'var(--text-3)', cursor: 'pointer',
+                    fontFamily: 'var(--font-sans)', transition: 'border-color 0.1s, color 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}>
+                    Radera
+                  </button>
+                )}
               </div>
             </div>
           ))}
