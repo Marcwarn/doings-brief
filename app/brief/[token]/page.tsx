@@ -401,12 +401,12 @@ export default function BriefPage() {
               </p>
               <button onClick={() => stopRecording(current)} style={{
                 padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: '#dc2626', color: '#fff',
+                background: '#3d1a2e', color: '#fff',
                 fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
+                boxShadow: '0 4px 12px rgba(61,26,46,0.25)',
                 display: 'inline-flex', alignItems: 'center', gap: 8,
               }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
                 Stoppa och transkribera
               </button>
             </div>

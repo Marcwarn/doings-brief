@@ -24,6 +24,7 @@ export default function AdminPage() {
   const [newEmail, setNewEmail]             = useState('')
   const [newName, setNewName]               = useState('')
   const [newSenderEmail, setNewSenderEmail] = useState('')
+  const [newPassword, setNewPassword]       = useState('')
   const [inviting, setInviting]             = useState(false)
   const [inviteResult, setInviteResult]     = useState('')
 
@@ -55,12 +56,15 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newEmail, fullName: newName, senderEmail: newSenderEmail }),
+      body: JSON.stringify({ email: newEmail, fullName: newName, senderEmail: newSenderEmail, password: newPassword || undefined }),
     })
     const { ok, error } = await res.json()
     if (ok) {
-      setInviteResult(`Inbjudan skickad till ${newEmail}`)
-      setNewEmail(''); setNewName(''); setNewSenderEmail('')
+      const msg = newPassword
+        ? `${newName || newEmail} skapad — de kan logga in direkt med lösenordet du angav.`
+        : `Inbjudan skickad till ${newEmail}`
+      setInviteResult(msg)
+      setNewEmail(''); setNewName(''); setNewSenderEmail(''); setNewPassword('')
       setAdding(false)
       setTimeout(loadProfiles, 1000)
     } else {
@@ -109,7 +113,7 @@ export default function AdminPage() {
             cursor: 'pointer',
             boxShadow: adding ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
           }}>
-            {adding ? 'Avbryt' : '+ Bjud in kollega'}
+            {adding ? 'Avbryt' : '+ Lägg till kollega'}
           </button>
         </div>
 
@@ -120,24 +124,50 @@ export default function AdminPage() {
             padding: '22px 24px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 14,
           }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Bjud in ny kollega
+              Ny kollega
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <input value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                     type="email" placeholder="anna@doings.se" required style={F}
-                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
-              <input value={newName} onChange={e => setNewName(e.target.value)}
-                     placeholder="Anna Andersson" required style={F}
-                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+              <div>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                  E-post *
+                </label>
+                <input value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                       type="email" placeholder="anna@doings.se" required style={F}
+                       onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Namn *
+                </label>
+                <input value={newName} onChange={e => setNewName(e.target.value)}
+                       placeholder="Anna Andersson" required style={F}
+                       onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+              </div>
             </div>
-            <input value={newSenderEmail} onChange={e => setNewSenderEmail(e.target.value)}
-                   placeholder="anna@doingsclients.se (avsändaradress)" style={F}
-                   onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                   onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
-            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
-              Avsändaradressen används när kollegans briefs skickas till kunder. Måste vara verifierad i Resend.
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Lösenord
+                </label>
+                <input value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                       type="password" placeholder="Minst 8 tecken" style={F}
+                       onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Avsändaradress
+                </label>
+                <input value={newSenderEmail} onChange={e => setNewSenderEmail(e.target.value)}
+                       placeholder="anna@doingsclients.se" style={F}
+                       onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                       onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
+              Ange ett lösenord om kollegan ska kunna logga in direkt. Lämna tomt för att skicka en inbjudningslänk via e-post.
             </p>
             {inviteResult && (
               <p style={{ fontSize: 13, margin: 0, color: inviteResult.startsWith('Fel') ? '#dc2626' : '#16a34a' }}>
@@ -161,7 +191,7 @@ export default function AdminPage() {
                 cursor: inviting ? 'not-allowed' : 'pointer',
                 boxShadow: inviting ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
               }}>
-                {inviting ? 'Skickar…' : 'Skicka inbjudan'}
+                {inviting ? 'Skapar…' : newPassword ? 'Skapa konto' : 'Skicka inbjudan'}
               </button>
             </div>
           </form>

@@ -2,17 +2,30 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
 
 export default function BriefsPage() {
   const sb = createClient()
+  const router = useRouter()
   const [sessions, setSessions] = useState<BriefSession[]>([])
   const [loading, setLoading]   = useState(true)
 
-  useEffect(() => {
+  function load() {
+    setLoading(true)
     sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { setSessions(data || []); setLoading(false) })
-  }, [])
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function deleteSession(id: string) {
+    if (!confirm('Radera den här briefen? Alla svar raderas också.')) return
+    const { error } = await sb.from('brief_sessions').delete().eq('id', id)
+    if (error) { alert(`Kunde inte radera: ${error.message}`); return }
+    setSessions(prev => prev.filter(s => s.id !== id))
+    router.refresh()
+  }
 
   function briefUrl(token: string) { return `${window.location.origin}/brief/${token}` }
 
@@ -99,6 +112,16 @@ export default function BriefsPage() {
                 onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
                   Kopiera länk
+                </button>
+                <button onClick={() => deleteSession(s.id)} style={{
+                  padding: '7px 10px', borderRadius: 6,
+                  background: 'none', border: '1px solid transparent',
+                  fontSize: 12.5, color: 'var(--text-3)', cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)', transition: 'border-color 0.1s, color 0.1s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}>
+                  Radera
                 </button>
               </div>
             </div>

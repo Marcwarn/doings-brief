@@ -2,22 +2,29 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient, type QuestionSet } from '@/lib/supabase'
 
 export default function QuestionSetsPage() {
   const sb = createClient()
+  const router = useRouter()
   const [sets, setSets]       = useState<QuestionSet[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  function load() {
+    setLoading(true)
     sb.from('question_sets').select('*').order('updated_at', { ascending: false })
       .then(({ data }) => { setSets(data || []); setLoading(false) })
-  }, [])
+  }
+
+  useEffect(() => { load() }, [])
 
   async function deleteSet(id: string) {
     if (!confirm('Radera det här frågebatteriet och alla dess frågor?')) return
-    await sb.from('question_sets').delete().eq('id', id)
+    const { error } = await sb.from('question_sets').delete().eq('id', id)
+    if (error) { alert(`Kunde inte radera: ${error.message}`); return }
     setSets(prev => prev.filter(s => s.id !== id))
+    router.refresh()
   }
 
   if (loading) return <PageLoader />

@@ -21,9 +21,6 @@ export default function DashboardPage() {
     })
   }, [])
 
-  const answered = sessions.filter(s => s.status === 'submitted').length
-  const pending  = sessions.filter(s => s.status !== 'submitted').length
-
   if (loading) return <Loader />
 
   return (
@@ -37,27 +34,6 @@ export default function DashboardPage() {
         <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, fontWeight: 400 }}>
           Doings Brief — hantera och skicka kundintervjuer
         </p>
-      </div>
-
-      {/* Stat strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, marginBottom: 32, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
-        {[
-          { n: sessions.length, label: 'Skickade briefs' },
-          { n: answered,        label: 'Besvarade',      accent: answered > 0 },
-          { n: questionSets.length, label: 'Frågebatterier' },
-        ].map(({ n, label, accent }) => (
-          <div key={label} style={{ background: 'var(--surface)', padding: '22px 26px' }}>
-            <div style={{
-              fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 600,
-              color: accent ? '#16a34a' : 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1,
-            }}>
-              {n}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 7, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {label}
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Action row */}
