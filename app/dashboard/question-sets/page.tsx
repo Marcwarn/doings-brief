@@ -20,57 +20,76 @@ export default function QuestionSetsPage() {
     setSets(prev => prev.filter(s => s.id !== id))
   }
 
-  if (loading) return <LoadingDots />
+  if (loading) return <PageLoader />
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-8">
+    <div style={{ padding: '36px 40px', maxWidth: 800, fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#1a1a1a' }}>Frågebatterier</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#a0607a' }}>Skapa och hantera dina frågeuppsättningar</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>Frågebatterier</h1>
+          <p style={{ fontSize: 13.5, color: '#9ca3af', margin: '4px 0 0' }}>Skapa och hantera dina frågeuppsättningar</p>
         </div>
-        <Link href="/dashboard/question-sets/new"
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
-              style={{ background: '#C62368' }}>
-          + Nytt batteri
+        <Link href="/dashboard/question-sets/new" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '9px 16px', borderRadius: 8,
+          background: '#C62368', color: '#fff',
+          fontSize: 13.5, fontWeight: 500, textDecoration: 'none',
+          boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
+        }}>
+          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nytt batteri
         </Link>
       </div>
 
       {sets.length === 0 ? (
-        <div className="rounded-2xl p-12 text-center" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <p className="text-sm mb-4" style={{ color: '#c4909f' }}>Inga frågebatterier ännu.</p>
-          <Link href="/dashboard/question-sets/new"
-                className="text-sm font-semibold transition-colors" style={{ color: '#C62368' }}>
+        <div style={{
+          background: '#fff', borderRadius: 12, padding: '60px 24px', textAlign: 'center',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
+          <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 16px' }}>Inga frågebatterier ännu.</p>
+          <Link href="/dashboard/question-sets/new" style={{
+            fontSize: 13.5, fontWeight: 500, color: '#C62368', textDecoration: 'none',
+          }}>
             Skapa ditt första →
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {sets.map(s => (
-            <div key={s.id}
-                 className="rounded-2xl px-5 py-4 flex items-center justify-between transition-colors"
-                 style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
+            <div key={s.id} style={{
+              background: '#fff', borderRadius: 12,
+              padding: '16px 20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+            }}>
               <div>
-                <p className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>{s.name}</p>
-                {s.description && <p className="text-xs mt-0.5" style={{ color: '#a0607a' }}>{s.description}</p>}
-                <p className="text-xs mt-1" style={{ color: '#c4909f' }}>
-                  Uppdaterat {new Date(s.updated_at).toLocaleDateString('sv-SE', { day:'numeric', month:'short', year:'numeric' })}
-                </p>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{s.name}</div>
+                {s.description && <div style={{ fontSize: 12.5, color: '#9ca3af', marginTop: 2 }}>{s.description}</div>}
+                <div style={{ fontSize: 11.5, color: '#d1d5db', marginTop: 4 }}>
+                  Uppdaterat {new Date(s.updated_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Link href={`/dashboard/send?set=${s.id}`}
-                      className="text-xs px-3 py-1.5 rounded-lg font-medium text-white transition-all"
-                      style={{ background: '#C62368' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Link href={`/dashboard/send?set=${s.id}`} style={{
+                  padding: '6px 14px', borderRadius: 7,
+                  background: '#C62368', color: '#fff',
+                  fontSize: 12.5, fontWeight: 500, textDecoration: 'none',
+                }}>
                   Skicka
                 </Link>
-                <Link href={`/dashboard/question-sets/${s.id}`}
-                      className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-                      style={{ color: '#C62368', background: '#fdf5f7' }}>
+                <Link href={`/dashboard/question-sets/${s.id}`} style={{
+                  padding: '6px 14px', borderRadius: 7,
+                  background: '#f5f4f6', color: '#374151',
+                  fontSize: 12.5, fontWeight: 500, textDecoration: 'none',
+                  border: '1px solid #ececec',
+                }}>
                   Redigera
                 </Link>
-                <button onClick={() => deleteSet(s.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-                        style={{ color: '#dc2626' }}>
+                <button onClick={() => deleteSet(s.id)} style={{
+                  padding: '6px 10px', borderRadius: 7,
+                  background: 'none', border: 'none',
+                  fontSize: 12.5, color: '#dc2626', cursor: 'pointer',
+                }}>
                   Radera
                 </button>
               </div>
@@ -82,13 +101,15 @@ export default function QuestionSetsPage() {
   )
 }
 
-function LoadingDots() {
+function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex gap-1.5">
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      <div style={{ display: 'flex', gap: 6 }}>
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
-               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
+          <div key={i} style={{
+            width: 8, height: 8, borderRadius: '50%', background: '#C62368',
+            animation: 'bounce 0.9s ease-in-out infinite', animationDelay: `${i * 0.18}s`,
+          }} />
         ))}
       </div>
     </div>

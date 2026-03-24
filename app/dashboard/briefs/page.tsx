@@ -14,60 +14,69 @@ export default function BriefsPage() {
       .then(({ data }) => { setSessions(data || []); setLoading(false) })
   }, [])
 
-  function briefUrl(token: string) {
-    return `${window.location.origin}/brief/${token}`
-  }
+  function briefUrl(token: string) { return `${window.location.origin}/brief/${token}` }
 
-  if (loading) return <LoadingDots />
+  if (loading) return <PageLoader />
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-8">
+    <div style={{ padding: '36px 40px', maxWidth: 820, fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#1a1a1a' }}>Skickade briefs</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#a0607a' }}>Alla briefs och deras svar</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: 0 }}>Skickade briefs</h1>
+          <p style={{ fontSize: 13.5, color: '#9ca3af', margin: '4px 0 0' }}>Alla briefs och deras svar</p>
         </div>
-        <Link href="/dashboard/send"
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-              style={{ background: '#C62368' }}>
+        <Link href="/dashboard/send" style={{
+          padding: '9px 16px', borderRadius: 8,
+          background: '#C62368', color: '#fff',
+          fontSize: 13.5, fontWeight: 500, textDecoration: 'none',
+          boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
+        }}>
           + Skicka ny
         </Link>
       </div>
 
       {sessions.length === 0 ? (
-        <div className="rounded-2xl p-12 text-center" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <p className="text-sm mb-4" style={{ color: '#c4909f' }}>Inga briefs skickade ännu.</p>
-          <Link href="/dashboard/send" className="text-sm font-semibold transition-colors" style={{ color: '#C62368' }}>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '60px 24px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>📬</div>
+          <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 16px' }}>Inga briefs skickade ännu.</p>
+          <Link href="/dashboard/send" style={{ fontSize: 13.5, fontWeight: 500, color: '#C62368', textDecoration: 'none' }}>
             Skicka din första brief →
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {sessions.map(s => (
-            <div key={s.id}
-                 className="rounded-2xl px-5 py-4 flex items-center justify-between gap-4 transition-colors"
-                 style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>{s.client_name}</span>
+            <div key={s.id} style={{
+              background: '#fff', borderRadius: 12, padding: '16px 20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#111' }}>{s.client_name}</span>
                   <StatusBadge status={s.status} />
                 </div>
-                <p className="text-xs" style={{ color: '#a0607a' }}>{s.client_email}</p>
-                <p className="text-xs mt-0.5" style={{ color: '#c4909f' }}>
-                  {new Date(s.created_at).toLocaleDateString('sv-SE', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-                </p>
+                <div style={{ fontSize: 12.5, color: '#9ca3af' }}>{s.client_email}</div>
+                <div style={{ fontSize: 11.5, color: '#d1d5db', marginTop: 2 }}>
+                  {new Date(s.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 {s.status === 'submitted' && (
-                  <Link href={`/dashboard/briefs/${s.id}`}
-                        className="text-xs px-3 py-1.5 rounded-lg font-medium text-white transition-all"
-                        style={{ background: '#C62368' }}>
+                  <Link href={`/dashboard/briefs/${s.id}`} style={{
+                    padding: '6px 14px', borderRadius: 7,
+                    background: '#C62368', color: '#fff',
+                    fontSize: 12.5, fontWeight: 500, textDecoration: 'none',
+                  }}>
                     Se svar
                   </Link>
                 )}
-                <button onClick={() => navigator.clipboard.writeText(briefUrl(s.token))}
-                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-                        style={{ color: '#C62368', background: '#fdf5f7' }}>
+                <button onClick={() => navigator.clipboard.writeText(briefUrl(s.token))} style={{
+                  padding: '6px 12px', borderRadius: 7,
+                  border: '1px solid #e5e7eb', background: '#fff',
+                  fontSize: 12.5, fontWeight: 500, color: '#374151',
+                  cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                }}>
                   Kopiera länk
                 </button>
               </div>
@@ -80,23 +89,24 @@ export default function BriefsPage() {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const ok = status === 'submitted'
   return (
-    <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-          style={status === 'submitted'
-            ? { background: '#dcfce7', color: '#16a34a' }
-            : { background: '#fdf5f7', color: '#a0607a' }}>
-      {status === 'submitted' ? 'Besvarad' : 'Inväntar'}
+    <span style={{
+      fontSize: 11, fontWeight: 500, padding: '3px 8px', borderRadius: 20,
+      background: ok ? '#dcfce7' : '#f3f4f6',
+      color: ok ? '#15803d' : '#6b7280',
+    }}>
+      {ok ? 'Besvarad' : 'Inväntar'}
     </span>
   )
 }
 
-function LoadingDots() {
+function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex gap-1.5">
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      <div style={{ display: 'flex', gap: 6 }}>
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
-               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
+          <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#C62368', animation: 'bounce 0.9s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
         ))}
       </div>
     </div>

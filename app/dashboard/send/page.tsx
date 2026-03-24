@@ -5,6 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question } from '@/lib/supabase'
 
+const F: React.CSSProperties = {
+  width: '100%', padding: '10px 14px', borderRadius: 8,
+  border: '1px solid #e5e7eb', background: '#fff',
+  fontSize: 13.5, color: '#111', outline: 'none',
+  fontFamily: 'DM Sans, sans-serif', transition: 'border-color 0.15s',
+}
+
 function SendBriefInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -24,8 +31,7 @@ function SendBriefInner() {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
       const { data } = await sb.from('question_sets').select('*').order('updated_at', { ascending: false })
-      setSets(data || [])
-      setLoading(false)
+      setSets(data || []); setLoading(false)
     })
   }, [])
 
@@ -39,9 +45,7 @@ function SendBriefInner() {
     e.preventDefault()
     if (!selectedSet) { setError('Välj ett frågebatteri.'); return }
     if (!clientName.trim() || !clientEmail.trim()) { setError('Fyll i klientens namn och e-post.'); return }
-
     setSending(true); setError('')
-
     const { data: { user } } = await sb.auth.getUser()
     const { data: session, error: sessErr } = await sb
       .from('brief_sessions')
@@ -53,75 +57,55 @@ function SendBriefInner() {
         question_set_id: selectedSet,
       })
       .select().single()
-
     if (sessErr || !session) { setError('Kunde inte skapa brief.'); setSending(false); return }
-
     await fetch('/api/briefs/send-invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        clientName: session.client_name,
-        clientEmail: session.client_email,
-        token: session.token,
-        consultantEmail: user?.email,
-      }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientName: session.client_name, clientEmail: session.client_email, token: session.token, consultantEmail: user?.email }),
     })
-
     setSent({ token: session.token, email: session.client_email })
     setSending(false)
   }
 
-  function briefUrl(token: string) {
-    return `${window.location.origin}/brief/${token}`
-  }
+  function briefUrl(token: string) { return `${window.location.origin}/brief/${token}` }
 
-  const inputStyle = {
-    width: '100%',
-    border: '1.5px solid #f0cdd8',
-    borderRadius: '10px',
-    padding: '10px 14px',
-    fontSize: '14px',
-    color: '#1a1a1a',
-    outline: 'none',
-    fontFamily: 'DM Sans, sans-serif',
-    background: '#fff',
-  }
-
-  if (loading) return <LoadingDots />
+  if (loading) return <PageLoader />
 
   if (sent) {
     const url = briefUrl(sent.token)
     return (
-      <div className="p-8 max-w-xl">
-        <div className="rounded-2xl p-8 text-center" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-               style={{ background: '#dcfce7' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"
-                 strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
+      <div style={{ padding: '36px 40px', maxWidth: 560, fontFamily: 'DM Sans, sans-serif' }}>
+        <div style={{ background: '#fff', borderRadius: 16, padding: '48px 36px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <h2 className="text-xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Brief skickad!</h2>
-          <p className="text-sm mb-6" style={{ color: '#a0607a' }}>
-            Vi skickade en länk till <strong style={{ color: '#1a1a1a' }}>{sent.email}</strong>.
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: '#111', margin: '0 0 8px' }}>Brief skickad!</h2>
+          <p style={{ fontSize: 13.5, color: '#6b7280', margin: '0 0 24px' }}>
+            Vi skickade en länk till <strong style={{ color: '#111', fontWeight: 500 }}>{sent.email}</strong>.
           </p>
-          <div className="rounded-xl p-3 mb-6 text-left" style={{ background: '#fdf5f7' }}>
-            <p className="text-xs mb-1" style={{ color: '#a0607a' }}>Länk till klienten</p>
-            <p className="text-xs font-mono break-all" style={{ color: '#C62368' }}>{url}</p>
+          <div style={{ background: '#f5f4f6', borderRadius: 8, padding: '12px 14px', marginBottom: 24, textAlign: 'left' }}>
+            <div style={{ fontSize: 11.5, color: '#9ca3af', marginBottom: 4 }}>Länk till klienten</div>
+            <div style={{ fontSize: 12, fontFamily: 'monospace', color: '#374151', wordBreak: 'break-all' }}>{url}</div>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => navigator.clipboard.writeText(url)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-                    style={{ color: '#C62368', background: '#fdf5f7' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={() => navigator.clipboard.writeText(url)} style={{
+              flex: 1, padding: '10px 0', borderRadius: 8,
+              border: '1px solid #e5e7eb', background: '#fff',
+              fontSize: 13.5, fontWeight: 500, color: '#374151', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+            }}>
               Kopiera länk
             </button>
-            <button onClick={() => { setSent(null); setClientName(''); setClientEmail('') }}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-                    style={{ background: '#C62368' }}>
+            <button onClick={() => { setSent(null); setClientName(''); setClientEmail('') }} style={{
+              flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+              background: '#C62368', fontSize: 13.5, fontWeight: 500, color: '#fff',
+              cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
+            }}>
               Skicka en till
             </button>
           </div>
-          <Link href="/dashboard/briefs" className="block mt-4 text-xs transition-colors" style={{ color: '#a0607a' }}>
+          <Link href="/dashboard/briefs" style={{ display: 'block', marginTop: 16, fontSize: 13, color: '#9ca3af', textDecoration: 'none' }}>
             Se alla briefs →
           </Link>
         </div>
@@ -130,52 +114,50 @@ function SendBriefInner() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a' }}>Skicka brief</h1>
+    <div style={{ padding: '36px 40px', maxWidth: 680, fontFamily: 'DM Sans, sans-serif' }}>
+      <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: '0 0 28px' }}>Skicka brief</h1>
 
-      <form onSubmit={send} className="flex flex-col gap-5">
+      <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Question set */}
-        <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <label className="block text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#a0607a' }}>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
             Frågebatteri *
-          </label>
+          </div>
           {sets.length === 0 ? (
-            <div className="text-sm" style={{ color: '#a0607a' }}>
+            <p style={{ fontSize: 13.5, color: '#9ca3af', margin: 0 }}>
               Inga batterier ännu.{' '}
-              <Link href="/dashboard/question-sets/new" className="underline" style={{ color: '#C62368' }}>
-                Skapa ett →
-              </Link>
-            </div>
+              <Link href="/dashboard/question-sets/new" style={{ color: '#C62368', textDecoration: 'none', fontWeight: 500 }}>Skapa ett →</Link>
+            </p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {sets.map(s => (
-                <label key={s.id}
-                       className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
-                       style={{
-                         border: `1.5px solid ${selectedSet === s.id ? '#C62368' : '#f0cdd8'}`,
-                         background: selectedSet === s.id ? '#fdf5f7' : '#fff',
-                       }}>
-                  <input type="radio" name="questionSet" value={s.id}
+                <label key={s.id} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12,
+                  padding: '12px 14px', borderRadius: 8, cursor: 'pointer',
+                  border: `1.5px solid ${selectedSet === s.id ? '#C62368' : '#e5e7eb'}`,
+                  background: selectedSet === s.id ? '#FFF0F4' : '#fff',
+                  transition: 'border-color 0.15s, background 0.15s',
+                }}>
+                  <input type="radio" name="qs" value={s.id}
                          checked={selectedSet === s.id}
                          onChange={() => setSelectedSet(s.id)}
-                         style={{ marginTop: '2px', accentColor: '#C62368' }} />
+                         style={{ marginTop: 2, accentColor: '#C62368' }} />
                   <div>
-                    <p className="font-medium text-sm" style={{ color: '#1a1a1a' }}>{s.name}</p>
-                    {s.description && <p className="text-xs" style={{ color: '#a0607a' }}>{s.description}</p>}
+                    <div style={{ fontSize: 13.5, fontWeight: 500, color: '#111' }}>{s.name}</div>
+                    {s.description && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{s.description}</div>}
                   </div>
                 </label>
               ))}
             </div>
           )}
-
           {questions.length > 0 && (
-            <div className="mt-4 pt-4" style={{ borderTop: '1px solid #fbeef3' }}>
-              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#a0607a' }}>
-                Förhandsgranskning ({questions.length} frågor)
-              </p>
-              <ol className="list-decimal list-inside space-y-1">
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #f4f4f4' }}>
+              <div style={{ fontSize: 11.5, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                {questions.length} frågor
+              </div>
+              <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {questions.map(q => (
-                  <li key={q.id} className="text-xs" style={{ color: '#C62368' }}>{q.text}</li>
+                  <li key={q.id} style={{ fontSize: 12.5, color: '#6b7280' }}>{q.text}</li>
                 ))}
               </ol>
             </div>
@@ -183,36 +165,30 @@ function SendBriefInner() {
         </div>
 
         {/* Client info */}
-        <div className="rounded-2xl p-6 flex flex-col gap-4" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: '#a0607a' }}>
+        <div style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Klientuppgifter *
-          </label>
-          <input
-            value={clientName}
-            onChange={e => setClientName(e.target.value)}
-            placeholder="Klientens namn eller organisation"
-            required
-            style={inputStyle}
-            onFocus={e => (e.target.style.borderColor = '#C62368')}
-            onBlur={e => (e.target.style.borderColor = '#f0cdd8')}
-          />
-          <input
-            type="email"
-            value={clientEmail}
-            onChange={e => setClientEmail(e.target.value)}
-            placeholder="klient@foretag.se"
-            required
-            style={inputStyle}
-            onFocus={e => (e.target.style.borderColor = '#C62368')}
-            onBlur={e => (e.target.style.borderColor = '#f0cdd8')}
-          />
+          </div>
+          <input value={clientName} onChange={e => setClientName(e.target.value)}
+                 placeholder="Klientens namn eller organisation" required style={F}
+                 onFocus={e => (e.target.style.borderColor = '#C62368')}
+                 onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+          <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)}
+                 placeholder="klient@foretag.se" required style={F}
+                 onFocus={e => (e.target.style.borderColor = '#C62368')}
+                 onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
         </div>
 
-        {error && <p className="text-sm" style={{ color: '#dc2626' }}>{error}</p>}
+        {error && <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>}
 
-        <button type="submit" disabled={sending || sets.length === 0}
-                className="py-3.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-all"
-                style={{ background: '#C62368' }}>
+        <button type="submit" disabled={sending || sets.length === 0} style={{
+          padding: '13px 0', borderRadius: 8, border: 'none',
+          background: (sending || sets.length === 0) ? '#e08aaa' : '#C62368',
+          fontSize: 14, fontWeight: 500, color: '#fff',
+          cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
+          fontFamily: 'DM Sans, sans-serif',
+          boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
+        }}>
           {sending ? 'Skickar…' : 'Skicka brief till klient →'}
         </button>
       </form>
@@ -221,20 +197,15 @@ function SendBriefInner() {
 }
 
 export default function SendBriefPage() {
-  return (
-    <Suspense fallback={<LoadingDots />}>
-      <SendBriefInner />
-    </Suspense>
-  )
+  return <Suspense fallback={<PageLoader />}><SendBriefInner /></Suspense>
 }
 
-function LoadingDots() {
+function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex gap-1.5">
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      <div style={{ display: 'flex', gap: 6 }}>
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
-               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
+          <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#C62368', animation: 'bounce 0.9s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
         ))}
       </div>
     </div>

@@ -5,12 +5,18 @@ import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question } from '@/lib/supabase'
 
+const F: React.CSSProperties = {
+  width: '100%', padding: '10px 14px', borderRadius: 8,
+  border: '1px solid #e5e7eb', background: '#fff',
+  fontSize: 13.5, color: '#111', outline: 'none',
+  fontFamily: 'DM Sans, sans-serif', transition: 'border-color 0.15s',
+}
+
 export default function EditQuestionSetPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
+  const router  = useRouter()
   const sb = createClient()
 
-  const [qs, setQs]               = useState<QuestionSet | null>(null)
   const [name, setName]           = useState('')
   const [desc, setDesc]           = useState('')
   const [questions, setQuestions] = useState<string[]>([])
@@ -25,9 +31,7 @@ export default function EditQuestionSetPage() {
       sb.from('questions').select('*').eq('question_set_id', id).order('order_index'),
     ]).then(([{ data: set }, { data: qlist }]) => {
       if (!set) { router.replace('/dashboard/question-sets'); return }
-      setQs(set)
-      setName(set.name)
-      setDesc(set.description || '')
+      setName(set.name); setDesc(set.description || '')
       setQuestions((qlist || []).map((q: Question) => q.text))
       if ((qlist || []).length === 0) setQuestions([''])
       setLoading(false)
@@ -45,84 +49,60 @@ export default function EditQuestionSetPage() {
     const filtered = questions.filter(q => q.trim())
     if (!name.trim()) { setError('Ge batteriet ett namn.'); return }
     if (filtered.length < 1) { setError('Lägg till minst en fråga.'); return }
-
     setSaving(true); setError('')
-    await sb.from('question_sets').update({
-      name: name.trim(),
-      description: desc.trim() || null,
-      updated_at: new Date().toISOString(),
-    }).eq('id', id)
-
+    await sb.from('question_sets').update({ name: name.trim(), description: desc.trim() || null, updated_at: new Date().toISOString() }).eq('id', id)
     await sb.from('questions').delete().eq('question_set_id', id)
-    await sb.from('questions').insert(
-      filtered.map((text, i) => ({ question_set_id: id, text, order_index: i }))
-    )
-
+    await sb.from('questions').insert(filtered.map((text, i) => ({ question_set_id: id, text, order_index: i })))
     setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setTimeout(() => setSaved(false), 2500)
   }
 
-  const inputStyle = {
-    width: '100%',
-    border: '1.5px solid #f0cdd8',
-    borderRadius: '10px',
-    padding: '10px 14px',
-    fontSize: '14px',
-    color: '#1a1a1a',
-    outline: 'none',
-    fontFamily: 'DM Sans, sans-serif',
-    background: '#fff',
-  }
-
-  if (loading) return <LoadingDots />
+  if (loading) return <PageLoader />
 
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="flex items-center gap-3 mb-8">
-        <Link href="/dashboard/question-sets" className="text-sm transition-colors" style={{ color: '#a0607a' }}>
-          ← Tillbaka
-        </Link>
-        <span style={{ color: '#f0cdd8' }}>/</span>
-        <h1 className="text-xl font-bold" style={{ color: '#1a1a1a' }}>Redigera frågebatteri</h1>
+    <div style={{ padding: '36px 40px', maxWidth: 680, fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 13 }}>
+        <Link href="/dashboard/question-sets" style={{ color: '#9ca3af', textDecoration: 'none' }}>Frågebatterier</Link>
+        <span style={{ color: '#d1d5db' }}>/</span>
+        <span style={{ color: '#111', fontWeight: 500 }}>Redigera</span>
       </div>
 
-      <form onSubmit={save} className="flex flex-col gap-6">
-        <div className="rounded-2xl p-6 flex flex-col gap-4" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#a0607a' }}>Namn *</label>
-            <input value={name} onChange={e => setName(e.target.value)} required autoFocus
-                   style={inputStyle}
-                   onFocus={e => (e.target.style.borderColor = '#C62368')}
-                   onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: '#a0607a' }}>Beskrivning</label>
-            <input value={desc} onChange={e => setDesc(e.target.value)}
-                   placeholder="Valfri beskrivning"
-                   style={inputStyle}
-                   onFocus={e => (e.target.style.borderColor = '#C62368')}
-                   onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
-          </div>
-        </div>
+      <h1 style={{ fontSize: 22, fontWeight: 600, color: '#111', margin: '0 0 28px' }}>Redigera frågebatteri</h1>
 
-        <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
-          <label className="block text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: '#a0607a' }}>
-            Frågor ({questions.filter(q => q.trim()).length} st)
-          </label>
-          <div className="flex flex-col gap-3">
+      <form onSubmit={save} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Section>
+          <Field label="Namn *">
+            <input value={name} onChange={e => setName(e.target.value)} required autoFocus
+                   style={F}
+                   onFocus={e => (e.target.style.borderColor = '#C62368')}
+                   onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+          </Field>
+          <Field label="Beskrivning">
+            <input value={desc} onChange={e => setDesc(e.target.value)}
+                   placeholder="Valfri beskrivning" style={F}
+                   onFocus={e => (e.target.style.borderColor = '#C62368')}
+                   onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+          </Field>
+        </Section>
+
+        <Section>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
+            Frågor ({questions.filter(q => q.trim()).length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {questions.map((q, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <span className="mt-2.5 text-xs font-bold w-5 shrink-0 text-right" style={{ color: '#c4909f' }}>{i + 1}</span>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: '#d1d5db', width: 18, textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
                 <input value={q} onChange={e => updateQuestion(i, e.target.value)}
                        placeholder={`Fråga ${i + 1}…`}
-                       style={{ ...inputStyle, width: undefined, flex: 1 } as React.CSSProperties}
+                       style={{ ...F, flex: 1, width: 'auto' }}
                        onFocus={e => (e.target.style.borderColor = '#C62368')}
-                       onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
+                       onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
                 {questions.length > 1 && (
                   <button type="button" onClick={() => removeQuestion(i)}
-                          className="mt-2 p-1 transition-colors" style={{ color: '#dc2626' }}>
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#d1d5db' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                   </button>
                 )}
@@ -130,26 +110,31 @@ export default function EditQuestionSetPage() {
             ))}
           </div>
           <button type="button" onClick={addQuestion}
-                  className="mt-4 text-xs font-medium transition-colors flex items-center gap-1"
-                  style={{ color: '#C62368' }}>
+                  style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#C62368', fontWeight: 500, padding: 0, display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             Lägg till fråga
           </button>
-        </div>
+        </Section>
 
-        {error && <p className="text-sm" style={{ color: '#dc2626' }}>{error}</p>}
+        {error && <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>}
 
-        <div className="flex gap-3">
-          <Link href={`/dashboard/send?set=${id}`}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold text-center transition-colors"
-                style={{ color: '#C62368', background: '#fdf5f7' }}>
-            Skicka brief med detta →
+        <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+          <Link href={`/dashboard/send?set=${id}`} style={{
+            flex: 1, padding: '11px 0', borderRadius: 8, textAlign: 'center',
+            border: '1px solid #e5e7eb', background: '#fff',
+            fontSize: 13.5, fontWeight: 500, color: '#374151', textDecoration: 'none',
+          }}>
+            Skicka brief →
           </Link>
-          <button type="submit" disabled={saving}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-all"
-                  style={{ background: saved ? '#16a34a' : '#C62368' }}>
+          <button type="submit" disabled={saving} style={{
+            flex: 2, padding: '11px 0', borderRadius: 8,
+            background: saved ? '#16a34a' : saving ? '#e08aaa' : '#C62368',
+            border: 'none', fontSize: 13.5, fontWeight: 500, color: '#fff',
+            cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif',
+            boxShadow: '0 2px 8px rgba(198,35,104,0.22)',
+          }}>
             {saving ? 'Sparar…' : saved ? '✓ Sparat!' : 'Spara ändringar'}
           </button>
         </div>
@@ -158,13 +143,29 @@ export default function EditQuestionSetPage() {
   )
 }
 
-function LoadingDots() {
+function Section({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex gap-1.5">
+    <div style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)' }}>
+      {children}
+    </div>
+  )
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 7 }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+      <div style={{ display: 'flex', gap: 6 }}>
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
-               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
+          <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#C62368', animation: 'bounce 0.9s ease-in-out infinite', animationDelay: `${i * 0.18}s` }} />
         ))}
       </div>
     </div>
