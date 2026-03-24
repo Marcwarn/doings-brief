@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -14,6 +14,13 @@ export default function LoginPage() {
   const [step,    setStep]    = useState<'email' | 'code'>('email')
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
+
+  // If already logged in → skip login page entirely
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data }) => {
+      if (data.session) router.replace('/dashboard')
+    })
+  }, [])
 
   // Step 1 — send OTP code to email (no magic link)
   async function handleSendCode(e: React.FormEvent) {
