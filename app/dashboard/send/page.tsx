@@ -19,12 +19,10 @@ function SendBriefInner() {
   const [sending, setSending]         = useState(false)
   const [sent, setSent]               = useState<{ token: string; email: string } | null>(null)
   const [error, setError]             = useState('')
-  const [consultantEmail, setConsultantEmail] = useState('')
 
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      setConsultantEmail(user.email!)
       const { data } = await sb.from('question_sets').select('*').order('updated_at', { ascending: false })
       setSets(data || [])
       setLoading(false)
@@ -57,7 +55,6 @@ function SendBriefInner() {
 
     if (sessErr || !session) { setError('Kunde inte skapa brief.'); setSending(false); return }
 
-    // Send invite email to client
     await fetch('/api/briefs/send-invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -77,39 +74,53 @@ function SendBriefInner() {
     return `${window.location.origin}/brief/${token}`
   }
 
+  const inputStyle = {
+    width: '100%',
+    border: '1.5px solid #f0cdd8',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    fontSize: '14px',
+    color: '#1a1a1a',
+    outline: 'none',
+    fontFamily: 'DM Sans, sans-serif',
+    background: '#fff',
+  }
+
   if (loading) return <LoadingDots />
 
   if (sent) {
     const url = briefUrl(sent.token)
     return (
       <div className="p-8 max-w-xl">
-        <div className="bg-white rounded-2xl border border-green-200 p-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+        <div className="rounded-2xl p-8 text-center" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+               style={{ background: '#dcfce7' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"
                  strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-[#1e0e2e] mb-2">Brief skickad!</h2>
-          <p className="text-sm text-purple-400 mb-6">
-            Vi skickade en länk till <strong className="text-[#1e0e2e]">{sent.email}</strong>.
+          <h2 className="text-xl font-bold mb-2" style={{ color: '#1a1a1a' }}>Brief skickad!</h2>
+          <p className="text-sm mb-6" style={{ color: '#a0607a' }}>
+            Vi skickade en länk till <strong style={{ color: '#1a1a1a' }}>{sent.email}</strong>.
           </p>
-          <div className="bg-purple-50 rounded-xl p-3 mb-6 text-left">
-            <p className="text-xs text-purple-400 mb-1">Länk till klienten</p>
-            <p className="text-xs font-mono text-purple-700 break-all">{url}</p>
+          <div className="rounded-xl p-3 mb-6 text-left" style={{ background: '#fdf5f7' }}>
+            <p className="text-xs mb-1" style={{ color: '#a0607a' }}>Länk till klienten</p>
+            <p className="text-xs font-mono break-all" style={{ color: '#C62368' }}>{url}</p>
           </div>
           <div className="flex gap-3">
             <button onClick={() => navigator.clipboard.writeText(url)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                    style={{ color: '#C62368', background: '#fdf5f7' }}>
               Kopiera länk
             </button>
             <button onClick={() => { setSent(null); setClientName(''); setClientEmail('') }}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-                    style={{ background: 'linear-gradient(135deg,#6b2d82,#C62368)' }}>
+                    style={{ background: '#C62368' }}>
               Skicka en till
             </button>
           </div>
-          <Link href="/dashboard/briefs" className="block mt-4 text-xs text-purple-400 hover:text-purple-600 transition-colors">
+          <Link href="/dashboard/briefs" className="block mt-4 text-xs transition-colors" style={{ color: '#a0607a' }}>
             Se alla briefs →
           </Link>
         </div>
@@ -119,51 +130,51 @@ function SendBriefInner() {
 
   return (
     <div className="p-8 max-w-2xl">
-      <div className="flex items-center gap-3 mb-8">
-        <h1 className="text-2xl font-bold text-[#1e0e2e]">Skicka brief</h1>
-      </div>
+      <h1 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a' }}>Skicka brief</h1>
 
       <form onSubmit={send} className="flex flex-col gap-5">
         {/* Question set */}
-        <div className="bg-white rounded-2xl border border-purple-100 p-6">
-          <label className="block text-xs font-semibold text-purple-500 uppercase tracking-wide mb-3">
+        <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
+          <label className="block text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#a0607a' }}>
             Frågebatteri *
           </label>
           {sets.length === 0 ? (
-            <div className="text-sm text-purple-400">
-              Inga batterier ännu. <Link href="/dashboard/question-sets/new" className="text-purple-600 underline">Skapa ett →</Link>
+            <div className="text-sm" style={{ color: '#a0607a' }}>
+              Inga batterier ännu.{' '}
+              <Link href="/dashboard/question-sets/new" className="underline" style={{ color: '#C62368' }}>
+                Skapa ett →
+              </Link>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               {sets.map(s => (
                 <label key={s.id}
-                       className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                         selectedSet === s.id
-                           ? 'border-purple-400 bg-purple-50'
-                           : 'border-purple-100 hover:border-purple-200'
-                       }`}>
+                       className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                       style={{
+                         border: `1.5px solid ${selectedSet === s.id ? '#C62368' : '#f0cdd8'}`,
+                         background: selectedSet === s.id ? '#fdf5f7' : '#fff',
+                       }}>
                   <input type="radio" name="questionSet" value={s.id}
                          checked={selectedSet === s.id}
                          onChange={() => setSelectedSet(s.id)}
-                         className="mt-0.5 accent-purple-600" />
+                         style={{ marginTop: '2px', accentColor: '#C62368' }} />
                   <div>
-                    <p className="font-medium text-[#1e0e2e] text-sm">{s.name}</p>
-                    {s.description && <p className="text-xs text-purple-400">{s.description}</p>}
+                    <p className="font-medium text-sm" style={{ color: '#1a1a1a' }}>{s.name}</p>
+                    {s.description && <p className="text-xs" style={{ color: '#a0607a' }}>{s.description}</p>}
                   </div>
                 </label>
               ))}
             </div>
           )}
 
-          {/* Preview questions */}
           {questions.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-purple-50">
-              <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide mb-2">
+            <div className="mt-4 pt-4" style={{ borderTop: '1px solid #fbeef3' }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#a0607a' }}>
                 Förhandsgranskning ({questions.length} frågor)
               </p>
               <ol className="list-decimal list-inside space-y-1">
                 {questions.map(q => (
-                  <li key={q.id} className="text-xs text-purple-600">{q.text}</li>
+                  <li key={q.id} className="text-xs" style={{ color: '#C62368' }}>{q.text}</li>
                 ))}
               </ol>
             </div>
@@ -171,8 +182,8 @@ function SendBriefInner() {
         </div>
 
         {/* Client info */}
-        <div className="bg-white rounded-2xl border border-purple-100 p-6 flex flex-col gap-4">
-          <label className="block text-xs font-semibold text-purple-500 uppercase tracking-wide">
+        <div className="rounded-2xl p-6 flex flex-col gap-4" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
+          <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: '#a0607a' }}>
             Klientuppgifter *
           </label>
           <input
@@ -180,8 +191,9 @@ function SendBriefInner() {
             onChange={e => setClientName(e.target.value)}
             placeholder="Klientens namn eller organisation"
             required
-            className="w-full border border-purple-200 rounded-xl px-4 py-2.5 text-sm text-[#1e0e2e]
-                       focus:outline-none focus:border-purple-400 transition-colors"
+            style={inputStyle}
+            onFocus={e => (e.target.style.borderColor = '#C62368')}
+            onBlur={e => (e.target.style.borderColor = '#f0cdd8')}
           />
           <input
             type="email"
@@ -189,16 +201,17 @@ function SendBriefInner() {
             onChange={e => setClientEmail(e.target.value)}
             placeholder="klient@foretag.se"
             required
-            className="w-full border border-purple-200 rounded-xl px-4 py-2.5 text-sm text-[#1e0e2e]
-                       focus:outline-none focus:border-purple-400 transition-colors"
+            style={inputStyle}
+            onFocus={e => (e.target.style.borderColor = '#C62368')}
+            onBlur={e => (e.target.style.borderColor = '#f0cdd8')}
           />
         </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+        {error && <p className="text-sm" style={{ color: '#dc2626' }}>{error}</p>}
 
         <button type="submit" disabled={sending || sets.length === 0}
                 className="py-3.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-all"
-                style={{ background: 'linear-gradient(135deg,#6b2d82,#C62368)' }}>
+                style={{ background: '#C62368' }}>
           {sending ? 'Skickar…' : 'Skicka brief till klient →'}
         </button>
       </form>
@@ -219,8 +232,8 @@ function LoadingDots() {
     <div className="flex items-center justify-center h-64">
       <div className="flex gap-1.5">
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-bounce"
-               style={{ animationDelay: `${i * 0.15}s` }} />
+          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
+               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
     </div>

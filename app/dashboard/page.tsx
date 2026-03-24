@@ -27,7 +27,9 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-[#1e0e2e] mb-8">Doings Brief</h1>
+      <h1 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a', fontFamily: 'DM Sans, sans-serif' }}>
+        Doings Brief
+      </h1>
 
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-4 mb-10">
@@ -39,17 +41,21 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-4 mb-10">
         <Link href="/dashboard/send"
-              className="bg-white rounded-2xl p-5 border border-purple-100
-                         hover:border-purple-300 hover:shadow-sm transition-all">
-          <p className="font-semibold text-[#1e0e2e] text-sm">Skicka ny brief</p>
-          <p className="text-xs text-purple-400 mt-1">Välj frågebatteri och klientmail</p>
+              className="rounded-2xl p-5 transition-all"
+              style={{ background: '#fff', border: '1px solid #f0cdd8' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#C62368')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#f0cdd8')}>
+          <p className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>Skicka ny brief</p>
+          <p className="text-xs mt-1" style={{ color: '#a0607a' }}>Välj frågebatteri och klientmail</p>
         </Link>
 
         <Link href="/dashboard/question-sets/new"
-              className="bg-white rounded-2xl p-5 border border-purple-100
-                         hover:border-purple-300 hover:shadow-sm transition-all">
-          <p className="font-semibold text-[#1e0e2e] text-sm">Nytt frågebatteri</p>
-          <p className="text-xs text-purple-400 mt-1">Skapa och spara frågor</p>
+              className="rounded-2xl p-5 transition-all"
+              style={{ background: '#fff', border: '1px solid #f0cdd8' }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = '#C62368')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = '#f0cdd8')}>
+          <p className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>Nytt frågebatteri</p>
+          <p className="text-xs mt-1" style={{ color: '#a0607a' }}>Skapa och spara frågor</p>
         </Link>
       </div>
 
@@ -59,10 +65,13 @@ export default function DashboardPage() {
           ? <EmptyState text="Inga briefs skickade ännu." />
           : sessions.map(s => (
             <Link key={s.id} href={`/dashboard/briefs/${s.id}`}
-                  className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-purple-50 transition-colors">
+                  className="flex items-center justify-between py-3 px-4 rounded-xl transition-colors"
+                  style={{ color: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fdf5f7')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <div>
-                <span className="font-medium text-[#1e0e2e] text-sm">{s.client_name}</span>
-                <span className="text-xs text-purple-400 ml-2">{s.client_email}</span>
+                <span className="font-medium text-sm" style={{ color: '#1a1a1a' }}>{s.client_name}</span>
+                <span className="text-xs ml-2" style={{ color: '#a0607a' }}>{s.client_email}</span>
               </div>
               <StatusBadge status={s.status} />
             </Link>
@@ -76,9 +85,12 @@ export default function DashboardPage() {
           ? <EmptyState text="Inga frågebatterier än — skapa ett för att komma igång." />
           : questionSets.map(qs => (
             <Link key={qs.id} href={`/dashboard/question-sets/${qs.id}`}
-                  className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-purple-50 transition-colors">
-              <span className="font-medium text-[#1e0e2e] text-sm">{qs.name}</span>
-              <span className="text-xs text-purple-400">
+                  className="flex items-center justify-between py-3 px-4 rounded-xl transition-colors"
+                  style={{ color: 'inherit' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fdf5f7')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <span className="font-medium text-sm" style={{ color: '#1a1a1a' }}>{qs.name}</span>
+              <span className="text-xs" style={{ color: '#a0607a' }}>
                 {new Date(qs.updated_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}
               </span>
             </Link>
@@ -89,11 +101,11 @@ export default function DashboardPage() {
   )
 }
 
-function StatCard({ label, value, color = '#6b2d82' }: { label: string; value: number; color?: string }) {
+function StatCard({ label, value, color = '#C62368' }: { label: string; value: number; color?: string }) {
   return (
-    <div className="bg-white rounded-2xl p-5 border border-purple-100">
+    <div className="rounded-2xl p-5" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
       <p className="text-3xl font-bold" style={{ color }}>{value}</p>
-      <p className="text-xs text-purple-400 mt-1">{label}</p>
+      <p className="text-xs mt-1" style={{ color: '#a0607a' }}>{label}</p>
     </div>
   )
 }
@@ -102,10 +114,10 @@ function Section({ title, children, linkHref, linkLabel }: {
   title: string; children: React.ReactNode; linkHref: string; linkLabel: string
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-purple-100 mb-6">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-purple-50">
-        <h2 className="font-semibold text-[#1e0e2e] text-sm">{title}</h2>
-        <Link href={linkHref} className="text-xs text-purple-500 hover:text-purple-700 transition-colors">
+    <div className="rounded-2xl mb-6" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
+      <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #fbeef3' }}>
+        <h2 className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>{title}</h2>
+        <Link href={linkHref} className="text-xs transition-colors" style={{ color: '#C62368' }}>
           {linkLabel} →
         </Link>
       </div>
@@ -116,16 +128,17 @@ function Section({ title, children, linkHref, linkLabel }: {
 
 function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-      status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-600'
-    }`}>
+    <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+          style={status === 'submitted'
+            ? { background: '#dcfce7', color: '#16a34a' }
+            : { background: '#fdf5f7', color: '#a0607a' }}>
       {status === 'submitted' ? 'Besvarad' : 'Inväntar'}
     </span>
   )
 }
 
 function EmptyState({ text }: { text: string }) {
-  return <p className="text-sm text-purple-300 text-center py-6">{text}</p>
+  return <p className="text-sm text-center py-6" style={{ color: '#c4909f' }}>{text}</p>
 }
 
 function LoadingDots() {
@@ -133,8 +146,8 @@ function LoadingDots() {
     <div className="flex items-center justify-center h-64">
       <div className="flex gap-1.5">
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-bounce"
-               style={{ animationDelay: `${i * 0.15}s` }} />
+          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
+               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
     </div>

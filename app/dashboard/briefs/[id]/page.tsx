@@ -31,13 +31,13 @@ export default function BriefResponsesPage() {
   return (
     <div className="p-8 max-w-3xl">
       <div className="flex items-center gap-3 mb-2">
-        <Link href="/dashboard/briefs" className="text-purple-400 hover:text-purple-700 text-sm transition-colors">
+        <Link href="/dashboard/briefs" className="text-sm transition-colors" style={{ color: '#a0607a' }}>
           ← Tillbaka
         </Link>
-        <span className="text-purple-200">/</span>
-        <h1 className="text-xl font-bold text-[#1e0e2e]">{session?.client_name}</h1>
+        <span style={{ color: '#f0cdd8' }}>/</span>
+        <h1 className="text-xl font-bold" style={{ color: '#1a1a1a' }}>{session?.client_name}</h1>
       </div>
-      <p className="text-purple-400 text-sm mb-8">
+      <p className="text-sm mb-8" style={{ color: '#a0607a' }}>
         {session?.client_email} · Besvarad{' '}
         {session?.submitted_at
           ? new Date(session.submitted_at).toLocaleDateString('sv-SE', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
@@ -45,8 +45,8 @@ export default function BriefResponsesPage() {
       </p>
 
       {responses.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-purple-100 p-10 text-center">
-          <p className="text-purple-300 text-sm">
+        <div className="rounded-2xl p-10 text-center" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
+          <p className="text-sm" style={{ color: '#c4909f' }}>
             {session?.status === 'submitted'
               ? 'Brifen är besvarad men inga svar hittades.'
               : 'Klienten har inte svarat på brifen ännu.'}
@@ -55,20 +55,20 @@ export default function BriefResponsesPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {responses.map((r, i) => (
-            <div key={r.id} className="bg-white rounded-2xl border border-purple-100 p-6">
+            <div key={r.id} className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid #f0cdd8' }}>
               <div className="flex items-start gap-3">
                 <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5"
-                      style={{ background: 'linear-gradient(135deg,#6b2d82,#C62368)' }}>
+                      style={{ background: '#C62368' }}>
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide mb-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#a0607a' }}>
                     {r.response_type === 'voice' ? '🎙 Röst (transkriberat)' : '✏️ Text'}
                   </p>
-                  <p className="text-sm font-medium text-purple-600 mb-3">{r.question_text}</p>
-                  <div className="bg-purple-50 rounded-xl px-4 py-3">
-                    <p className="text-sm text-[#1e0e2e] leading-relaxed whitespace-pre-wrap">
-                      {r.text_content || <span className="text-purple-300 italic">Inget svar</span>}
+                  <p className="text-sm font-medium mb-3" style={{ color: '#C62368' }}>{r.question_text}</p>
+                  <div className="rounded-xl px-4 py-3" style={{ background: '#fdf5f7' }}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: '#1a1a1a' }}>
+                      {r.text_content || <span style={{ color: '#c4909f', fontStyle: 'italic' }}>Inget svar</span>}
                     </p>
                   </div>
                 </div>
@@ -78,7 +78,6 @@ export default function BriefResponsesPage() {
         </div>
       )}
 
-      {/* Export options */}
       {responses.length > 0 && (
         <div className="mt-6 flex gap-3">
           <button
@@ -92,7 +91,8 @@ export default function BriefResponsesPage() {
               a.href = url; a.download = `${session?.client_name}-brief.txt`; a.click()
               URL.revokeObjectURL(url)
             }}
-            className="text-sm px-4 py-2 rounded-xl font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+            className="text-sm px-4 py-2 rounded-xl font-medium transition-colors"
+            style={{ color: '#C62368', background: '#fdf5f7' }}>
             Exportera som text
           </button>
         </div>
@@ -106,8 +106,8 @@ function LoadingDots() {
     <div className="flex items-center justify-center h-64">
       <div className="flex gap-1.5">
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-bounce"
-               style={{ animationDelay: `${i * 0.15}s` }} />
+          <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
+               style={{ background: '#C62368', animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
     </div>
