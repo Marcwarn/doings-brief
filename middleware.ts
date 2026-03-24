@@ -9,19 +9,22 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
+          // Must set on BOTH request (for downstream middleware) and response (for browser)
+          // AND pass options so cookies get maxAge/secure/sameSite — not just session cookies
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
             supabaseResponse.cookies.set(name, value, options)
-          )
+          })
         },
       },
     }
   )
 
-  // Refresh session so it doesn't expire mid-use
+  // Refresh session — triggers setAll which writes updated cookies with correct expiry
   await supabase.auth.getUser()
 
   return supabaseResponse
