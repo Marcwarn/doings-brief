@@ -77,20 +77,9 @@ function Background({ index }: { index: number }) {
         <img
           src="/doings-logo-white.svg"
           alt="Doings"
-          width={44}
+          width={72}
           draggable={false}
           style={{ filter: 'drop-shadow(0 1px 3px rgba(30,14,46,0.45)) drop-shadow(0 0 12px rgba(107,45,130,0.3))' }}
-        />
-      </div>
-
-      {/* Lab flasks — bottom-right corner */}
-      <div className="fixed bottom-0 right-0 z-0 pointer-events-none select-none">
-        <img
-          src="/lab-flasks.png"
-          alt=""
-          aria-hidden
-          draggable={false}
-          style={{ width: 230, opacity: 0.80 }}
         />
       </div>
     </>
@@ -309,8 +298,6 @@ export default function BriefPage({ params }: { params: { token: string } }) {
       <div className="min-h-screen py-10 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="glass-header px-5 py-3 flex items-center gap-3 mb-10">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                 style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>D</div>
             <span className="font-semibold text-doings-purple-dark text-sm">Doings Brief</span>
           </div>
 
@@ -382,8 +369,6 @@ export default function BriefPage({ params }: { params: { token: string } }) {
       <header className="fixed top-3 left-0 right-0 z-10 px-4">
         <div className="max-w-lg mx-auto glass-header px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md flex items-center justify-center text-white text-xs font-bold"
-                 style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>D</div>
             <span className="font-semibold text-doings-purple-dark text-sm">Doings Brief</span>
             {sessionData?.client_name && (
               <span className="text-xs text-doings-muted hidden sm:inline ml-0.5">

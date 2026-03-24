@@ -42,33 +42,16 @@ export default function LoginPage() {
         <img
           src="/doings-logo-white.svg"
           alt="Doings"
-          width={44}
+          width={72}
           draggable={false}
           style={{ filter: 'drop-shadow(0 1px 3px rgba(30,14,46,0.45)) drop-shadow(0 0 12px rgba(107,45,130,0.3))' }}
-        />
-      </div>
-
-      {/* Lab flasks — bottom-right corner */}
-      <div className="fixed bottom-0 right-0 z-0 pointer-events-none select-none">
-        <img
-          src="/lab-flasks.png"
-          alt=""
-          aria-hidden
-          draggable={false}
-          style={{ width: 230, opacity: 0.80 }}
         />
       </div>
 
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
 
         {/* Logo */}
-        <div className="flex flex-col items-center gap-3 mb-8">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg font-bold"
-            style={{ background: 'linear-gradient(145deg, #6b2d82, #C62368)', boxShadow: '0 6px 24px rgba(107,45,130,0.35)' }}
-          >
-            D
-          </div>
+        <div className="flex flex-col items-center gap-2 mb-8">
           <span className="text-[1.05rem] font-semibold text-doings-purple-dark tracking-tight">
             Doings Brief
           </span>
