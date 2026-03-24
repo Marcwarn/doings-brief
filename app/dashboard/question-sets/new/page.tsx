@@ -36,7 +36,10 @@ export default function NewQuestionSetPage() {
       .insert({ user_id: user.id, name: name.trim(), description: description.trim() || null })
       .select().single()
 
-    if (qsErr || !qs) { setError('Kunde inte spara. Försök igen.'); setSaving(false); return }
+    if (qsErr || !qs) {
+      setError(`Kunde inte spara: ${qsErr?.message || 'okänt fel'}`)
+      setSaving(false); return
+    }
 
     await sb.from('questions').insert(
       filtered.map((text, i) => ({ question_set_id: qs.id, text, order_index: i }))

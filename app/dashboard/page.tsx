@@ -27,8 +27,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 max-w-4xl">
-      <h1 className="text-2xl font-bold text-[#1e0e2e] mb-1">Välkommen</h1>
-      <p className="text-purple-400 text-sm mb-8">Här är en översikt av ditt arbete.</p>
+      <h1 className="text-2xl font-bold text-[#1e0e2e] mb-8">Doings Brief</h1>
 
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-4 mb-10">
@@ -40,35 +39,17 @@ export default function DashboardPage() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-4 mb-10">
         <Link href="/dashboard/send"
-              className="flex items-center gap-3 bg-white rounded-2xl p-5 border border-purple-100
-                         hover:border-purple-300 hover:shadow-sm transition-all group">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
-               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-semibold text-[#1e0e2e] text-sm">Skicka ny brief</p>
-            <p className="text-xs text-purple-400">Välj frågebatteri och klientmail</p>
-          </div>
+              className="bg-white rounded-2xl p-5 border border-purple-100
+                         hover:border-purple-300 hover:shadow-sm transition-all">
+          <p className="font-semibold text-[#1e0e2e] text-sm">Skicka ny brief</p>
+          <p className="text-xs text-purple-400 mt-1">Välj frågebatteri och klientmail</p>
         </Link>
 
         <Link href="/dashboard/question-sets/new"
-              className="flex items-center gap-3 bg-white rounded-2xl p-5 border border-purple-100
-                         hover:border-purple-300 hover:shadow-sm transition-all group">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
-               style={{ background: 'linear-gradient(135deg, #6b2d82, #C62368)' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-semibold text-[#1e0e2e] text-sm">Nytt frågebatteri</p>
-            <p className="text-xs text-purple-400">Skapa och spara frågor</p>
-          </div>
+              className="bg-white rounded-2xl p-5 border border-purple-100
+                         hover:border-purple-300 hover:shadow-sm transition-all">
+          <p className="font-semibold text-[#1e0e2e] text-sm">Nytt frågebatteri</p>
+          <p className="text-xs text-purple-400 mt-1">Skapa och spara frågor</p>
         </Link>
       </div>
 

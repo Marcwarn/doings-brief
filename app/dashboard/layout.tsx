@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-3">
           <img src="/doings-logo-white.svg" alt="Doings" width={48}
                className="opacity-90"
-               style={{ filter: 'invert(20%) sepia(60%) saturate(400%) hue-rotate(260deg)' }} />
+               style={{ filter: 'brightness(0)' }} />
           <span className="font-bold text-[#1e0e2e] text-sm tracking-tight">Doings Brief</span>
         </div>
         <div className="flex items-center gap-4">
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
                       ${active
                         ? 'bg-purple-50 text-[#6b2d82]'
-                        : 'text-purple-400 hover:bg-purple-50 hover:text-[#6b2d82]'
+                        : 'text-[#1e0e2e] hover:bg-purple-50 hover:text-[#6b2d82]'
                       }`}>
                 <Icon />
                 {label}
