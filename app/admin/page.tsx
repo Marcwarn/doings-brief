@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type Profile } from '@/lib/supabase'
 
+const F: React.CSSProperties = {
+  width: '100%', padding: '9px 12px', borderRadius: 7,
+  border: '1px solid var(--border)', background: 'var(--bg)',
+  fontSize: 13, color: 'var(--text)', outline: 'none',
+  fontFamily: 'var(--font-sans)', transition: 'border-color 0.15s, box-shadow 0.15s',
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const sb = createClient()
@@ -14,17 +21,15 @@ export default function AdminPage() {
   const [adding, setAdding]       = useState(false)
   const [saving, setSaving]       = useState<string | null>(null)
 
-  // New user form
-  const [newEmail, setNewEmail]           = useState('')
-  const [newName, setNewName]             = useState('')
+  const [newEmail, setNewEmail]             = useState('')
+  const [newName, setNewName]               = useState('')
   const [newSenderEmail, setNewSenderEmail] = useState('')
-  const [inviting, setInviting]           = useState(false)
-  const [inviteResult, setInviteResult]   = useState('')
+  const [inviting, setInviting]             = useState(false)
+  const [inviteResult, setInviteResult]     = useState('')
 
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      // Check admin role
       const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single()
       if (profile?.role !== 'admin') { router.replace('/dashboard'); return }
       loadProfiles()
@@ -64,66 +69,98 @@ export default function AdminPage() {
     setInviting(false)
   }
 
-  if (loading) return <LoadingDots />
+  if (loading) return <PageLoader />
 
   return (
-    <div className="min-h-screen bg-[#f7f5fb]">
-      <header className="bg-white border-b border-purple-100 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-purple-400 hover:text-purple-700 text-sm transition-colors">
-            ← Dashboard
-          </Link>
-          <span className="text-purple-200">/</span>
-          <span className="font-bold text-[#1e0e2e] text-sm">Admin</span>
-        </div>
-      </header>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', fontFamily: 'var(--font-sans)' }}>
 
-      <div className="max-w-3xl mx-auto p-8">
-        <div className="flex items-center justify-between mb-8">
+      {/* Header strip */}
+      <div style={{
+        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+        padding: '14px 32px', display: 'flex', alignItems: 'center', gap: 10,
+      }}>
+        <Link href="/dashboard" style={{ fontSize: 13, color: 'var(--text-3)', textDecoration: 'none', transition: 'color 0.1s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}>
+          ← Dashboard
+        </Link>
+        <span style={{ color: 'var(--border)', fontSize: 14 }}>/</span>
+        <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>Admin</span>
+      </div>
+
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 32px', animation: 'fadeUp 0.35s ease both' }}>
+
+        {/* Page header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
           <div>
-            <h1 className="text-2xl font-bold text-[#1e0e2e]">Användare</h1>
-            <p className="text-purple-400 text-sm mt-0.5">Hantera kollegor och deras inställningar</p>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
+              Användare
+            </h1>
+            <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6 }}>
+              Hantera kollegor och deras inställningar
+            </p>
           </div>
-          <button onClick={() => setAdding(!adding)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-                  style={{ background: 'linear-gradient(135deg,#6b2d82,#C62368)' }}>
-            + Bjud in kollega
+          <button onClick={() => setAdding(!adding)} style={{
+            padding: '10px 18px', borderRadius: 8, border: 'none',
+            background: adding ? 'var(--bg)' : 'var(--accent)',
+            border: adding ? '1px solid var(--border)' : 'none' as any,
+            fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+            letterSpacing: '0.01em', color: adding ? 'var(--text-2)' : '#fff',
+            cursor: 'pointer',
+            boxShadow: adding ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
+          } as React.CSSProperties}>
+            {adding ? 'Avbryt' : '+ Bjud in kollega'}
           </button>
         </div>
 
         {/* Invite form */}
         {adding && (
-          <form onSubmit={inviteUser}
-                className="bg-white rounded-2xl border border-purple-100 p-6 mb-6 flex flex-col gap-4">
-            <h2 className="font-semibold text-[#1e0e2e] text-sm">Bjud in ny kollega</h2>
-            <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={inviteUser} style={{
+            background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)',
+            padding: '22px 24px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 14,
+          }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Bjud in ny kollega
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <input value={newEmail} onChange={e => setNewEmail(e.target.value)}
-                     type="email" placeholder="anna@doings.se" required
-                     className="border border-purple-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400" />
+                     type="email" placeholder="anna@doings.se" required style={F}
+                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
               <input value={newName} onChange={e => setNewName(e.target.value)}
-                     placeholder="Anna Andersson" required
-                     className="border border-purple-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400" />
+                     placeholder="Anna Andersson" required style={F}
+                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
             </div>
             <input value={newSenderEmail} onChange={e => setNewSenderEmail(e.target.value)}
-                   placeholder="anna@doingsclients.se (avsändaradress)"
-                   className="border border-purple-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400" />
-            <p className="text-xs text-purple-400">
-              Avsändaradressen används när kollegans briefs skickas till kunder.
-              Den måste vara verifierad i Resend.
+                   placeholder="anna@doingsclients.se (avsändaradress)" style={F}
+                   onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                   onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+              Avsändaradressen används när kollegans briefs skickas till kunder. Måste vara verifierad i Resend.
             </p>
             {inviteResult && (
-              <p className={`text-sm ${inviteResult.startsWith('Fel') ? 'text-red-500' : 'text-green-600'}`}>
+              <p style={{ fontSize: 13, margin: 0, color: inviteResult.startsWith('Fel') ? '#dc2626' : '#16a34a' }}>
                 {inviteResult}
               </p>
             )}
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setAdding(false)}
-                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors">
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" onClick={() => setAdding(false)} style={{
+                flex: 1, padding: '10px 0', borderRadius: 7, cursor: 'pointer',
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                fontSize: 13.5, fontWeight: 500, color: 'var(--text-2)',
+                fontFamily: 'var(--font-sans)',
+              }}>
                 Avbryt
               </button>
-              <button type="submit" disabled={inviting}
-                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
-                      style={{ background: 'linear-gradient(135deg,#6b2d82,#C62368)' }}>
+              <button type="submit" disabled={inviting} style={{
+                flex: 2, padding: '10px 0', borderRadius: 7, border: 'none',
+                background: inviting ? 'rgba(198,35,104,0.4)' : 'var(--accent)',
+                fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
+                letterSpacing: '0.01em', color: '#fff',
+                cursor: inviting ? 'not-allowed' : 'pointer',
+                boxShadow: inviting ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
+              }}>
                 {inviting ? 'Skickar…' : 'Skicka inbjudan'}
               </button>
             </div>
@@ -131,51 +168,64 @@ export default function AdminPage() {
         )}
 
         {/* User list */}
-        <div className="flex flex-col gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
           {profiles.map(p => (
-            <div key={p.id} className="bg-white rounded-2xl border border-purple-100 p-5">
-              <div className="flex items-start justify-between gap-4">
+            <div key={p.id} style={{ background: 'var(--surface)', padding: '18px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
                 <div>
-                  <p className="font-semibold text-[#1e0e2e] text-sm">{p.full_name || p.email}</p>
-                  <p className="text-xs text-purple-400">{p.email}</p>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{p.full_name || p.email}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{p.email}</div>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  p.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
-                }`}>
+                <span style={{
+                  fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+                  letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0,
+                  background: p.role === 'admin' ? 'var(--accent-dim)' : 'var(--bg)',
+                  color: p.role === 'admin' ? 'var(--accent)' : 'var(--text-3)',
+                }}>
                   {p.role === 'admin' ? 'Admin' : 'Konsult'}
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label className="text-xs text-purple-400 block mb-1">Namn</label>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Namn
+                  </label>
                   <input
                     defaultValue={p.full_name || ''}
-                    onBlur={e => { if (e.target.value !== (p.full_name || '')) updateProfile(p.id, { full_name: e.target.value }) }}
-                    className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400"
+                    style={F}
+                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = ''; if (e.target.value !== (p.full_name || '')) updateProfile(p.id, { full_name: e.target.value }) }}
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-purple-400 block mb-1">Avsändaradress</label>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                    Avsändaradress
+                  </label>
                   <input
                     defaultValue={p.sender_email || ''}
                     placeholder="namn@doingsclients.se"
-                    onBlur={e => { if (e.target.value !== (p.sender_email || '')) updateProfile(p.id, { sender_email: e.target.value }) }}
-                    className="w-full border border-purple-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400"
+                    style={F}
+                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = ''; if (e.target.value !== (p.sender_email || '')) updateProfile(p.id, { sender_email: e.target.value }) }}
                   />
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-2">
-                <label className="text-xs text-purple-400">Roll:</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                <label style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Roll:</label>
                 <select
                   value={p.role}
                   onChange={e => updateProfile(p.id, { role: e.target.value as 'admin' | 'consultant' })}
-                  className="text-xs border border-purple-200 rounded-lg px-2 py-1 focus:outline-none focus:border-purple-400">
+                  style={{
+                    fontSize: 12, border: '1px solid var(--border)', borderRadius: 6,
+                    padding: '4px 8px', background: 'var(--bg)', color: 'var(--text)',
+                    outline: 'none', fontFamily: 'var(--font-sans)', cursor: 'pointer',
+                  }}>
                   <option value="consultant">Konsult</option>
                   <option value="admin">Admin</option>
                 </select>
-                {saving === p.id && <span className="text-xs text-purple-400">Sparar…</span>}
+                {saving === p.id && <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Sparar…</span>}
               </div>
             </div>
           ))}
@@ -185,13 +235,12 @@ export default function AdminPage() {
   )
 }
 
-function LoadingDots() {
+function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex gap-1.5">
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '70vh' }}>
+      <div style={{ display: 'flex', gap: 5 }}>
         {[0,1,2].map(i => (
-          <div key={i} className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-bounce"
-               style={{ animationDelay: `${i * 0.15}s` }} />
+          <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
     </div>
