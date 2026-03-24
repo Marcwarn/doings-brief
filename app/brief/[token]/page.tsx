@@ -15,11 +15,14 @@ type AnswerState = { text: string; mode: 'voice' | 'text' | null; status: 'idle'
 // ── Shared background (changes per question) ──────────────────────────────────
 function Background({ index }: { index: number }) {
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div style={{ position: 'fixed', inset: 0, zIndex: -1, overflow: 'hidden' }}>
       {BACKGROUNDS.map((src, i) => (
         <img key={src} src={src} alt="" aria-hidden draggable={false}
-             className="absolute inset-0 w-full h-full object-cover select-none"
-             style={{ opacity: i === index ? 1 : 0, transition: 'opacity 1.1s cubic-bezier(0.4,0,0.2,1)' }} />
+             style={{
+               position: 'absolute', inset: 0, width: '100%', height: '100%',
+               objectFit: 'cover', userSelect: 'none', pointerEvents: 'none',
+               opacity: i === index ? 1 : 0, transition: 'opacity 1.1s cubic-bezier(0.4,0,0.2,1)',
+             }} />
       ))}
     </div>
   )
