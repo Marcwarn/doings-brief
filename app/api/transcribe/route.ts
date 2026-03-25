@@ -10,13 +10,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Forward the multipart form data directly to Berget AI
-    const formData = await req.formData()
+    const incoming = await req.formData()
 
-    // Ensure model is set to KB-Whisper-Large
-    if (!formData.has('model')) {
-      formData.set('model', 'KBLab/kb-whisper-large')
+    // Berget requires the field to be named "file" (not "audio")
+    // Rebuild FormData with correct field names
+    const bergetForm = new FormData()
+    const audioFile = incoming.get('file') ?? incoming.get('audio')
+    if (!audioFile) {
+      return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
     }
+    bergetForm.append('file', audioFile as Blob)
+    bergetForm.set('model', 'KBLab/kb-whisper-large')
 
     const bergetRes = await fetch(BERGET_API_URL, {
       method: 'POST',
@@ -24,7 +28,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${BERGET_API_KEY}`,
         // Do NOT set Content-Type — fetch sets it automatically with boundary for FormData
       },
-      body: formData,
+      body: bergetForm,
     })
 
     if (!bergetRes.ok) {

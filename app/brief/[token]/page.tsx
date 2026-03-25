@@ -199,7 +199,7 @@ export default function BriefPage() {
     const ext  = mimeToExt(mime)
     const blob = new Blob(chunksRef.current, { type: mime })
     const form = new FormData()
-    form.append('audio', blob, `recording.${ext}`)
+    form.append('file', blob, `recording.${ext}`)
     form.append('model', 'KBLab/kb-whisper-large')
 
     try {

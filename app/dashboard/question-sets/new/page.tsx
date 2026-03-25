@@ -106,7 +106,7 @@ export default function NewQuestionSetPage() {
     await new Promise(r => setTimeout(r, 300))
     const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
     const form = new FormData()
-    form.append('audio', blob, 'recording.webm')
+    form.append('file', blob, 'recording.webm')
     form.append('model', 'KBLab/kb-whisper-large')
     try {
       const res = await fetch('/api/transcribe', { method: 'POST', body: form })
