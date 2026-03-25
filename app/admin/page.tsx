@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type Profile } from '@/lib/supabase'
@@ -27,6 +27,20 @@ export default function AdminPage() {
   const [newPassword, setNewPassword]       = useState('')
   const [inviting, setInviting]             = useState(false)
   const [inviteResult, setInviteResult]     = useState('')
+
+  // Bulk import
+  const importRef                           = useRef<HTMLInputElement>(null)
+  const [importRows, setImportRows]         = useState<{name:string,email:string,password:string}[]>([])
+  const [importStatus, setImportStatus]     = useState<string[]>([])
+  const [importing, setImporting]           = useState(false)
+
+  // Bulk import
+  const importRef                               = useRef<HTMLInputElement>(null)
+  const [importRows, setImportRows]             = useState<{name:string,email:string,password:string}[]>([])
+  const [importStatus, setImportStatus]         = useState<('pending'|'ok'|'err')[]>([])
+  const [importMessages, setImportMessages]     = useState<string[]>([])
+  const [importing, setImporting]               = useState(false)
+  const [importDone, setImportDone]             = useState(false)
 
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
@@ -71,6 +85,47 @@ export default function AdminPage() {
       setInviteResult(`Fel: ${error || 'Okänt fel'}`)
     }
     setInviting(false)
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const text = await file.text()
+    const lines = text.split(/\r?\n/).filter(l => l.trim())
+    // Skip header row if it contains "namn" or "e-post" or "fullständigt"
+    const start = lines[0]?.toLowerCase().includes('namn') || lines[0]?.toLowerCase().includes('e-post') ? 1 : 0
+    const rows = lines.slice(start).map(l => {
+      // Handle quoted CSV values
+      const parts: string[] = []
+      let cur = '', inQ = false
+      for (const ch of l) {
+        if (ch === '"') { inQ = !inQ }
+        else if (ch === ',' && !inQ) { parts.push(cur.trim()); cur = '' }
+        else { cur += ch }
+      }
+      parts.push(cur.trim())
+      return { name: parts[0] || '', email: parts[1] || '', password: parts[2] || '' }
+    }).filter(r => r.email.includes('@'))
+    setImportRows(rows)
+    setImportStatus([])
+    e.target.value = ''
+  }
+
+  async function runImport() {
+    setImporting(true)
+    const statuses: string[] = []
+    for (const row of importRows) {
+      const res = await fetch('/api/admin/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: row.email, fullName: row.name, password: row.password || undefined }),
+      })
+      const { ok, error } = await res.json()
+      statuses.push(ok ? `✓ ${row.email}` : `✗ ${row.email} — ${error}`)
+      setImportStatus([...statuses])
+    }
+    setImporting(false)
+    setTimeout(loadProfiles, 1000)
   }
 
   if (loading) return <PageLoader />
@@ -196,6 +251,84 @@ export default function AdminPage() {
             </div>
           </form>
         )}
+
+        {/* Bulk import */}
+        <div style={{
+          background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)',
+          padding: '18px 22px', marginBottom: 24,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>
+                Importera flera användare
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+                Ladda upp en CSV-fil med kolumnerna: namn, e-post, lösenord
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <a href="/api/admin/bulk-template" download="bulk-users-template.csv" style={{
+                padding: '8px 14px', borderRadius: 7, border: '1px solid var(--border)',
+                background: 'var(--bg)', fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)',
+                textDecoration: 'none', cursor: 'pointer',
+              }}>
+                ↓ Ladda ner mall
+              </a>
+              <button onClick={() => importRef.current?.click()} style={{
+                padding: '8px 14px', borderRadius: 7, border: 'none',
+                background: 'var(--accent)', fontSize: 12.5, fontWeight: 700,
+                color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-display)',
+              }}>
+                Välj fil…
+              </button>
+              <input ref={importRef} type="file" accept=".csv,.txt" onChange={handleImportFile} style={{ display: 'none' }} />
+            </div>
+          </div>
+
+          {importRows.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
+                {importRows.length} användare hittades i filen:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                {importRows.map((r, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '7px 12px', borderRadius: 6, background: 'var(--bg)',
+                    border: '1px solid var(--border)', fontSize: 12.5,
+                  }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text)', minWidth: 160 }}>{r.name || '—'}</span>
+                    <span style={{ color: 'var(--text-3)', flex: 1 }}>{r.email}</span>
+                    <span style={{ fontSize: 11, color: r.password ? '#16a34a' : 'var(--text-3)' }}>
+                      {r.password ? 'med lösenord' : 'inbjudningslänk'}
+                    </span>
+                    {importStatus[i] && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: importStatus[i].startsWith('✓') ? '#16a34a' : '#dc2626' }}>
+                        {importStatus[i].startsWith('✓') ? '✓ Skapad' : '✗ Fel'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {importStatus.length < importRows.length && (
+                <button onClick={runImport} disabled={importing} style={{
+                  padding: '9px 20px', borderRadius: 7, border: 'none',
+                  background: importing ? 'rgba(198,35,104,0.4)' : 'var(--accent)',
+                  fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
+                  color: '#fff', cursor: importing ? 'not-allowed' : 'pointer',
+                  boxShadow: importing ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
+                }}>
+                  {importing ? 'Skapar konton…' : `Skapa ${importRows.length} konton`}
+                </button>
+              )}
+              {importStatus.length === importRows.length && importStatus.length > 0 && (
+                <div style={{ fontSize: 12.5, color: '#16a34a', fontWeight: 600 }}>
+                  Import klar — {importStatus.filter(s => s.startsWith('✓')).length} av {importRows.length} skapades.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* User list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
