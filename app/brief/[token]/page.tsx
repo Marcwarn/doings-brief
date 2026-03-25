@@ -295,12 +295,12 @@ export default function BriefPage() {
             Hej, {clientName}!
           </h1>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(255,255,255,0.65)', margin: 0, fontWeight: 300 }}>
-            {questions.length} frågor — svara med röst eller text.
+            {questions.length} frågor — tar bara några minuter.
           </p>
         </div>
       }>
         <p style={{ fontSize: 14, color: '#6b3348', fontFamily: 'var(--font-sans)', lineHeight: 1.65, marginBottom: 20 }}>
-          Det brukar ta 5–10 minuter. Svara så naturligt du kan — det finns inga rätt eller fel.
+          Du är den viktigaste personen i det här rummet — och det här är ditt tillfälle att sätta tonen för hela projektet. Inga rätta svar. Bara dina.
         </p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 22 }}>
           {questions.map((_, i) => (
