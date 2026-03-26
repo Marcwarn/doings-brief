@@ -29,6 +29,7 @@ export default function BriefResponsesPage() {
   const [summaryError, setSummaryError] = useState<string | null>(null)
   const [summary, setSummary] = useState<BriefSummary | null>(null)
   const [summaryUpdatedAt, setSummaryUpdatedAt] = useState<string | null>(null)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
 
   useEffect(() => {
     Promise.all([
@@ -204,6 +205,19 @@ export default function BriefResponsesPage() {
     }
   }
 
+  async function copySummary() {
+    if (!summary) return
+
+    try {
+      await navigator.clipboard.writeText(formatSummaryForClipboard(summary, summaryUpdatedAt))
+      setCopyStatus('copied')
+      window.setTimeout(() => setCopyStatus('idle'), 2000)
+    } catch {
+      setCopyStatus('error')
+      window.setTimeout(() => setCopyStatus('idle'), 2500)
+    }
+  }
+
   if (loading) return <PageLoader />
 
   return (
@@ -319,16 +333,44 @@ export default function BriefResponsesPage() {
 
       {summary && (
         <div style={{ marginTop: 28, background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-sub)' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
-              AI-sammanfattning
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-sub)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
+                AI-sammanfattning
+              </div>
+              <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
+                Första versionen analyserar bara detta enskilda svar och markerar vad slutsatserna främst bygger på.
+                {summaryUpdatedAt && (
+                  <> Senast genererad {new Date(summaryUpdatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</>
+                )}
+              </p>
             </div>
-            <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
-              Första versionen analyserar bara detta enskilda svar och markerar vad slutsatserna främst bygger på.
-              {summaryUpdatedAt && (
-                <> Senast genererad {new Date(summaryUpdatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <button
+                onClick={copySummary}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 7,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  color: 'var(--text-2)',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  transition: 'border-color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}>
+                Kopiera sammanfattning
+              </button>
+              {copyStatus === 'copied' && (
+                <p style={{ margin: 0, fontSize: 12, color: '#15803d' }}>Kopierad</p>
               )}
-            </p>
+              {copyStatus === 'error' && (
+                <p style={{ margin: 0, fontSize: 12, color: '#b91c1c' }}>Kunde inte kopiera</p>
+              )}
+            </div>
           </div>
 
           <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -355,6 +397,32 @@ export default function BriefResponsesPage() {
       )}
     </div>
   )
+}
+
+function formatSummaryForClipboard(summary: BriefSummary, updatedAt: string | null) {
+  const sections: Array<[string, string[]]> = [
+    ['AI-sammanfattning', [summary.summary]],
+    ['Viktigaste signaler', summary.keySignals],
+    ['Risker eller oklarheter', summary.risks],
+    ['Följdfrågor', summary.followUpQuestions],
+    ['Rekommenderade nästa steg', summary.nextSteps],
+    ['Bygger främst på', summary.basedOn],
+  ]
+
+  const lines = sections.flatMap(([title, items]) => {
+    const safeItems = items.length > 0 ? items : ['Inget att visa']
+    return [
+      title,
+      ...safeItems.map(item => `- ${item}`),
+      '',
+    ]
+  })
+
+  if (updatedAt) {
+    lines.push(`Senast genererad: ${new Date(updatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`)
+  }
+
+  return lines.join('\n').trim()
 }
 
 function downloadBlob(blob: Blob, filename: string) {
