@@ -18,6 +18,7 @@ async function main() {
     const responsePageUrl = await openResponsePage(page)
     await triggerSummary(page)
     await verifySummaryPanel(page)
+    await verifyCachedSummary(page)
 
     console.log(JSON.stringify({
       ok: true,
@@ -95,6 +96,11 @@ async function verifySummaryPanel(page) {
 
   const bodyText = await page.locator('body').textContent()
   assertIncludes(bodyText || '', 'AI-sammanfattning', 'summary panel header')
+}
+
+async function verifyCachedSummary(page) {
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.getByText('AI-sammanfattning', { exact: true }).waitFor({ timeout: 15000 })
 }
 
 function requireEnv(name, value) {

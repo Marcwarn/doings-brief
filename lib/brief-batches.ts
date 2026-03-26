@@ -2,6 +2,7 @@ import type { BriefSession } from '@/lib/supabase'
 
 export const BRIEF_BATCH_KEY_PREFIX = 'brief_batch:'
 export const BRIEF_BATCH_LOOKUP_PREFIX = 'brief_batch_lookup:'
+export const BRIEF_SUMMARY_KEY_PREFIX = 'brief_summary:'
 
 export type BriefBatchMetadata = {
   batchId: string
@@ -14,6 +15,20 @@ export type BriefBatchMetadata = {
 }
 
 export type BriefBatchLookupMap = Record<string, BriefBatchMetadata>
+
+export type BriefSummaryPayload = {
+  summary: string
+  keySignals: string[]
+  risks: string[]
+  followUpQuestions: string[]
+  nextSteps: string[]
+  basedOn: string[]
+}
+
+export type StoredBriefSummary = {
+  summary: BriefSummaryPayload
+  updatedAt: string
+}
 
 export type GroupedBriefSessions = {
   key: string
@@ -34,6 +49,10 @@ export function getBatchLookupKey(sessionId: string) {
   return `${BRIEF_BATCH_LOOKUP_PREFIX}${sessionId}`
 }
 
+export function getBriefSummaryKey(sessionId: string) {
+  return `${BRIEF_SUMMARY_KEY_PREFIX}${sessionId}`
+}
+
 export function parseBatchMetadata(raw: string | null | undefined) {
   if (!raw) return null
 
@@ -51,6 +70,49 @@ export function parseBatchMetadata(raw: string | null | undefined) {
       questionSetId: parsed.questionSetId || null,
       sessionIds: parsed.sessionIds,
       createdAt: parsed.createdAt || new Date().toISOString(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function normalizeStringList(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map(item => typeof item === 'string' ? item.trim() : '')
+    .filter(Boolean)
+    .slice(0, 6)
+}
+
+export function parseBriefSummaryPayload(value: unknown): BriefSummaryPayload | null {
+  if (!value || typeof value !== 'object') return null
+
+  const candidate = value as Record<string, unknown>
+  const summary = typeof candidate.summary === 'string' ? candidate.summary.trim() : ''
+  if (!summary) return null
+
+  return {
+    summary,
+    keySignals: normalizeStringList(candidate.keySignals),
+    risks: normalizeStringList(candidate.risks),
+    followUpQuestions: normalizeStringList(candidate.followUpQuestions),
+    nextSteps: normalizeStringList(candidate.nextSteps),
+    basedOn: normalizeStringList(candidate.basedOn),
+  }
+}
+
+export function parseStoredBriefSummary(raw: string | null | undefined) {
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as StoredBriefSummary
+    const summary = parseBriefSummaryPayload(parsed?.summary)
+    if (!summary) return null
+
+    return {
+      summary,
+      updatedAt: parsed?.updatedAt || new Date().toISOString(),
     }
   } catch {
     return null

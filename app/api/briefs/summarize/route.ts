@@ -1,43 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseRequestClient } from '@/lib/server-auth'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
+import {
+  getBriefSummaryKey,
+  parseBriefSummaryPayload,
+  parseStoredBriefSummary,
+  type BriefSummaryPayload,
+} from '@/lib/brief-batches'
 
 const BERGET_BASE = 'https://api.berget.ai/v1'
-
-type SummaryPayload = {
-  summary: string
-  keySignals: string[]
-  risks: string[]
-  followUpQuestions: string[]
-  nextSteps: string[]
-  basedOn: string[]
-}
-
-function normalizeStringList(value: unknown) {
-  if (!Array.isArray(value)) return []
-
-  return value
-    .map(item => typeof item === 'string' ? item.trim() : '')
-    .filter(Boolean)
-    .slice(0, 6)
-}
-
-function coerceSummaryPayload(value: unknown): SummaryPayload | null {
-  if (!value || typeof value !== 'object') return null
-
-  const candidate = value as Record<string, unknown>
-  const summary = typeof candidate.summary === 'string' ? candidate.summary.trim() : ''
-  if (!summary) return null
-
-  return {
-    summary,
-    keySignals: normalizeStringList(candidate.keySignals),
-    risks: normalizeStringList(candidate.risks),
-    followUpQuestions: normalizeStringList(candidate.followUpQuestions),
-    nextSteps: normalizeStringList(candidate.nextSteps),
-    basedOn: normalizeStringList(candidate.basedOn),
-  }
-}
 
 export async function POST(req: NextRequest) {
   const key = process.env.BERGET_API_KEY
@@ -48,7 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { sessionId } = await req.json()
+    const { sessionId, regenerate = false, cachedOnly = false } = await req.json()
 
     if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
@@ -77,6 +48,26 @@ export async function POST(req: NextRequest) {
     const { data: session, error: sessionError } = await sessionQuery.single()
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Brief hittades inte' }, { status: 404 })
+    }
+
+    const summaryKey = getBriefSummaryKey(sessionId)
+    const { data: cachedRow, error: cachedError } = await admin
+      .from('settings')
+      .select('value')
+      .eq('key', summaryKey)
+      .maybeSingle()
+
+    if (cachedError) {
+      console.error('brief summary cache read error:', cachedError)
+    }
+
+    const cachedSummary = parseStoredBriefSummary(cachedRow?.value)
+    if (cachedOnly) {
+      return NextResponse.json({ summary: cachedSummary?.summary || null, updatedAt: cachedSummary?.updatedAt || null })
+    }
+
+    if (cachedSummary && !regenerate) {
+      return NextResponse.json({ summary: cachedSummary.summary, updatedAt: cachedSummary.updatedAt })
     }
 
     const { data: responses, error: responsesError } = await admin
@@ -153,9 +144,9 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
     const raw = data.choices?.[0]?.message?.content || ''
 
-    let parsed: SummaryPayload | null = null
+    let parsed: BriefSummaryPayload | null = null
     try {
-      parsed = coerceSummaryPayload(JSON.parse(raw))
+      parsed = parseBriefSummaryPayload(JSON.parse(raw))
     } catch {
       parsed = null
     }
@@ -165,7 +156,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Ogiltigt svar fran AI' }, { status: 500 })
     }
 
-    return NextResponse.json({ summary: parsed })
+    const updatedAt = new Date().toISOString()
+    const { error: cacheWriteError } = await admin
+      .from('settings')
+      .upsert({
+        key: summaryKey,
+        value: JSON.stringify({ summary: parsed, updatedAt }),
+        updated_at: updatedAt,
+      })
+
+    if (cacheWriteError) {
+      console.error('brief summary cache write error:', cacheWriteError)
+    }
+
+    return NextResponse.json({ summary: parsed, updatedAt })
   } catch (error) {
     console.error('brief summarize error:', error)
     return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 })

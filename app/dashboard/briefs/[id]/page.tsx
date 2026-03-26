@@ -25,8 +25,10 @@ export default function BriefResponsesPage() {
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [summarizing, setSummarizing] = useState(false)
+  const [loadingSummary, setLoadingSummary] = useState(false)
   const [summaryError, setSummaryError] = useState<string | null>(null)
   const [summary, setSummary] = useState<BriefSummary | null>(null)
+  const [summaryUpdatedAt, setSummaryUpdatedAt] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -37,6 +39,37 @@ export default function BriefResponsesPage() {
       setSession(sess); setResponses(resp || []); setLoading(false)
     })
   }, [id])
+
+  useEffect(() => {
+    if (!session || responses.length === 0) return
+
+    let isMounted = true
+    setLoadingSummary(true)
+
+    fetch('/api/briefs/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: session.id, cachedOnly: true }),
+    })
+      .then(async response => {
+        const payload = await response.json().catch(() => null)
+        if (!isMounted) return
+        if (!response.ok) return
+        setSummary(payload?.summary || null)
+        setSummaryUpdatedAt(payload?.updatedAt || null)
+      })
+      .catch(() => {
+        if (!isMounted) return
+      })
+      .finally(() => {
+        if (!isMounted) return
+        setLoadingSummary(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [session, responses.length])
 
   async function exportAsWord() {
     if (!session || responses.length === 0 || exporting) return
@@ -143,7 +176,7 @@ export default function BriefResponsesPage() {
     }
   }
 
-  async function summarizeWithAi() {
+  async function summarizeWithAi(regenerate = false) {
     if (!session || responses.length === 0 || summarizing) return
 
     setSummarizing(true)
@@ -153,7 +186,7 @@ export default function BriefResponsesPage() {
       const response = await fetch('/api/briefs/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id }),
+        body: JSON.stringify({ sessionId: session.id, regenerate }),
       })
 
       const payload = await response.json().catch(() => null)
@@ -163,6 +196,7 @@ export default function BriefResponsesPage() {
       }
 
       setSummary(payload.summary)
+      setSummaryUpdatedAt(payload.updatedAt || null)
     } catch {
       setSummaryError('Nätverksfel. Försök igen.')
     } finally {
@@ -254,7 +288,7 @@ export default function BriefResponsesPage() {
               {exporting ? 'Skapar Word-dokument...' : 'Ladda ner som Word'}
             </button>
             <button
-              onClick={summarizeWithAi}
+              onClick={() => summarizeWithAi(Boolean(summary))}
               disabled={summarizing}
               style={{
                 padding: '9px 18px', borderRadius: 7,
@@ -277,6 +311,9 @@ export default function BriefResponsesPage() {
           {summaryError && (
             <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{summaryError}</p>
           )}
+          {loadingSummary && !summary && (
+            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>Läser sparad AI-sammanfattning...</p>
+          )}
         </div>
       )}
 
@@ -288,6 +325,9 @@ export default function BriefResponsesPage() {
             </div>
             <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
               Första versionen analyserar bara detta enskilda svar och markerar vad slutsatserna främst bygger på.
+              {summaryUpdatedAt && (
+                <> Senast genererad {new Date(summaryUpdatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</>
+              )}
             </p>
           </div>
 
