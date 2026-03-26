@@ -119,11 +119,15 @@ export default function BriefPage() {
   const [bgIndex, setBgIndex]       = useState(0)
   const [voiceError, setVoiceError] = useState('')
 
-  const mediaRef   = useRef<MediaRecorder | null>(null)
-  const chunksRef  = useRef<Blob[]>([])
-  const mimeRef    = useRef<string>('')
-  const timerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const mediaRef     = useRef<MediaRecorder | null>(null)
+  const chunksRef    = useRef<Blob[]>([])
+  const mimeRef      = useRef<string>('')
+  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null)
+  const startTimeRef = useRef<number>(0)
   const [elapsed, setElapsed] = useState(0)
+
+  // Clean up timer on unmount
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
 
   useEffect(() => {
     if (!token) return
@@ -163,9 +167,14 @@ export default function BriefPage() {
       mediaRef.current = mr
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       mr.onstop = () => stream.getTracks().forEach(t => t.stop())
-      mr.start(100) // collect chunks every 100ms so we have data quickly
+      mr.start(250) // collect chunks every 250ms
 
-      timerRef.current = setInterval(() => setElapsed(e => e + 1000), 1000)
+      // Use Date.now() reference so timer never drifts
+      startTimeRef.current = Date.now()
+      if (timerRef.current) clearInterval(timerRef.current)
+      timerRef.current = setInterval(() => {
+        setElapsed(Date.now() - startTimeRef.current)
+      }, 500)
       updateAnswer(i, { status: 'recording', mode: 'voice', text: '' })
     } catch {
       setVoiceError('Kunde inte komma åt mikrofonen. Kontrollera webbläsarbehörigheter och försök igen.')
