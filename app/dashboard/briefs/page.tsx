@@ -60,14 +60,22 @@ export default function BriefsPage() {
         <Link href="/dashboard/send" style={{
           display: 'inline-flex', alignItems: 'center', gap: 7,
           padding: '10px 18px', borderRadius: 8,
-          background: 'var(--accent)', color: '#fff',
+          background: 'var(--surface)', color: 'var(--text)',
+          border: '1px solid var(--border)',
           fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
           letterSpacing: '0.01em', textDecoration: 'none',
-          boxShadow: '0 4px 16px rgba(198,35,104,0.22)',
-          transition: 'transform 0.15s, box-shadow 0.15s',
+          transition: 'border-color 0.15s, background 0.15s, color 0.15s',
         }}
-        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-1px)'; el.style.boxShadow = '0 6px 20px rgba(198,35,104,0.30)' }}
-        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = ''; el.style.boxShadow = '0 4px 16px rgba(198,35,104,0.22)' }}>
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.borderColor = 'var(--accent)'
+          el.style.background = 'var(--accent-dim)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLElement
+          el.style.borderColor = 'var(--border)'
+          el.style.background = 'var(--surface)'
+        }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
