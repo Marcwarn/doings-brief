@@ -85,55 +85,90 @@ export default function BriefsPage() {
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+        <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+          {/* Column headers */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 110px 130px 220px',
+            padding: '9px 22px', background: 'var(--bg)',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            {['Kund', 'Status', 'Skickad', ''].map((h, i) => (
+              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+            ))}
+          </div>
+
+          {/* Rows */}
           {sessions.map(s => (
             <div key={s.id} style={{
-              background: 'var(--surface)', padding: '16px 22px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+              display: 'grid', gridTemplateColumns: '1fr 110px 130px 220px',
+              alignItems: 'center',
+              padding: '14px 22px',
+              background: 'var(--surface)',
+              borderBottom: '1px solid var(--border)',
               transition: 'background 0.1s',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-dim)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.client_name}</span>
-                  <Pill ok={s.status === 'submitted'} />
+
+              {/* Kund */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                  background: 'linear-gradient(135deg, var(--accent), #6b2d82)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff',
+                }}>
+                  {s.client_name?.charAt(0).toUpperCase() || '?'}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{s.client_email}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, opacity: 0.7 }}>
-                  {new Date(s.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.client_name}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.client_email}
+                  </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+
+              {/* Status */}
+              <div><Pill ok={s.status === 'submitted'} /></div>
+
+              {/* Datum */}
+              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                {new Date(s.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </div>
+
+              {/* Åtgärder */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
                 {s.status === 'submitted' && (
                   <Link href={`/dashboard/briefs/${s.id}`} style={{
-                    padding: '7px 14px', borderRadius: 6,
+                    padding: '6px 13px', borderRadius: 6,
                     background: 'var(--accent)', color: '#fff',
                     fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                    letterSpacing: '0.01em', textDecoration: 'none',
+                    letterSpacing: '0.01em', textDecoration: 'none', flexShrink: 0,
                   }}>
                     Se svar
                   </Link>
                 )}
-                <button onClick={() => navigator.clipboard.writeText(briefUrl(s.token))} style={{
-                  padding: '7px 14px', borderRadius: 6,
+                <button onClick={() => navigator.clipboard.writeText(briefUrl(s.token))} title="Kopiera länk" style={{
+                  padding: '6px 10px', borderRadius: 6,
                   border: '1px solid var(--border)', background: 'var(--surface)',
-                  fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)',
+                  fontSize: 12, fontWeight: 500, color: 'var(--text-2)',
                   cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                  transition: 'border-color 0.15s',
+                  transition: 'border-color 0.15s', flexShrink: 0,
                 }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
                   Kopiera länk
                 </button>
                 {confirming === s.id ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>Radera?</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera?</span>
                     <button onClick={() => deleteSession(s.id)} disabled={deleting === s.id} style={{
                       padding: '5px 10px', borderRadius: 6, border: 'none',
                       background: 'var(--text)', color: 'var(--bg)',
                       fontSize: 12, fontWeight: 600, cursor: deleting === s.id ? 'not-allowed' : 'pointer',
-                      fontFamily: 'var(--font-sans)', opacity: deleting === s.id ? 0.5 : 1,
+                      opacity: deleting === s.id ? 0.5 : 1,
                     }}>
                       {deleting === s.id ? '…' : 'Ja'}
                     </button>
@@ -141,17 +176,16 @@ export default function BriefsPage() {
                       padding: '5px 10px', borderRadius: 6,
                       border: '1px solid var(--border)', background: 'none',
                       fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
                     }}>
                       Avbryt
                     </button>
                   </div>
                 ) : (
                   <button onClick={() => setConfirming(s.id)} style={{
-                    padding: '7px 10px', borderRadius: 6,
+                    padding: '6px 10px', borderRadius: 6,
                     background: 'none', border: '1px solid transparent',
-                    fontSize: 12.5, color: 'var(--text-3)', cursor: 'pointer',
-                    fontFamily: 'var(--font-sans)', transition: 'border-color 0.1s, color 0.1s',
+                    fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                    transition: 'border-color 0.1s, color 0.1s', flexShrink: 0,
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}>
