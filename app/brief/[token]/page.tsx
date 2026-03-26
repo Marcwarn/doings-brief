@@ -122,12 +122,29 @@ export default function BriefPage() {
   const mediaRef     = useRef<MediaRecorder | null>(null)
   const chunksRef    = useRef<Blob[]>([])
   const mimeRef      = useRef<string>('')
-  const timerRef     = useRef<ReturnType<typeof setInterval> | null>(null)
+  const rafRef       = useRef<number | null>(null)
   const startTimeRef = useRef<number>(0)
-  const [elapsed, setElapsed] = useState(0)
+  const timerDisplayRef = useRef<HTMLSpanElement | null>(null)
 
-  // Clean up timer on unmount
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
+  // Clean up RAF on unmount
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }, [])
+
+  function startTimer() {
+    startTimeRef.current = Date.now()
+    const tick = () => {
+      const ms = Date.now() - startTimeRef.current
+      const s  = Math.floor(ms / 1000)
+      const display = `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`
+      if (timerDisplayRef.current) timerDisplayRef.current.textContent = display
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+  }
+
+  function stopTimer() {
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+    if (timerDisplayRef.current) timerDisplayRef.current.textContent = '00:00'
+  }
 
   useEffect(() => {
     if (!token) return
@@ -161,20 +178,13 @@ export default function BriefPage() {
       const mime = getSupportedMime()
       mimeRef.current = mime
       chunksRef.current = []
-      setElapsed(0)
 
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
       mediaRef.current = mr
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       mr.onstop = () => stream.getTracks().forEach(t => t.stop())
       mr.start(250) // collect chunks every 250ms
-
-      // Use Date.now() reference so timer never drifts
-      startTimeRef.current = Date.now()
-      if (timerRef.current) clearInterval(timerRef.current)
-      timerRef.current = setInterval(() => {
-        setElapsed(Date.now() - startTimeRef.current)
-      }, 500)
+      startTimer()
       updateAnswer(i, { status: 'recording', mode: 'voice', text: '' })
     } catch {
       setVoiceError('Kunde inte komma åt mikrofonen. Kontrollera webbläsarbehörigheter och försök igen.')
@@ -183,7 +193,7 @@ export default function BriefPage() {
   }
 
   async function stopRecording(i: number) {
-    if (timerRef.current) clearInterval(timerRef.current)
+    stopTimer()
     updateAnswer(i, { status: 'transcribing' })
     setVoiceError('')
 
@@ -238,11 +248,6 @@ export default function BriefPage() {
       body: JSON.stringify({ token, responses: payload }),
     })
     setStep('done')
-  }
-
-  function formatTime(ms: number) {
-    const s = Math.floor(ms / 1000)
-    return `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -406,7 +411,7 @@ export default function BriefPage() {
               </div>
               {/* Timer */}
               <p style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 600, color: '#3d1a2e', margin: '0 0 18px', letterSpacing: '-0.02em' }}>
-                {formatTime(elapsed)}
+                <span ref={timerDisplayRef}>00:00</span>
               </p>
               <button onClick={() => stopRecording(current)} style={{
                 padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
