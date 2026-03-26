@@ -151,7 +151,8 @@ export default function BriefsPage() {
                 {s.status === 'submitted' && (
                   <Link href={`/dashboard/briefs/${s.id}`} style={{
                     padding: '6px 13px', borderRadius: 6,
-                    background: 'var(--accent)', color: '#fff',
+                    background: 'var(--surface)', color: 'var(--text)',
+                    border: '1px solid var(--border)',
                     fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
                     letterSpacing: '0.01em', textDecoration: 'none', flexShrink: 0,
                   }}>

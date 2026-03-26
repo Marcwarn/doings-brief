@@ -40,16 +40,16 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 32 }}>
         <Link href="/dashboard/send" style={{
           display: 'block', padding: '20px 22px', borderRadius: 10,
-          background: 'var(--accent)', textDecoration: 'none',
-          boxShadow: '0 4px 20px rgba(198,35,104,0.20)',
-          transition: 'transform 0.15s, box-shadow 0.15s',
+          background: 'var(--surface)', textDecoration: 'none',
+          border: '1px solid var(--border)',
+          transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
         }}
-        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 28px rgba(198,35,104,0.28)' }}
-        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = ''; el.style.boxShadow = '0 4px 20px rgba(198,35,104,0.20)' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>
+        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--accent)'; el.style.boxShadow = '0 0 0 3px var(--accent-dim)'; el.style.background = 'var(--accent-dim)' }}
+        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--border)'; el.style.boxShadow = ''; el.style.background = 'var(--surface)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
             Skicka ny brief
           </div>
-          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)', marginTop: 4 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4 }}>
             Välj frågebatteri och klientmail
           </div>
         </Link>

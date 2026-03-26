@@ -138,13 +138,12 @@ export default function EditQuestionSetPage() {
             Skicka brief →
           </Link>
           <button type="submit" disabled={saving} style={{
-            flex: 2, padding: '11px 0', borderRadius: 7, border: 'none',
-            background: saved ? '#16a34a' : saving ? 'rgba(198,35,104,0.5)' : 'var(--accent)',
+            flex: 2, padding: '11px 0', borderRadius: 7, border: '1px solid var(--border)',
+            background: saved ? '#f0fdf4' : saving ? 'var(--bg)' : 'var(--surface)',
             fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
-            letterSpacing: '0.01em', color: '#fff',
+            letterSpacing: '0.01em', color: saved ? '#166534' : saving ? 'var(--text-3)' : 'var(--text)',
             cursor: saving ? 'not-allowed' : 'pointer',
-            boxShadow: saving ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
-            transition: 'background 0.2s',
+            transition: 'background 0.2s, border-color 0.15s',
           }}>
             {saving ? 'Sparar…' : saved ? 'Sparat!' : 'Spara ändringar'}
           </button>

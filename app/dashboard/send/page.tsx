@@ -107,12 +107,12 @@ function SendBriefInner() {
               Kopiera länk
             </button>
             <button onClick={() => { setSent(null); setClientName(''); setClientEmail(''); setClientOrg('') }} style={{
-              flex: 1, padding: '10px 0', borderRadius: 7, border: 'none',
-              background: 'var(--accent)',
+              flex: 1, padding: '10px 0', borderRadius: 7,
+              border: '1px solid var(--border)', background: 'var(--surface)',
               fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
-              letterSpacing: '0.01em', color: '#fff',
+              letterSpacing: '0.01em', color: 'var(--text)',
               cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(198,35,104,0.22)',
+              transition: 'border-color 0.15s, background 0.15s',
             }}>
               Skicka en till
             </button>
@@ -217,16 +217,15 @@ function SendBriefInner() {
         )}
 
         <button type="submit" disabled={sending || sets.length === 0} style={{
-          padding: '13px 0', borderRadius: 7, border: 'none',
-          background: (sending || sets.length === 0) ? 'rgba(198,35,104,0.4)' : 'var(--accent)',
+          padding: '13px 0', borderRadius: 7, border: '1px solid var(--border)',
+          background: (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)',
           fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-          letterSpacing: '0.01em', color: '#fff',
+          letterSpacing: '0.01em', color: (sending || sets.length === 0) ? 'var(--text-3)' : 'var(--text)',
           cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
-          boxShadow: (sending || sets.length === 0) ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
-          transition: 'transform 0.15s, box-shadow 0.15s',
+          transition: 'border-color 0.15s, background 0.15s',
         }}
-        onMouseEnter={e => { if (!sending && sets.length > 0) { const el = e.currentTarget; el.style.transform = 'translateY(-1px)'; el.style.boxShadow = '0 6px 22px rgba(198,35,104,0.30)' } }}
-        onMouseLeave={e => { const el = e.currentTarget; el.style.transform = ''; el.style.boxShadow = (sending || sets.length === 0) ? 'none' : '0 4px 16px rgba(198,35,104,0.22)' }}>
+        onMouseEnter={e => { if (!sending && sets.length > 0) { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.background = 'var(--accent-dim)' } }}
+        onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.background = (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)' }}>
           {sending ? 'Skickar…' : 'Skicka brief till klient →'}
         </button>
       </form>

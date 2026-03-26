@@ -206,17 +206,20 @@ export default function NewQuestionSetPage() {
             disabled={aiLoading || !aiTopic.trim()}
             style={{
               alignSelf: 'flex-start',
-              padding: '9px 18px', borderRadius: 7, border: 'none',
-              background: aiLoading || !aiTopic.trim() ? 'rgba(198,35,104,0.35)' : 'var(--accent)',
+              padding: '9px 18px', borderRadius: 7, border: '1px solid var(--border)',
+              background: aiLoading || !aiTopic.trim() ? 'var(--bg)' : 'var(--surface)',
               fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700,
-              letterSpacing: '0.01em', color: '#fff', cursor: aiLoading || !aiTopic.trim() ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.01em', color: aiLoading || !aiTopic.trim() ? 'var(--text-3)' : 'var(--text)', cursor: aiLoading || !aiTopic.trim() ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: 7,
+              transition: 'border-color 0.15s, background 0.15s',
             }}
+            onMouseEnter={e => { if (!aiLoading && aiTopic.trim()) { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-dim)' } }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = aiLoading || !aiTopic.trim() ? 'var(--bg)' : 'var(--surface)' }}
           >
             {aiLoading ? (
               <>
                 <span style={{ display: 'inline-flex', gap: 3 }}>
-                  {[0,1,2].map(i => <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'bounce 0.8s ease-in-out infinite', animationDelay: `${i*0.15}s` }} />)}
+                  {[0,1,2].map(i => <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--text)', display: 'inline-block', animation: 'bounce 0.8s ease-in-out infinite', animationDelay: `${i*0.15}s` }} />)}
                 </span>
                 Genererar…
               </>
@@ -360,12 +363,12 @@ export default function NewQuestionSetPage() {
             Avbryt
           </Link>
           <button type="submit" disabled={saving} style={{
-            flex: 2, padding: '11px 0', borderRadius: 7, border: 'none',
-            background: saving ? 'rgba(198,35,104,0.5)' : 'var(--accent)',
+            flex: 2, padding: '11px 0', borderRadius: 7, border: '1px solid var(--border)',
+            background: saving ? 'var(--bg)' : 'var(--surface)',
             fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
-            letterSpacing: '0.01em', color: '#fff',
+            letterSpacing: '0.01em', color: saving ? 'var(--text-3)' : 'var(--text)',
             cursor: saving ? 'not-allowed' : 'pointer',
-            boxShadow: saving ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
+            transition: 'border-color 0.15s, background 0.15s',
           }}>
             {saving ? 'Sparar…' : 'Spara frågebatteri'}
           </button>
