@@ -18,6 +18,7 @@ async function main() {
     const responsePageUrl = await openResponsePage(page)
     await triggerSummary(page)
     await verifySummaryPanel(page)
+    await verifyCopyAction(page)
     await verifyCachedSummary(page)
 
     console.log(JSON.stringify({
@@ -101,6 +102,11 @@ async function verifySummaryPanel(page) {
 async function verifyCachedSummary(page) {
   await page.reload({ waitUntil: 'networkidle' })
   await page.getByText('AI-sammanfattning', { exact: true }).waitFor({ timeout: 15000 })
+}
+
+async function verifyCopyAction(page) {
+  await page.getByRole('button', { name: /kopiera sammanfattning/i }).click()
+  await page.getByText('Kopierad', { exact: true }).waitFor({ timeout: 15000 })
 }
 
 function requireEnv(name, value) {
