@@ -31,7 +31,7 @@ async function main() {
     await login(page)
     const responsePageUrl = await openResponsePage(page)
     const expectedClientName = await readText(page, 'h1')
-    const firstQuestion = await firstVisibleText(page, 'div', 'Fråga')
+    const firstQuestion = await firstQuestionFromPage(page)
 
     const download = await triggerWordDownload(page)
     const suggestedFilename = download.suggestedFilename()
@@ -106,17 +106,17 @@ async function readText(page, selector) {
   return (text || '').trim()
 }
 
-async function firstVisibleText(page, selector, excludeText) {
-  const texts = await page.locator(selector).allTextContents()
-  for (const text of texts) {
-    const trimmed = text.trim()
-    if (!trimmed) continue
-    if (excludeText && trimmed.includes(excludeText)) continue
-    if (trimmed === 'Röst' || trimmed === 'Text') continue
-    if (trimmed === 'Ladda ner som Word') continue
-    return trimmed
-  }
-  return ''
+async function firstQuestionFromPage(page) {
+  const bodyText = await page.locator('body').textContent()
+  const candidates = (bodyText || '')
+    .split('\n')
+    .map(text => text.trim())
+    .filter(Boolean)
+    .filter(text => text.endsWith('?'))
+    .filter(text => text.length > 10)
+    .filter(text => text !== 'Radera?')
+
+  return candidates[0] || ''
 }
 
 async function extractDocumentXml(docxPath) {
