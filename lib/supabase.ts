@@ -42,6 +42,7 @@ export type BriefSession = {
   question_set_id: string | null
   client_name: string
   client_email: string
+  client_organisation: string | null
   token: string
   status: 'pending' | 'submitted'
   created_at: string

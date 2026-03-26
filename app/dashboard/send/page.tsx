@@ -20,8 +20,9 @@ function SendBriefInner() {
   const [sets, setSets]               = useState<QuestionSet[]>([])
   const [selectedSet, setSelectedSet] = useState<string>(searchParams.get('set') || '')
   const [questions, setQuestions]     = useState<Question[]>([])
-  const [clientName, setClientName]   = useState('')
-  const [clientEmail, setClientEmail] = useState('')
+  const [clientName, setClientName]         = useState('')
+  const [clientEmail, setClientEmail]       = useState('')
+  const [clientOrg, setClientOrg]           = useState('')
   const [loading, setLoading]         = useState(true)
   const [sending, setSending]         = useState(false)
   const [sent, setSent]               = useState<{ token: string; email: string } | null>(null)
@@ -44,7 +45,7 @@ function SendBriefInner() {
   async function send(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedSet) { setError('Välj ett frågebatteri.'); return }
-    if (!clientName.trim() || !clientEmail.trim()) { setError('Fyll i klientens namn och e-post.'); return }
+    if (!clientName.trim() || !clientEmail.trim()) { setError('Fyll i personens namn och e-post.'); return }
     setSending(true); setError('')
     const { data: { user } } = await sb.auth.getUser()
     const { data: session, error: sessErr } = await sb
@@ -53,6 +54,7 @@ function SendBriefInner() {
         consultant_id: user?.id,
         client_name: clientName.trim(),
         client_email: clientEmail.trim(),
+        client_organisation: clientOrg.trim() || null,
         consultant_email: user?.email,
         question_set_id: selectedSet,
       })
@@ -104,7 +106,7 @@ function SendBriefInner() {
             onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
               Kopiera länk
             </button>
-            <button onClick={() => { setSent(null); setClientName(''); setClientEmail('') }} style={{
+            <button onClick={() => { setSent(null); setClientName(''); setClientEmail(''); setClientOrg('') }} style={{
               flex: 1, padding: '10px 0', borderRadius: 7, border: 'none',
               background: 'var(--accent)',
               fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
@@ -181,16 +183,31 @@ function SendBriefInner() {
         {/* Client info */}
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, border: '1px solid var(--border)' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Klientuppgifter *
+            Mottagare
           </div>
-          <input value={clientName} onChange={e => setClientName(e.target.value)}
-                 placeholder="Klientens namn eller organisation" required style={F}
-                 onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                 onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
-          <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)}
-                 placeholder="klient@foretag.se" required style={F}
-                 onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                 onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Förnamn Efternamn *</label>
+              <input value={clientName} onChange={e => setClientName(e.target.value)}
+                     placeholder="Anna Lindqvist" required style={F}
+                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Organisation</label>
+              <input value={clientOrg} onChange={e => setClientOrg(e.target.value)}
+                     placeholder="Mojang" style={F}
+                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>E-postadress *</label>
+            <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)}
+                   placeholder="anna@mojang.se" required style={F}
+                   onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                   onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+          </div>
         </div>
 
         {error && (

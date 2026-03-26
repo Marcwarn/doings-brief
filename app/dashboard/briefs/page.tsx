@@ -118,14 +118,14 @@ export default function BriefsPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff',
                 }}>
-                  {s.client_name?.charAt(0).toUpperCase() || '?'}
+                  {(s.client_organisation || s.client_name)?.charAt(0).toUpperCase() || '?'}
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.client_name}
+                    {s.client_organisation || s.client_name}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.client_email}
+                    {s.client_organisation ? s.client_name : s.client_email}
                   </div>
                 </div>
               </div>
