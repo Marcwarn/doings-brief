@@ -69,7 +69,7 @@ function Modal({ header, children }: { header: React.ReactNode; children: React.
         <div style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem', position: 'relative', zIndex: 1 }}>
           <DoingsLogo />
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.12em', textTransform: 'uppercase' as const }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>
             Brief
           </span>
         </div>
@@ -351,7 +351,7 @@ export default function BriefPage() {
 
         <Modal header={
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 8 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.02em', marginBottom: 8 }}>
               Fråga {current + 1}
             </div>
             <p style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 500, color: '#fff', margin: 0, lineHeight: 1.45 }}>
@@ -450,7 +450,7 @@ export default function BriefPage() {
           {/* ── Voice transcript: auto-growing ── */}
           {a.mode === 'voice' && a.status === 'done' && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 600, color: '#a0607a', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 10 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 600, color: '#a0607a', letterSpacing: '0.02em', marginBottom: 10 }}>
                 Transkriberat svar — redigera om du vill
               </div>
               <AutoGrowTextarea
@@ -502,7 +502,7 @@ export default function BriefPage() {
           <div style={{ background: '#C62368', padding: '1.2rem 1.6rem', display: 'flex', alignItems: 'center', gap: 10 }}>
             <DoingsLogo />
             <div>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>Brief</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>Brief</span>
               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 10 }}>Granska dina svar</span>
             </div>
           </div>
@@ -515,7 +515,7 @@ export default function BriefPage() {
             boxShadow: '0 2px 12px rgba(198,35,104,0.07)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#c4909f', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#c4909f', letterSpacing: '0.02em' }}>
                 Fråga {i + 1}
               </span>
               <button onClick={() => { setCurrent(i); setStep('questions') }}

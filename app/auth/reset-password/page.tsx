@@ -82,7 +82,7 @@ function ResetInner() {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: '#a0607a', marginBottom: 8 }}>
+      <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.01em', color: '#a0607a', marginBottom: 8 }}>
                 Nytt lösenord
               </label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)}
@@ -91,7 +91,7 @@ function ResetInner() {
                      onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
             </div>
             <div>
-              <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: '#a0607a', marginBottom: 8 }}>
+              <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.01em', color: '#a0607a', marginBottom: 8 }}>
                 Upprepa lösenord
               </label>
               <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}

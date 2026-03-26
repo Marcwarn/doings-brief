@@ -110,7 +110,7 @@ function Panel({ title, href, linkText, children }: { title: string; href: strin
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>{title}</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>{title}</span>
         <Link href={href} style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>{linkText} →</Link>
       </div>
       <div style={{ padding: '0 18px 6px' }}>{children}</div>
@@ -122,7 +122,7 @@ function Pill({ ok }: { ok: boolean }) {
   return (
     <span style={{
       fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-      letterSpacing: '0.04em', textTransform: 'uppercase',
+      letterSpacing: '0.01em',
       background: ok ? '#f0fdf4' : '#f5f5f4',
       color: ok ? '#16a34a' : '#a8a29e',
       flexShrink: 0, marginLeft: 10,

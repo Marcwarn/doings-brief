@@ -178,7 +178,7 @@ export default function BriefResponsesPage() {
                   {i + 1}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                     {r.response_type === 'voice' ? 'Röst' : 'Text'}
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>{r.question_text}</div>
@@ -244,7 +244,7 @@ function Pill({ ok }: { ok: boolean }) {
   return (
     <span style={{
       fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-      letterSpacing: '0.04em', textTransform: 'uppercase',
+      letterSpacing: '0.01em',
       background: ok ? '#f0fdf4' : '#f5f5f4',
       color: ok ? '#16a34a' : '#a8a29e',
       flexShrink: 0,

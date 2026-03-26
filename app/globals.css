@@ -12,14 +12,14 @@
   --text-3:      #a8a8a3;
   --accent:      #C62368;
   --accent-dim:  #fdf3f6;
-  --font-sans:   'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-display:'Syne', system-ui, sans-serif;
+  --font-sans:   var(--font-sans), system-ui, sans-serif;
+  --font-display: var(--font-display), system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: var(--font-sans);
+  font-family: var(--font-sans), system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -149,7 +149,7 @@ body {
 
 /* ── Textarea styling ────────────────────────────────────────── */
 textarea {
-  font-family: var(--font-sans);
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 0.875rem;
   line-height: 1.6;
 }

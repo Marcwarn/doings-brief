@@ -170,12 +170,12 @@ export default function AdminPage() {
             background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)',
             padding: '22px 24px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 14,
           }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
               Ny kollega
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                   E-post *
                 </label>
                 <input value={newEmail} onChange={e => setNewEmail(e.target.value)}
@@ -184,7 +184,7 @@ export default function AdminPage() {
                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                   Namn *
                 </label>
                 <input value={newName} onChange={e => setNewName(e.target.value)}
@@ -195,7 +195,7 @@ export default function AdminPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
-                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                   Lösenord
                 </label>
                 <input value={newPassword} onChange={e => setNewPassword(e.target.value)}
@@ -204,7 +204,7 @@ export default function AdminPage() {
                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                   Avsändaradress
                 </label>
                 <input value={newSenderEmail} onChange={e => setNewSenderEmail(e.target.value)}
@@ -251,7 +251,7 @@ export default function AdminPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 4 }}>
                 Importera flera användare
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
@@ -333,7 +333,7 @@ export default function AdminPage() {
                 </div>
                 <span style={{
                   fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-                  letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0,
+                  letterSpacing: '0.01em', flexShrink: 0,
                   background: p.role === 'admin' ? 'var(--accent-dim)' : 'var(--bg)',
                   color: p.role === 'admin' ? 'var(--accent)' : 'var(--text-3)',
                 }}>
@@ -343,7 +343,7 @@ export default function AdminPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                     Namn
                   </label>
                   <input
@@ -354,7 +354,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 6 }}>
                     Avsändaradress
                   </label>
                   <input

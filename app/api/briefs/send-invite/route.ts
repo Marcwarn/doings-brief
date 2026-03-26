@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
              style="max-width:580px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(107,45,130,.08);">
         <tr>
           <td style="background:linear-gradient(135deg,#1e0e2e,#6b2d82);padding:32px;">
-            <p style="margin:0 0 6px;font-size:13px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:.08em;text-transform:uppercase;">Brief från ${escHtml(senderName)}</p>
+            <p style="margin:0 0 6px;font-size:13px;color:rgba(255,255,255,.6);font-weight:600;letter-spacing:.01em;">Brief från ${escHtml(senderName)}</p>
             <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;">Hej ${escHtml(clientName)}!</h1>
           </td>
         </tr>

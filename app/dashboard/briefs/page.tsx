@@ -93,7 +93,7 @@ export default function BriefsPage() {
             borderBottom: '1px solid var(--border)',
           }}>
             {['Kund', 'Status', 'Skickad', ''].map((h, i) => (
-              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
+              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.01em' }}>{h}</span>
             ))}
           </div>
 
@@ -205,7 +205,7 @@ function Pill({ ok }: { ok: boolean }) {
   return (
     <span style={{
       fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-      letterSpacing: '0.04em', textTransform: 'uppercase',
+      letterSpacing: '0.01em',
       background: ok ? '#f0fdf4' : '#f5f5f4',
       color: ok ? '#16a34a' : '#a8a29e',
       flexShrink: 0,

@@ -18,7 +18,7 @@ function buildHtml(clientName: string, answers: Answer[]) {
       (a, i) => `
     <tr>
       <td style="padding:16px 24px;border-bottom:1px solid #f0eaf5;vertical-align:top;width:40%;">
-        <span style="font-size:11px;font-weight:600;color:#6b2d82;text-transform:uppercase;letter-spacing:0.05em;">
+        <span style="font-size:11px;font-weight:600;color:#6b2d82;letter-spacing:0.01em;">
           Fråga ${i + 1} · ${a.label}
         </span>
         <p style="margin:4px 0 0;font-size:14px;color:#606070;line-height:1.5;">${escHtml(a.question)}</p>
@@ -40,7 +40,7 @@ function buildHtml(clientName: string, answers: Answer[]) {
         <!-- Header -->
         <tr>
           <td colspan="2" style="background:linear-gradient(135deg,#1e0e2e,#6b2d82);padding:32px 32px 28px;">
-            <p style="margin:0 0 4px;font-size:13px;color:rgba(255,255,255,0.6);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Ny brief</p>
+            <p style="margin:0 0 4px;font-size:13px;color:rgba(255,255,255,0.6);font-weight:600;letter-spacing:0.01em;">Ny brief</p>
             <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;">${escHtml(name)}</h1>
             <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.55);">Inlämnad ${now}</p>
           </td>

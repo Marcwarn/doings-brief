@@ -74,7 +74,7 @@ export default function LoginPage() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.4rem', position: 'relative', zIndex: 1 }}>
               <DoingsLogo />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.1em', textTransform: 'uppercase' as const, fontFamily: 'var(--font-display)' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.03em', fontFamily: 'var(--font-display)' }}>
                 Brief
               </span>
             </div>
@@ -167,7 +167,7 @@ export default function LoginPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase' as const, color: '#a0607a', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
+      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.01em', color: '#a0607a', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
         {label}
       </label>
       {children}

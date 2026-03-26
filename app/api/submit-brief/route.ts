@@ -13,7 +13,7 @@ function buildHtml(clientName: string, answers: Answer[], now: string) {
   const rows = answers.map((a, i) => `
     <tr>
       <td style="padding:14px 24px;border-bottom:1px solid #f0eaf5;vertical-align:top;width:40%;">
-        <span style="font-size:11px;font-weight:600;color:#6b2d82;text-transform:uppercase;letter-spacing:.05em;">${i+1}. ${esc(a.label)}</span>
+        <span style="font-size:11px;font-weight:600;color:#6b2d82;letter-spacing:.01em;">${i+1}. ${esc(a.label)}</span>
         <p style="margin:4px 0 0;font-size:13px;color:#606070;">${esc(a.question)}</p>
       </td>
       <td style="padding:14px 24px;border-bottom:1px solid #f0eaf5;vertical-align:top;">
@@ -26,7 +26,7 @@ function buildHtml(clientName: string, answers: Answer[], now: string) {
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;"><tr><td align="center">
   <table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(107,45,130,.08);">
     <tr><td colspan="2" style="background:linear-gradient(135deg,#1e0e2e,#6b2d82);padding:28px 32px;">
-      <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,.55);font-weight:600;text-transform:uppercase;letter-spacing:.08em;">Ny brief</p>
+      <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,.55);font-weight:600;letter-spacing:.01em;">Ny brief</p>
       <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;">${esc(clientName)}</h1>
       <p style="margin:6px 0 0;font-size:12px;color:rgba(255,255,255,.5);">Inlämnad ${now}</p>
     </td></tr>

@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span style={{
               fontFamily: 'var(--font-display)',
               fontSize: 13, fontWeight: 700, letterSpacing: '0.12em',
-              textTransform: 'uppercase', color: 'var(--text)',
+              color: 'var(--text)',
             }}>
               Brief
             </span>
@@ -68,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav style={{ flex: 1, padding: '4px 14px', display: 'flex', flexDirection: 'column', gap: 1 }}>
           <div style={{
             fontSize: 10, fontWeight: 600, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--text-3)',
+            color: 'var(--text-3)',
             padding: '0 10px', marginBottom: 8,
           }}>
             Verktyg

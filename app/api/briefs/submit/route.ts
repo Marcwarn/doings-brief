@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       const rows = responses.map((r: any, i: number) => `
         <tr>
           <td style="padding:14px 20px;border-bottom:1px solid #f0eaf5;vertical-align:top;width:35%;">
-            <span style="font-size:11px;font-weight:600;color:#6b2d82;text-transform:uppercase;">Fråga ${i+1}</span>
+            <span style="font-size:11px;font-weight:600;color:#6b2d82;">Fråga ${i+1}</span>
             <p style="margin:4px 0 0;font-size:13px;color:#555;line-height:1.5;">${escHtml(r.questionText)}</p>
           </td>
           <td style="padding:14px 20px;border-bottom:1px solid #f0eaf5;vertical-align:top;">
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
              style="max-width:640px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(107,45,130,.08);">
         <tr>
           <td colspan="2" style="background:linear-gradient(135deg,#1e0e2e,#6b2d82);padding:28px 32px;">
-            <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;">Brief besvarad</p>
+            <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,.6);letter-spacing:.01em;">Brief besvarad</p>
             <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;">${escHtml(session.client_name)}</h1>
             <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.55);">${escHtml(session.client_email)}</p>
           </td>

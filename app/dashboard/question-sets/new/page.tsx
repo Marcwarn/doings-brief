@@ -389,7 +389,7 @@ function Section({ children }: { children: React.ReactNode }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+    <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
       {children}
     </div>
   )
@@ -400,7 +400,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <label style={{
         display: 'block', fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700,
-        color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8,
+        color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 8,
       }}>
         {label}
       </label>
