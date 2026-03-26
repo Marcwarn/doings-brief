@@ -13,18 +13,28 @@ export default function BriefsPage() {
   const [confirming, setConfirming] = useState<string | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
 
-  function load() {
+  async function load() {
     setLoading(true)
-    sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { setSessions(data || []); setLoading(false) })
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) { setLoading(false); return }
+    const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
+    const query = sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
+    const { data } = profile?.role === 'admin'
+      ? await query
+      : await query.eq('consultant_id', user.id)
+    setSessions(data || [])
+    setLoading(false)
   }
 
   useEffect(() => { load() }, [])
 
   async function deleteSession(id: string) {
     setDeleting(id)
-    const { error } = await sb.from('brief_sessions').delete().eq('id', id)
-    if (error) { setDeleting(null); setConfirming(null); return }
+    const { error, count } = await sb.from('brief_sessions').delete({ count: 'exact' }).eq('id', id)
+    if (error || count === 0) {
+      alert(`Kunde inte radera: ${error?.message || 'Behörighet saknas — briefen kan tillhöra en annan användare.'}`)
+      setDeleting(null); setConfirming(null); return
+    }
     setSessions(prev => prev.filter(s => s.id !== id))
     setConfirming(null); setDeleting(null)
     router.refresh()
