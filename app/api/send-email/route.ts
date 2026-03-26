@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { getResendClient } from '@/lib/server-clients'
 
 const TO_EMAIL    = 'marcus.warn@doings.se'
 const FROM_EMAIL  = process.env.FROM_EMAIL || 'brief@doingsclients.se'
@@ -95,11 +93,8 @@ function escHtml(str: string) {
 
 // ── Route handler ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 })
-  }
-
   try {
+    const resend = getResendClient()
     const { clientName = '', answers }: Payload = await req.json()
 
     if (!answers || !Array.isArray(answers)) {

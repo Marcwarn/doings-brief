@@ -1,9 +1,25 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-export const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-export const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+const PRERENDER_SUPABASE_URL = 'https://prerender-placeholder.supabase.co'
+const PRERENDER_SUPABASE_ANON = 'prerender-placeholder-anon-key'
 
 export function createClient() {
+  if (typeof window === 'undefined') {
+    // During Next prerender we only need a harmless placeholder client so pages can build.
+    return createBrowserClient(
+      SUPABASE_URL || PRERENDER_SUPABASE_URL,
+      SUPABASE_ANON || PRERENDER_SUPABASE_ANON,
+      { isSingleton: true }
+    )
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
+  }
+
   return createBrowserClient(SUPABASE_URL, SUPABASE_ANON, { isSingleton: true })
 }
 

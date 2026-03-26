@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-)
+import { getResendClient, getSupabaseAdminClient } from '@/lib/server-clients'
 
 function escHtml(s: string) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
@@ -16,6 +7,8 @@ function escHtml(s: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const resend = getResendClient()
+    const supabaseAdmin = getSupabaseAdminClient()
     const { clientName, clientEmail, token, consultantEmail } = await req.json()
 
     // Get consultant profile for sender name

@@ -1,21 +1,20 @@
 import type { Metadata } from 'next'
-import { Syne, Plus_Jakarta_Sans } from 'next/font/google'
+import '@fontsource/syne/400.css'
+import '@fontsource/syne/500.css'
+import '@fontsource/syne/600.css'
+import '@fontsource/syne/700.css'
+import '@fontsource/syne/800.css'
+import '@fontsource/plus-jakarta-sans/300.css'
+import '@fontsource/plus-jakarta-sans/300-italic.css'
+import '@fontsource/plus-jakarta-sans/400.css'
+import '@fontsource/plus-jakarta-sans/400-italic.css'
+import '@fontsource/plus-jakarta-sans/500.css'
+import '@fontsource/plus-jakarta-sans/500-italic.css'
+import '@fontsource/plus-jakarta-sans/600.css'
+import '@fontsource/plus-jakarta-sans/600-italic.css'
+import '@fontsource/plus-jakarta-sans/700.css'
+import '@fontsource/plus-jakarta-sans/700-italic.css'
 import './globals.css'
-
-const syne = Syne({
-  subsets: ['latin'],
-  variable: '--font-display',
-  weight: ['400', '500', '600', '700', '800'],
-  display: 'swap',
-})
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  weight: ['300', '400', '500', '600', '700'],
-  style: ['normal', 'italic'],
-  display: 'swap',
-})
 
 export const metadata: Metadata = {
   title: 'Doings Brief',
@@ -25,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="sv" className={`${syne.variable} ${plusJakarta.variable}`}>
+    <html lang="sv">
       <body>{children}</body>
     </html>
   )

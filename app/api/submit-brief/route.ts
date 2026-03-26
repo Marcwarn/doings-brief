@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
+import { getResendClient, getSupabaseAnonClient } from '@/lib/server-clients'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM   = `Doings Brief <${process.env.FROM_EMAIL || 'brief@doingsclients.se'}>`
-
-// Use anon key — RLS policies allow public read/insert for brief operations
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 type Answer = { label: string; question: string; answer: string }
 
@@ -49,6 +41,8 @@ function buildHtml(clientName: string, answers: Answer[], now: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    const resend = getResendClient()
+    const sb = getSupabaseAnonClient()
     const { sessionId, clientName, token, answers } = await req.json()
 
     // 1. Get consultant email from the session (stored when created)

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
+import { getResendClient } from '@/lib/server-clients'
 
-const resend   = new Resend(process.env.RESEND_API_KEY)
 const FROM     = `Doings Brief <${process.env.FROM_EMAIL || 'brief@doingsclients.se'}>`
 
 export async function POST(req: NextRequest) {
   try {
+    const resend = getResendClient()
     const { clientName, clientEmail, token, consultantEmail } = await req.json()
     const briefUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://doings-brief.vercel.app'}/brief/${token}`
 
