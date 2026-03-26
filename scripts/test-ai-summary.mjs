@@ -11,6 +11,7 @@ async function main() {
 
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ baseURL: BASE_URL })
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE_URL })
   const page = await context.newPage()
 
   try {
@@ -107,6 +108,9 @@ async function verifyCachedSummary(page) {
 async function verifyCopyAction(page) {
   await page.getByRole('button', { name: /kopiera sammanfattning/i }).click()
   await page.getByText('Kopierad', { exact: true }).waitFor({ timeout: 15000 })
+
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText())
+  assertIncludes(clipboardText, 'AI-sammanfattning', 'copied summary text')
 }
 
 function requireEnv(name, value) {
