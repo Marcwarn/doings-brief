@@ -12,6 +12,81 @@ const F: React.CSSProperties = {
   fontFamily: 'var(--font-sans)', transition: 'border-color 0.15s, box-shadow 0.15s',
 }
 
+type Recipient = {
+  name: string
+  email: string
+}
+
+type SentSession = Recipient & {
+  token: string
+}
+
+function titleCaseFromEmail(email: string) {
+  return email
+    .split('@')[0]
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function parseRecipients(input: string) {
+  const lines = input
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+
+  if (lines.length === 0) {
+    return { recipients: [] as Recipient[], error: 'Lägg till minst en mottagare.' }
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i
+  const seen = new Set<string>()
+  const recipients: Recipient[] = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    let name = ''
+    let email = ''
+
+    const angleMatch = line.match(/^(.*?)<([^>]+)>$/)
+    if (angleMatch) {
+      name = angleMatch[1].trim().replace(/,$/, '')
+      email = angleMatch[2].trim()
+    } else if (line.includes(',')) {
+      const [rawName, ...rest] = line.split(',')
+      name = rawName.trim()
+      email = rest.join(',').trim()
+    } else if (emailPattern.test(line)) {
+      email = line
+    }
+
+    if (!emailPattern.test(email)) {
+      return {
+        recipients: [],
+        error: `Rad ${index + 1} har fel format. Använd "Namn, e-post" eller "Namn <e-post>".`,
+      }
+    }
+
+    const normalizedEmail = email.toLowerCase()
+    if (seen.has(normalizedEmail)) {
+      return {
+        recipients: [],
+        error: `E-postadressen ${normalizedEmail} finns flera gånger i listan.`,
+      }
+    }
+
+    seen.add(normalizedEmail)
+    recipients.push({
+      name: name || titleCaseFromEmail(normalizedEmail),
+      email: normalizedEmail,
+    })
+  }
+
+  return { recipients, error: '' }
+}
+
 function SendBriefInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -20,12 +95,11 @@ function SendBriefInner() {
   const [sets, setSets]               = useState<QuestionSet[]>([])
   const [selectedSet, setSelectedSet] = useState<string>(searchParams.get('set') || '')
   const [questions, setQuestions]     = useState<Question[]>([])
-  const [clientName, setClientName]         = useState('')
-  const [clientEmail, setClientEmail]       = useState('')
   const [clientOrg, setClientOrg]           = useState('')
+  const [recipientsInput, setRecipientsInput] = useState('')
   const [loading, setLoading]         = useState(true)
   const [sending, setSending]         = useState(false)
-  const [sent, setSent]               = useState<{ token: string; email: string } | null>(null)
+  const [sent, setSent]               = useState<SentSession[] | null>(null)
   const [error, setError]             = useState('')
 
   useEffect(() => {
@@ -45,26 +119,65 @@ function SendBriefInner() {
   async function send(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedSet) { setError('Välj ett frågebatteri.'); return }
-    if (!clientName.trim() || !clientEmail.trim()) { setError('Fyll i personens namn och e-post.'); return }
+    const { recipients, error: parseError } = parseRecipients(recipientsInput)
+    if (parseError) { setError(parseError); return }
     setSending(true); setError('')
     const { data: { user } } = await sb.auth.getUser()
-    const { data: session, error: sessErr } = await sb
+    const payload = recipients.map(recipient => ({
+      consultant_id: user?.id,
+      client_name: recipient.name,
+      client_email: recipient.email,
+      client_organisation: clientOrg.trim() || null,
+      consultant_email: user?.email,
+      question_set_id: selectedSet,
+    }))
+
+    const { data: sessions, error: sessErr } = await sb
       .from('brief_sessions')
-      .insert({
-        consultant_id: user?.id,
-        client_name: clientName.trim(),
-        client_email: clientEmail.trim(),
-        client_organisation: clientOrg.trim() || null,
-        consultant_email: user?.email,
-        question_set_id: selectedSet,
+      .insert(payload)
+      .select()
+
+    if (sessErr || !sessions || sessions.length === 0) {
+      setError('Kunde inte skapa briefar.')
+      setSending(false)
+      return
+    }
+
+    const inviteResults = await Promise.all(
+      sessions.map(async session => {
+        const response = await fetch('/api/briefs/send-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientName: session.client_name,
+            clientEmail: session.client_email,
+            token: session.token,
+            consultantEmail: user?.email,
+          }),
+        })
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null)
+          throw new Error(body?.error || `Kunde inte skicka till ${session.client_email}.`)
+        }
+
+        return {
+          name: session.client_name,
+          email: session.client_email,
+          token: session.token,
+        }
       })
-      .select().single()
-    if (sessErr || !session) { setError('Kunde inte skapa brief.'); setSending(false); return }
-    await fetch('/api/briefs/send-invite', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientName: session.client_name, clientEmail: session.client_email, token: session.token, consultantEmail: user?.email }),
+    ).catch((inviteError: Error) => {
+      setError(inviteError.message || 'Kunde inte skicka alla briefar.')
+      return null
     })
-    setSent({ token: session.token, email: session.client_email })
+
+    if (!inviteResults) {
+      setSending(false)
+      return
+    }
+
+    setSent(inviteResults)
     setSending(false)
   }
 
@@ -73,7 +186,7 @@ function SendBriefInner() {
   if (loading) return <PageLoader />
 
   if (sent) {
-    const url = briefUrl(sent.token)
+    const firstUrl = briefUrl(sent[0].token)
     return (
       <div style={{ padding: '40px 44px', maxWidth: 560, animation: 'fadeUp 0.35s ease both' }}>
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '48px 36px', textAlign: 'center', border: '1px solid var(--border)' }}>
@@ -83,19 +196,38 @@ function SendBriefInner() {
             </svg>
           </div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: '0 0 10px' }}>
-            Brief skickad!
+            {sent.length === 1 ? 'Brief skickad!' : `${sent.length} briefs skickade!`}
           </h2>
           <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 28px' }}>
-            Vi skickade en länk till <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{sent.email}</strong>.
+            {sent.length === 1 ? (
+              <>Vi skickade en länk till <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{sent[0].email}</strong>.</>
+            ) : (
+              <>Vi skickade personliga länkar till <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{sent.length} mottagare</strong> under samma företag.</>
+            )}
           </p>
+          {sent.length > 1 && (
+            <div style={{ background: 'var(--bg)', borderRadius: 7, padding: '12px 14px', marginBottom: 16, textAlign: 'left', border: '1px solid var(--border)' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 8 }}>
+                Skickade mottagare
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {sent.map(recipient => (
+                  <div key={recipient.token} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
+                    <span style={{ color: 'var(--text)' }}>{recipient.name}</span>
+                    <span style={{ color: 'var(--text-3)' }}>{recipient.email}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div style={{ background: 'var(--bg)', borderRadius: 7, padding: '12px 14px', marginBottom: 24, textAlign: 'left', border: '1px solid var(--border)' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 5 }}>
-              Länk till klienten
+              {sent.length === 1 ? 'Länk till klienten' : 'Exempel på personlig länk'}
             </div>
-            <div style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--text-2)', wordBreak: 'break-all' }}>{url}</div>
+            <div style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--text-2)', wordBreak: 'break-all' }}>{firstUrl}</div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => navigator.clipboard.writeText(url)} style={{
+            <button onClick={() => navigator.clipboard.writeText(firstUrl)} style={{
               flex: 1, padding: '10px 0', borderRadius: 7,
               border: '1px solid var(--border)', background: 'var(--surface)',
               fontSize: 13.5, fontWeight: 500, color: 'var(--text-2)', cursor: 'pointer',
@@ -104,9 +236,9 @@ function SendBriefInner() {
             }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
             onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-              Kopiera länk
+              {sent.length === 1 ? 'Kopiera länk' : 'Kopiera första länk'}
             </button>
-            <button onClick={() => { setSent(null); setClientName(''); setClientEmail(''); setClientOrg('') }} style={{
+            <button onClick={() => { setSent(null); setRecipientsInput(''); setClientOrg('') }} style={{
               flex: 1, padding: '10px 0', borderRadius: 7,
               border: '1px solid var(--border)', background: 'var(--surface)',
               fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
@@ -114,7 +246,7 @@ function SendBriefInner() {
               cursor: 'pointer',
               transition: 'border-color 0.15s, background 0.15s',
             }}>
-              Skicka en till
+              Skicka fler
             </button>
           </div>
           <Link href="/dashboard/briefs" style={{ display: 'block', marginTop: 18, fontSize: 13, color: 'var(--text-3)', textDecoration: 'none' }}>
@@ -185,28 +317,28 @@ function SendBriefInner() {
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
             Mottagare
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Förnamn Efternamn *</label>
-              <input value={clientName} onChange={e => setClientName(e.target.value)}
-                     placeholder="Anna Lindqvist" required style={F}
-                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Organisation</label>
-              <input value={clientOrg} onChange={e => setClientOrg(e.target.value)}
-                     placeholder="Mojang" style={F}
-                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
-            </div>
-          </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>E-postadress *</label>
-            <input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)}
-                   placeholder="anna@mojang.se" required style={F}
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Organisation</label>
+            <input value={clientOrg} onChange={e => setClientOrg(e.target.value)}
+                   placeholder="Mojang" style={F}
                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Mottagare *</label>
+            <textarea
+              value={recipientsInput}
+              onChange={e => setRecipientsInput(e.target.value)}
+              placeholder={'Anna Lindqvist, anna@mojang.se\nJohan Berg <johan@mojang.se>\nfatima@mojang.se'}
+              required
+              rows={6}
+              style={{ ...F, minHeight: 148, resize: 'vertical', lineHeight: 1.55 }}
+              onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+              onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+            />
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
+              En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
+            </p>
           </div>
         </div>
 
