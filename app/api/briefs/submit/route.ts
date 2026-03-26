@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
           </td>
         </tr>`).join('')
 
-      await resend.emails.send({
+      const { data: emailData, error: emailError } = await resend.emails.send({
         from:    `${senderName} <${senderEmail}>`,
         to:      session.consultant_email,
         subject: `Brief besvarad – ${session.client_name}`,
@@ -110,6 +110,11 @@ export async function POST(req: NextRequest) {
 </body></html>`,
         text: `Brief besvarad av ${session.client_name}\n\n${responses.map((r: any, i: number) => `Fråga ${i+1}: ${r.questionText}\nSvar: ${r.textContent || '(inget svar)'}`).join('\n\n')}\n\nSe i dashboard: ${dashUrl}`,
       })
+      if (emailError) {
+        console.error('Resend error:', JSON.stringify(emailError))
+      } else {
+        console.log('Email sent OK, id:', emailData?.id, '→', session.consultant_email)
+      }
     }
 
     return NextResponse.json({ ok: true })
