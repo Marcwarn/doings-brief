@@ -60,7 +60,7 @@ async function chooseFirstQuestionSet(page) {
 }
 
 async function fillBatchForm(page, organisation, recipients) {
-  await page.getByPlaceholder('Mojang').fill(organisation)
+  await page.locator('input[placeholder="Mojang"]').fill(organisation)
   await page.locator('textarea').fill(recipients.join('\n'))
 }
 
