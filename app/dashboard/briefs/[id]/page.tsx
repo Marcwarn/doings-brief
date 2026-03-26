@@ -5,6 +5,15 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type BriefSession, type BriefResponse } from '@/lib/supabase'
 
+type BriefSummary = {
+  summary: string
+  keySignals: string[]
+  risks: string[]
+  followUpQuestions: string[]
+  nextSteps: string[]
+  basedOn: string[]
+}
+
 export default function BriefResponsesPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
@@ -15,6 +24,9 @@ export default function BriefResponsesPage() {
   const [loading, setLoading]     = useState(true)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [summarizing, setSummarizing] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [summary, setSummary] = useState<BriefSummary | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -131,6 +143,33 @@ export default function BriefResponsesPage() {
     }
   }
 
+  async function summarizeWithAi() {
+    if (!session || responses.length === 0 || summarizing) return
+
+    setSummarizing(true)
+    setSummaryError(null)
+
+    try {
+      const response = await fetch('/api/briefs/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || !payload?.summary) {
+        setSummaryError(payload?.error || 'Kunde inte skapa AI-sammanfattningen.')
+        return
+      }
+
+      setSummary(payload.summary)
+    } catch {
+      setSummaryError('Nätverksfel. Försök igen.')
+    } finally {
+      setSummarizing(false)
+    }
+  }
+
   if (loading) return <PageLoader />
 
   return (
@@ -196,26 +235,82 @@ export default function BriefResponsesPage() {
 
       {responses.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-          <button
-            onClick={exportAsWord}
-            disabled={exporting}
-            style={{
-              padding: '9px 18px', borderRadius: 7,
-              border: '1px solid var(--border)', background: 'var(--surface)',
-              fontSize: 13, fontWeight: 500, color: 'var(--text-2)',
-              cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
-              transition: 'border-color 0.15s',
-              opacity: exporting ? 0.65 : 1,
-            }}
-            onMouseEnter={e => {
-              if (!exporting) e.currentTarget.style.borderColor = 'var(--accent)'
-            }}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-            {exporting ? 'Skapar Word-dokument...' : 'Ladda ner som Word'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={exportAsWord}
+              disabled={exporting}
+              style={{
+                padding: '9px 18px', borderRadius: 7,
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                fontSize: 13, fontWeight: 500, color: 'var(--text-2)',
+                cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
+                transition: 'border-color 0.15s',
+                opacity: exporting ? 0.65 : 1,
+              }}
+              onMouseEnter={e => {
+                if (!exporting) e.currentTarget.style.borderColor = 'var(--accent)'
+              }}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+              {exporting ? 'Skapar Word-dokument...' : 'Ladda ner som Word'}
+            </button>
+            <button
+              onClick={summarizeWithAi}
+              disabled={summarizing}
+              style={{
+                padding: '9px 18px', borderRadius: 7,
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                fontSize: 13, fontWeight: 500, color: 'var(--text-2)',
+                cursor: summarizing ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
+                transition: 'border-color 0.15s',
+                opacity: summarizing ? 0.65 : 1,
+              }}
+              onMouseEnter={e => {
+                if (!summarizing) e.currentTarget.style.borderColor = 'var(--accent)'
+              }}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+              {summarizing ? 'Sammanfattar med AI...' : (summary ? 'Generera om AI-sammanfattning' : 'Sammanfatta med AI')}
+            </button>
+          </div>
           {exportError && (
             <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{exportError}</p>
           )}
+          {summaryError && (
+            <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{summaryError}</p>
+          )}
+        </div>
+      )}
+
+      {summary && (
+        <div style={{ marginTop: 28, background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-sub)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
+              AI-sammanfattning
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
+              Första versionen analyserar bara detta enskilda svar och markerar vad slutsatserna främst bygger på.
+            </p>
+          </div>
+
+          <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <SummaryBlock title="Kort sammanfattning">
+              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.7 }}>{summary.summary}</p>
+            </SummaryBlock>
+            <SummaryBlock title="Viktigaste signaler">
+              <SummaryList items={summary.keySignals} emptyLabel="Inga tydliga signaler kunde sammanfattas." />
+            </SummaryBlock>
+            <SummaryBlock title="Risker eller oklarheter">
+              <SummaryList items={summary.risks} emptyLabel="Inga särskilda risker eller oklarheter identifierades." />
+            </SummaryBlock>
+            <SummaryBlock title="Följdfrågor">
+              <SummaryList items={summary.followUpQuestions} emptyLabel="Inga följdfrågor föreslogs." />
+            </SummaryBlock>
+            <SummaryBlock title="Rekommenderade nästa steg">
+              <SummaryList items={summary.nextSteps} emptyLabel="Inga nästa steg föreslogs." />
+            </SummaryBlock>
+            <SummaryBlock title="Bygger främst på">
+              <SummaryList items={summary.basedOn} emptyLabel="AI:n angav inget tydligt underlag." />
+            </SummaryBlock>
+          </div>
         </div>
       )}
     </div>
@@ -251,6 +346,33 @@ function Pill({ ok }: { ok: boolean }) {
     }}>
       {ok ? 'Besvarad' : 'Inväntar'}
     </span>
+  )
+}
+
+function SummaryBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
+        {title}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function SummaryList({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
+  if (items.length === 0) {
+    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)', fontStyle: 'italic' }}>{emptyLabel}</p>
+  }
+
+  return (
+    <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {items.map(item => (
+        <li key={item} style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
+          {item}
+        </li>
+      ))}
+    </ul>
   )
 }
 
