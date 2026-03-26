@@ -76,7 +76,12 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`
 
-    await resend.emails.send({
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY is not set!')
+      return NextResponse.json({ error: 'Email config missing' }, { status: 500 })
+    }
+
+    const { data: emailData, error: emailError } = await resend.emails.send({
       from:    `${senderName} <${senderEmail}>`,
       to:      clientEmail,
       subject: `Brief inför ert arbete – ${senderName} på Doings`,
@@ -84,6 +89,12 @@ export async function POST(req: NextRequest) {
       text:    `Hej ${clientName}!\n\n${senderName} på Doings har skickat dig ett frågeformulär.\nSvara här: ${briefUrl}\n\n– Doings Brief`,
     })
 
+    if (emailError) {
+      console.error('Resend send-invite error:', JSON.stringify(emailError))
+      return NextResponse.json({ error: emailError.message }, { status: 500 })
+    }
+
+    console.log('Invite sent OK, id:', emailData?.id, '→', clientEmail)
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('send-invite error:', err)
