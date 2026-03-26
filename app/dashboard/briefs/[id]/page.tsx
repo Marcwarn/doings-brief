@@ -13,6 +13,8 @@ export default function BriefResponsesPage() {
   const [session, setSession]     = useState<BriefSession | null>(null)
   const [responses, setResponses] = useState<BriefResponse[]>([])
   const [loading, setLoading]     = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -23,6 +25,111 @@ export default function BriefResponsesPage() {
       setSession(sess); setResponses(resp || []); setLoading(false)
     })
   }, [id])
+
+  async function exportAsWord() {
+    if (!session || responses.length === 0 || exporting) return
+
+    setExporting(true)
+    setExportError(null)
+
+    try {
+      const { AlignmentType, Document, HeadingLevel, Packer, Paragraph, TextRun } = await import('docx')
+
+      const submittedLabel = session.submitted_at
+        ? new Date(session.submitted_at).toLocaleDateString('sv-SE', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'Inte inskickad ännu'
+
+      const doc = new Document({
+        creator: 'Doings Brief',
+        title: `${session.client_name} briefsvar`,
+        description: `Inkommande briefsvar för ${session.client_name}`,
+        sections: [
+          {
+            properties: {},
+            children: [
+              new Paragraph({
+                text: session.client_name,
+                heading: HeadingLevel.TITLE,
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 220 },
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: 'E-post: ', bold: true }),
+                  new TextRun(session.client_email),
+                ],
+                spacing: { after: 80 },
+              }),
+              ...(session.client_organisation
+                ? [new Paragraph({
+                    children: [
+                      new TextRun({ text: 'Organisation: ', bold: true }),
+                      new TextRun(session.client_organisation),
+                    ],
+                    spacing: { after: 80 },
+                  })]
+                : []),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: 'Status: ', bold: true }),
+                  new TextRun(session.status === 'submitted' ? 'Besvarad' : 'Inväntar'),
+                ],
+                spacing: { after: 80 },
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: 'Inskickad: ', bold: true }),
+                  new TextRun(submittedLabel),
+                ],
+                spacing: { after: 240 },
+              }),
+              ...responses.flatMap((response, index) => {
+                const answer = response.text_content?.trim() || 'Inget svar'
+                const answerParagraphs = answer.split('\n').map(line => new Paragraph({
+                  text: line || ' ',
+                  spacing: { after: 80 },
+                }))
+
+                return [
+                  new Paragraph({
+                    text: `Fråga ${index + 1}`,
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 120, after: 120 },
+                  }),
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: 'Typ: ', bold: true }),
+                      new TextRun(response.response_type === 'voice' ? 'Röst' : 'Text'),
+                    ],
+                    spacing: { after: 80 },
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: response.question_text, bold: true })],
+                    spacing: { after: 120 },
+                  }),
+                  ...answerParagraphs,
+                ]
+              }),
+            ],
+          },
+        ],
+      })
+
+      const blob = await Packer.toBlob(doc)
+      downloadBlob(blob, `${sanitizeFilename(session.client_name)}-brief.docx`)
+    } catch (error) {
+      console.error('DOCX export failed', error)
+      setExportError('Kunde inte skapa Word-dokumentet.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading) return <PageLoader />
 
@@ -88,29 +195,49 @@ export default function BriefResponsesPage() {
       )}
 
       {responses.length > 0 && (
-        <button
-          onClick={() => {
-            const text = responses.map((r, i) => `Fråga ${i+1}: ${r.question_text}\nSvar: ${r.text_content || '(inget svar)'}`).join('\n\n')
-            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url; a.download = `${session?.client_name}-brief.txt`; a.click()
-            URL.revokeObjectURL(url)
-          }}
-          style={{
-            padding: '9px 18px', borderRadius: 7,
-            border: '1px solid var(--border)', background: 'var(--surface)',
-            fontSize: 13, fontWeight: 500, color: 'var(--text-2)',
-            cursor: 'pointer', fontFamily: 'var(--font-sans)',
-            transition: 'border-color 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-          Exportera som text
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
+          <button
+            onClick={exportAsWord}
+            disabled={exporting}
+            style={{
+              padding: '9px 18px', borderRadius: 7,
+              border: '1px solid var(--border)', background: 'var(--surface)',
+              fontSize: 13, fontWeight: 500, color: 'var(--text-2)',
+              cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
+              transition: 'border-color 0.15s',
+              opacity: exporting ? 0.65 : 1,
+            }}
+            onMouseEnter={e => {
+              if (!exporting) e.currentTarget.style.borderColor = 'var(--accent)'
+            }}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+            {exporting ? 'Skapar Word-dokument...' : 'Ladda ner som Word'}
+          </button>
+          {exportError && (
+            <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{exportError}</p>
+          )}
+        </div>
       )}
     </div>
   )
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function sanitizeFilename(name: string) {
+  return name
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'briefsvar'
 }
 
 function Pill({ ok }: { ok: boolean }) {
