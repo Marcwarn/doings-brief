@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:ai-summary": "node scripts/test-ai-summary.mjs",
     "test:word-export": "node scripts/test-word-export.mjs",
     "test:batch-send": "node scripts/test-batch-send.mjs"
   },
