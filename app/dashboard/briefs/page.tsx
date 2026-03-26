@@ -1,17 +1,78 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
+
+type BriefGroup = {
+  key: string
+  label: string
+  sublabel: string
+  sessions: BriefSession[]
+  submittedCount: number
+  pendingCount: number
+  lastSentAt: string
+}
+
+function getGroupKey(session: BriefSession) {
+  const organisation = session.client_organisation?.trim().toLowerCase()
+  if (organisation) return `org:${organisation}`
+  return `session:${session.id}`
+}
+
+function getGroupLabel(session: BriefSession) {
+  return session.client_organisation?.trim() || session.client_name
+}
+
+function groupSessions(sessions: BriefSession[]) {
+  const groups = new Map<string, BriefGroup>()
+
+  for (const session of sessions) {
+    const key = getGroupKey(session)
+    const existing = groups.get(key)
+
+    if (existing) {
+      existing.sessions.push(session)
+      existing.submittedCount += session.status === 'submitted' ? 1 : 0
+      existing.pendingCount += session.status === 'submitted' ? 0 : 1
+      if (new Date(session.created_at) > new Date(existing.lastSentAt)) {
+        existing.lastSentAt = session.created_at
+      }
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      label: getGroupLabel(session),
+      sublabel: session.client_organisation?.trim() ? `${session.client_name} och ${Math.max(0, sessions.length - 1)} till` : session.client_email,
+      sessions: [session],
+      submittedCount: session.status === 'submitted' ? 1 : 0,
+      pendingCount: session.status === 'submitted' ? 0 : 1,
+      lastSentAt: session.created_at,
+    })
+  }
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      sessions: group.sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      sublabel: group.sessions.length === 1
+        ? (group.sessions[0].client_organisation?.trim() ? group.sessions[0].client_name : group.sessions[0].client_email)
+        : `${group.sessions.length} respondenter`,
+    }))
+    .sort((a, b) => new Date(b.lastSentAt).getTime() - new Date(a.lastSentAt).getTime())
+}
 
 export default function BriefsPage() {
   const sb = createClient()
   const router = useRouter()
   const [sessions, setSessions]     = useState<BriefSession[]>([])
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const [loading, setLoading]       = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
+  const groups = useMemo(() => groupSessions(sessions), [sessions])
 
   async function load() {
     setLoading(true)
@@ -41,6 +102,9 @@ export default function BriefsPage() {
   }
 
   function briefUrl(token: string) { return `${window.location.origin}/brief/${token}` }
+  function toggleGroup(groupKey: string) {
+    setExpandedGroups(prev => prev.includes(groupKey) ? prev.filter(key => key !== groupKey) : [...prev, groupKey])
+  }
 
   if (loading) return <PageLoader />
 
@@ -96,117 +160,200 @@ export default function BriefsPage() {
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           {/* Column headers */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 110px 130px 220px',
+            display: 'grid', gridTemplateColumns: '1fr 140px 150px 220px',
             padding: '9px 22px', background: 'var(--bg)',
             borderBottom: '1px solid var(--border)',
           }}>
-            {['Kund', 'Status', 'Skickad', ''].map((h, i) => (
+            {['Företag', 'Respondenter', 'Senast skickad', ''].map((h, i) => (
               <span key={i} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.01em' }}>{h}</span>
             ))}
           </div>
 
-          {/* Rows */}
-          {sessions.map(s => (
-            <div key={s.id} style={{
-              display: 'grid', gridTemplateColumns: '1fr 110px 130px 220px',
-              alignItems: 'center',
-              padding: '14px 22px',
-              background: 'var(--surface)',
-              borderBottom: '1px solid var(--border)',
-              transition: 'background 0.1s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-dim)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}>
+          {groups.map(group => {
+            const isExpanded = expandedGroups.includes(group.key)
 
-              {/* Kund */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                  background: 'linear-gradient(135deg, var(--accent), #6b2d82)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff',
-                }}>
-                  {(s.client_organisation || s.client_name)?.charAt(0).toUpperCase() || '?'}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.client_organisation || s.client_name}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.client_organisation ? s.client_name : s.client_email}
-                  </div>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div><Pill ok={s.status === 'submitted'} /></div>
-
-              {/* Datum */}
-              <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                {new Date(s.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </div>
-
-              {/* Åtgärder */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
-                {s.status === 'submitted' && (
-                  <Link href={`/dashboard/briefs/${s.id}`} style={{
-                    padding: '6px 13px', borderRadius: 6,
-                    background: 'var(--surface)', color: 'var(--text)',
-                    border: '1px solid var(--border)',
-                    fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                    letterSpacing: '0.01em', textDecoration: 'none', flexShrink: 0,
-                  }}>
-                    Se svar
-                  </Link>
-                )}
-                <button onClick={() => navigator.clipboard.writeText(briefUrl(s.token))} title="Kopiera länk" style={{
-                  padding: '6px 10px', borderRadius: 6,
-                  border: '1px solid var(--border)', background: 'var(--surface)',
-                  fontSize: 12, fontWeight: 500, color: 'var(--text-2)',
-                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                  transition: 'border-color 0.15s', flexShrink: 0,
-                }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-                  Kopiera länk
-                </button>
-                {confirming === s.id ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera?</span>
-                    <button onClick={() => deleteSession(s.id)} disabled={deleting === s.id} style={{
-                      padding: '5px 10px', borderRadius: 6, border: 'none',
-                      background: 'var(--text)', color: 'var(--bg)',
-                      fontSize: 12, fontWeight: 600, cursor: deleting === s.id ? 'not-allowed' : 'pointer',
-                      opacity: deleting === s.id ? 0.5 : 1,
-                    }}>
-                      {deleting === s.id ? '…' : 'Ja'}
-                    </button>
-                    <button onClick={() => setConfirming(null)} style={{
-                      padding: '5px 10px', borderRadius: 6,
-                      border: '1px solid var(--border)', background: 'none',
-                      fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
-                    }}>
-                      Avbryt
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={() => setConfirming(s.id)} style={{
-                    padding: '6px 10px', borderRadius: 6,
-                    background: 'none', border: '1px solid transparent',
-                    fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
-                    transition: 'border-color 0.1s, color 0.1s', flexShrink: 0,
+            return (
+              <div key={group.key} style={{ borderBottom: '1px solid var(--border)' }}>
+                <div
+                  style={{
+                    display: 'grid', gridTemplateColumns: '1fr 140px 150px 220px',
+                    alignItems: 'center',
+                    padding: '14px 22px',
+                    background: 'var(--surface)',
+                    transition: 'background 0.1s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}>
-                    Radera
-                  </button>
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-dim)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                    <button
+                      onClick={() => toggleGroup(group.key)}
+                      aria-label={isExpanded ? 'Dölj personer' : 'Visa personer'}
+                      style={{
+                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                        border: '1px solid var(--border)', background: 'var(--bg)',
+                        color: 'var(--text)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 700,
+                      }}
+                    >
+                      {isExpanded ? '−' : '+'}
+                    </button>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                      background: 'linear-gradient(135deg, var(--accent), #6b2d82)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff',
+                    }}>
+                      {group.label.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {group.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {group.sublabel}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--text)' }}>{group.sessions.length} totalt</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <CountPill label="Svarade" value={group.submittedCount} tone="ok" />
+                      <CountPill label="Väntar" value={group.pendingCount} tone="muted" />
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                    {new Date(group.lastSentAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => toggleGroup(group.key)}
+                      style={{
+                        padding: '6px 13px', borderRadius: 6,
+                        background: 'var(--surface)', color: 'var(--text)',
+                        border: '1px solid var(--border)',
+                        fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                        letterSpacing: '0.01em', cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      {isExpanded ? 'Dölj personer' : 'Visa personer'}
+                    </button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div style={{ background: 'var(--bg)', padding: '8px 14px 14px', borderTop: '1px solid var(--border-sub)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {group.sessions.map(session => (
+                        <div
+                          key={session.id}
+                          style={{
+                            display: 'grid', gridTemplateColumns: '1fr auto',
+                            gap: 12, alignItems: 'center',
+                            padding: '12px 14px',
+                            borderRadius: 8,
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                          }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                              <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{session.client_name}</span>
+                              <Pill ok={session.status === 'submitted'} />
+                            </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{session.client_email}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>
+                              Skickad {new Date(session.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            {session.status === 'submitted' && (
+                              <Link href={`/dashboard/briefs/${session.id}`} style={{
+                                padding: '6px 13px', borderRadius: 6,
+                                background: 'var(--surface)', color: 'var(--text)',
+                                border: '1px solid var(--border)',
+                                fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                                letterSpacing: '0.01em', textDecoration: 'none', flexShrink: 0,
+                              }}>
+                                Se svar
+                              </Link>
+                            )}
+                            <button onClick={() => navigator.clipboard.writeText(briefUrl(session.token))} title="Kopiera länk" style={{
+                              padding: '6px 10px', borderRadius: 6,
+                              border: '1px solid var(--border)', background: 'var(--surface)',
+                              fontSize: 12, fontWeight: 500, color: 'var(--text-2)',
+                              cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                              transition: 'border-color 0.15s', flexShrink: 0,
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+                            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+                              Kopiera länk
+                            </button>
+                            {confirming === session.id ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera?</span>
+                                <button onClick={() => deleteSession(session.id)} disabled={deleting === session.id} style={{
+                                  padding: '5px 10px', borderRadius: 6, border: 'none',
+                                  background: 'var(--text)', color: 'var(--bg)',
+                                  fontSize: 12, fontWeight: 600, cursor: deleting === session.id ? 'not-allowed' : 'pointer',
+                                  opacity: deleting === session.id ? 0.5 : 1,
+                                }}>
+                                  {deleting === session.id ? '…' : 'Ja'}
+                                </button>
+                                <button onClick={() => setConfirming(null)} style={{
+                                  padding: '5px 10px', borderRadius: 6,
+                                  border: '1px solid var(--border)', background: 'none',
+                                  fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                                }}>
+                                  Avbryt
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirming(session.id)} style={{
+                                padding: '6px 10px', borderRadius: 6,
+                                background: 'none', border: '1px solid transparent',
+                                fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                                transition: 'border-color 0.1s, color 0.1s', flexShrink: 0,
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}>
+                                Radera
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
+  )
+}
+
+function CountPill({ label, value, tone }: { label: string; value: number; tone: 'ok' | 'muted' }) {
+  return (
+    <span style={{
+      fontSize: 10.5,
+      fontWeight: 600,
+      padding: '3px 8px',
+      borderRadius: 999,
+      letterSpacing: '0.01em',
+      background: tone === 'ok' ? '#f0fdf4' : '#f5f5f4',
+      color: tone === 'ok' ? '#16a34a' : '#78716c',
+      flexShrink: 0,
+    }}>
+      {label}: {value}
+    </span>
   )
 }
 

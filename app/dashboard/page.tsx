@@ -1,18 +1,65 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient, type BriefSession, type QuestionSet } from '@/lib/supabase'
+
+type DashboardBriefGroup = {
+  key: string
+  label: string
+  sublabel: string
+  submittedCount: number
+  pendingCount: number
+  sessions: BriefSession[]
+}
+
+function groupSessions(sessions: BriefSession[]) {
+  const groups = new Map<string, DashboardBriefGroup>()
+
+  for (const session of sessions) {
+    const key = session.client_organisation?.trim().toLowerCase()
+      ? `org:${session.client_organisation.trim().toLowerCase()}`
+      : `session:${session.id}`
+    const existing = groups.get(key)
+
+    if (existing) {
+      existing.sessions.push(session)
+      existing.submittedCount += session.status === 'submitted' ? 1 : 0
+      existing.pendingCount += session.status === 'submitted' ? 0 : 1
+      continue
+    }
+
+    groups.set(key, {
+      key,
+      label: session.client_organisation?.trim() || session.client_name,
+      sublabel: session.client_organisation?.trim() ? '' : session.client_email,
+      submittedCount: session.status === 'submitted' ? 1 : 0,
+      pendingCount: session.status === 'submitted' ? 0 : 1,
+      sessions: [session],
+    })
+  }
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      sessions: group.sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      sublabel: group.sessions.length === 1
+        ? (group.sessions[0].client_organisation?.trim() ? group.sessions[0].client_name : group.sessions[0].client_email)
+        : `${group.sessions.length} respondenter`,
+    }))
+    .sort((a, b) => new Date(b.sessions[0].created_at).getTime() - new Date(a.sessions[0].created_at).getTime())
+}
 
 export default function DashboardPage() {
   const sb = createClient()
   const [sessions, setSessions]         = useState<BriefSession[]>([])
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
   const [loading, setLoading]           = useState(true)
+  const groupedSessions = useMemo(() => groupSessions(sessions), [sessions])
 
   useEffect(() => {
     Promise.all([
-      sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(6),
+      sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(24),
       sb.from('question_sets').select('*').order('created_at', { ascending: false }).limit(6),
     ]).then(([{ data: sess }, { data: qs }]) => {
       setSessions(sess || [])
@@ -74,16 +121,18 @@ export default function DashboardPage() {
       {/* Two-col feed */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Recent briefs */}
-        <Panel title="Senaste briefs" href="/dashboard/briefs" linkText="Visa alla">
-          {sessions.length === 0
+        <Panel title="Senaste utskick" href="/dashboard/briefs" linkText="Visa alla">
+          {groupedSessions.length === 0
             ? <Empty text="Inga briefs skickade ännu" />
-            : sessions.slice(0, 5).map(s => (
-              <Link key={s.id} href={`/dashboard/briefs/${s.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-sub)', textDecoration: 'none' }}>
+            : groupedSessions.slice(0, 5).map(group => (
+              <Link key={group.key} href="/dashboard/briefs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-sub)', textDecoration: 'none' }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.client_name}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>{s.client_email}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.label}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>
+                    {group.sublabel} · {group.submittedCount} svarade · {group.pendingCount} väntar
+                  </div>
                 </div>
-                <Pill ok={s.status === 'submitted'} />
+                <Pill ok={group.pendingCount === 0} />
               </Link>
             ))}
         </Panel>
