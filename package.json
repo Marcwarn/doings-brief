@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:word-export": "node scripts/test-word-export.mjs"
+    "test:word-export": "node scripts/test-word-export.mjs",
+    "test:batch-send": "node scripts/test-batch-send.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
