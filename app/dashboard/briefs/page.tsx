@@ -4,75 +4,18 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
-
-type BriefGroup = {
-  key: string
-  label: string
-  sublabel: string
-  sessions: BriefSession[]
-  submittedCount: number
-  pendingCount: number
-  lastSentAt: string
-}
-
-function getGroupKey(session: BriefSession) {
-  const organisation = session.client_organisation?.trim().toLowerCase()
-  if (organisation) return `org:${organisation}`
-  return `session:${session.id}`
-}
-
-function getGroupLabel(session: BriefSession) {
-  return session.client_organisation?.trim() || session.client_name
-}
-
-function groupSessions(sessions: BriefSession[]) {
-  const groups = new Map<string, BriefGroup>()
-
-  for (const session of sessions) {
-    const key = getGroupKey(session)
-    const existing = groups.get(key)
-
-    if (existing) {
-      existing.sessions.push(session)
-      existing.submittedCount += session.status === 'submitted' ? 1 : 0
-      existing.pendingCount += session.status === 'submitted' ? 0 : 1
-      if (new Date(session.created_at) > new Date(existing.lastSentAt)) {
-        existing.lastSentAt = session.created_at
-      }
-      continue
-    }
-
-    groups.set(key, {
-      key,
-      label: getGroupLabel(session),
-      sublabel: session.client_organisation?.trim() ? `${session.client_name} och ${Math.max(0, sessions.length - 1)} till` : session.client_email,
-      sessions: [session],
-      submittedCount: session.status === 'submitted' ? 1 : 0,
-      pendingCount: session.status === 'submitted' ? 0 : 1,
-      lastSentAt: session.created_at,
-    })
-  }
-
-  return Array.from(groups.values())
-    .map(group => ({
-      ...group,
-      sessions: group.sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-      sublabel: group.sessions.length === 1
-        ? (group.sessions[0].client_organisation?.trim() ? group.sessions[0].client_name : group.sessions[0].client_email)
-        : `${group.sessions.length} respondenter`,
-    }))
-    .sort((a, b) => new Date(b.lastSentAt).getTime() - new Date(a.lastSentAt).getTime())
-}
+import { groupBriefSessions, type BriefBatchLookupMap } from '@/lib/brief-batches'
 
 export default function BriefsPage() {
   const sb = createClient()
   const router = useRouter()
   const [sessions, setSessions]     = useState<BriefSession[]>([])
+  const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const [loading, setLoading]       = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
-  const groups = useMemo(() => groupSessions(sessions), [sessions])
+  const groups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
 
   async function load() {
     setLoading(true)
@@ -88,6 +31,31 @@ export default function BriefsPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    if (sessions.length === 0) {
+      setBatchLookup({})
+      return
+    }
+
+    fetch('/api/briefs/batches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: sessions.map(session => session.id) }),
+    })
+      .then(async response => {
+        if (!response.ok) {
+          throw new Error('Kunde inte läsa batchmetadata')
+        }
+
+        const payload = await response.json()
+        setBatchLookup(payload.batchLookup || {})
+      })
+      .catch(error => {
+        console.error(error)
+        setBatchLookup({})
+      })
+  }, [sessions])
 
   async function deleteSession(id: string) {
     setDeleting(id)

@@ -3,59 +3,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient, type BriefSession, type QuestionSet } from '@/lib/supabase'
-
-type DashboardBriefGroup = {
-  key: string
-  label: string
-  sublabel: string
-  submittedCount: number
-  pendingCount: number
-  sessions: BriefSession[]
-}
-
-function groupSessions(sessions: BriefSession[]) {
-  const groups = new Map<string, DashboardBriefGroup>()
-
-  for (const session of sessions) {
-    const key = session.client_organisation?.trim().toLowerCase()
-      ? `org:${session.client_organisation.trim().toLowerCase()}`
-      : `session:${session.id}`
-    const existing = groups.get(key)
-
-    if (existing) {
-      existing.sessions.push(session)
-      existing.submittedCount += session.status === 'submitted' ? 1 : 0
-      existing.pendingCount += session.status === 'submitted' ? 0 : 1
-      continue
-    }
-
-    groups.set(key, {
-      key,
-      label: session.client_organisation?.trim() || session.client_name,
-      sublabel: session.client_organisation?.trim() ? '' : session.client_email,
-      submittedCount: session.status === 'submitted' ? 1 : 0,
-      pendingCount: session.status === 'submitted' ? 0 : 1,
-      sessions: [session],
-    })
-  }
-
-  return Array.from(groups.values())
-    .map(group => ({
-      ...group,
-      sessions: group.sessions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-      sublabel: group.sessions.length === 1
-        ? (group.sessions[0].client_organisation?.trim() ? group.sessions[0].client_name : group.sessions[0].client_email)
-        : `${group.sessions.length} respondenter`,
-    }))
-    .sort((a, b) => new Date(b.sessions[0].created_at).getTime() - new Date(a.sessions[0].created_at).getTime())
-}
+import { groupBriefSessions, type BriefBatchLookupMap } from '@/lib/brief-batches'
 
 export default function DashboardPage() {
   const sb = createClient()
   const [sessions, setSessions]         = useState<BriefSession[]>([])
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
+  const [batchLookup, setBatchLookup]   = useState<BriefBatchLookupMap>({})
   const [loading, setLoading]           = useState(true)
-  const groupedSessions = useMemo(() => groupSessions(sessions), [sessions])
+  const groupedSessions = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
 
   useEffect(() => {
     Promise.all([
@@ -67,6 +23,31 @@ export default function DashboardPage() {
       setLoading(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (sessions.length === 0) {
+      setBatchLookup({})
+      return
+    }
+
+    fetch('/api/briefs/batches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: sessions.map(session => session.id) }),
+    })
+      .then(async response => {
+        if (!response.ok) {
+          throw new Error('Kunde inte läsa batchmetadata')
+        }
+
+        const payload = await response.json()
+        setBatchLookup(payload.batchLookup || {})
+      })
+      .catch(error => {
+        console.error(error)
+        setBatchLookup({})
+      })
+  }, [sessions])
 
   if (loading) return <Loader />
 

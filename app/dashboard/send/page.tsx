@@ -87,6 +87,16 @@ function parseRecipients(input: string) {
   return { recipients, error: '' }
 }
 
+function formatBatchLabel(organisation: string) {
+  const date = new Date().toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+  return organisation ? `${organisation} · ${date}` : `Utskick ${date}`
+}
+
 function SendBriefInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -123,6 +133,7 @@ function SendBriefInner() {
     if (parseError) { setError(parseError); return }
     setSending(true); setError('')
     const { data: { user } } = await sb.auth.getUser()
+    const batchId = crypto.randomUUID()
     const payload = recipients.map(recipient => ({
       consultant_id: user?.id,
       client_name: recipient.name,
@@ -176,6 +187,25 @@ function SendBriefInner() {
       setSending(false)
       return
     }
+
+    fetch('/api/briefs/batches/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        batchId,
+        label: formatBatchLabel(clientOrg.trim()),
+        organisation: clientOrg.trim() || null,
+        questionSetId: selectedSet,
+        sessionIds: sessions.map(session => session.id),
+      }),
+    }).then(async response => {
+      if (!response.ok) {
+        const body = await response.json().catch(() => null)
+        console.error('Batch metadata save failed', body?.error || response.statusText)
+      }
+    }).catch(metadataError => {
+      console.error('Batch metadata request failed', metadataError)
+    })
 
     setSent(inviteResults)
     setSending(false)
