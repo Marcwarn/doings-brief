@@ -34,14 +34,6 @@ export default function AdminPage() {
   const [importStatus, setImportStatus]     = useState<string[]>([])
   const [importing, setImporting]           = useState(false)
 
-  // Bulk import
-  const importRef                               = useRef<HTMLInputElement>(null)
-  const [importRows, setImportRows]             = useState<{name:string,email:string,password:string}[]>([])
-  const [importStatus, setImportStatus]         = useState<('pending'|'ok'|'err')[]>([])
-  const [importMessages, setImportMessages]     = useState<string[]>([])
-  const [importing, setImporting]               = useState(false)
-  const [importDone, setImportDone]             = useState(false)
-
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
