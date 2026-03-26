@@ -1,0 +1,49 @@
+name: Word Export Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  word-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DOINGS_BRIEF_BASE_URL: ${{ secrets.DOINGS_BRIEF_BASE_URL }}
+      DOINGS_BRIEF_TEST_EMAIL: ${{ secrets.DOINGS_BRIEF_TEST_EMAIL }}
+      DOINGS_BRIEF_TEST_PASSWORD: ${{ secrets.DOINGS_BRIEF_TEST_PASSWORD }}
+      DOINGS_BRIEF_RESPONSE_URL: ${{ secrets.DOINGS_BRIEF_RESPONSE_URL }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify required secrets
+        run: |
+          test -n "$DOINGS_BRIEF_BASE_URL"
+          test -n "$DOINGS_BRIEF_TEST_EMAIL"
+          test -n "$DOINGS_BRIEF_TEST_PASSWORD"
+
+      - name: Run Word export smoke test
+        run: npm run test:word-export
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: word-export-artifacts
+          path: output/playwright/
+          if-no-files-found: ignore
