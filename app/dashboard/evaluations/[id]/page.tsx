@@ -44,6 +44,8 @@ export default function EvaluationDetailPage() {
   const [payload, setPayload] = useState<EvaluationDetailPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<'questions' | 'participants'>('questions')
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetch(`/api/evaluations/${id}`)
@@ -66,6 +68,8 @@ export default function EvaluationDetailPage() {
   const qrUrl = useMemo(() => (
     publicUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(publicUrl)}` : ''
   ), [publicUrl])
+
+  const normalizedSearch = searchQuery.trim().toLowerCase()
 
   async function downloadQrPng() {
     if (!payload || !qrUrl) return
@@ -98,6 +102,51 @@ export default function EvaluationDetailPage() {
   }
 
   const { evaluation, questions, responses } = payload
+  const latestResponseAt = responses[0]?.submittedAt || null
+  const questionGroups = questions.map(question => {
+    const entries = responses
+      .map(response => {
+        const answer = response.answers.find(item => item.questionId === question.id || item.orderIndex === question.order_index)
+        if (!answer) return null
+        return {
+          responseId: response.responseId,
+          answer: answer.answer,
+          email: response.email,
+          submittedAt: response.submittedAt,
+        }
+      })
+      .filter((value): value is { responseId: string; answer: string; email: string; submittedAt: string } => Boolean(value))
+
+    return {
+      question,
+      entries,
+    }
+  })
+
+  const filteredQuestionGroups = questionGroups
+    .map(group => ({
+      ...group,
+      entries: group.entries.filter(entry => {
+        if (!normalizedSearch) return true
+        return [
+          group.question.text,
+          entry.answer,
+          evaluation.collectEmail ? entry.email : '',
+        ].join(' ').toLowerCase().includes(normalizedSearch)
+      }),
+    }))
+    .filter(group => {
+      if (!normalizedSearch) return true
+      return group.entries.length > 0 || group.question.text.toLowerCase().includes(normalizedSearch)
+    })
+
+  const filteredResponses = responses.filter(response => {
+    if (!normalizedSearch) return true
+    return [
+      evaluation.collectEmail ? response.email : '',
+      ...response.answers.map(answer => `${answer.questionText} ${answer.answer}`),
+    ].join(' ').toLowerCase().includes(normalizedSearch)
+  })
 
   return (
     <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
@@ -124,6 +173,13 @@ export default function EvaluationDetailPage() {
         </div>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+        <SummaryCard label="Svar" value={`${responses.length}`} detail="inkomna hittills" tone="ok" />
+        <SummaryCard label="Frågor" value={`${questions.length}`} detail="i utvärderingen" />
+        <SummaryCard label="Svarsläge" value={evaluation.collectEmail ? 'Med e-post' : 'Anonymt'} detail="visas i resultaten" />
+        <SummaryCard label="Senaste svar" value={latestResponseAt ? formatDateTime(latestResponseAt) : 'Inga ännu'} detail="senast uppdaterad" />
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, marginBottom: 20 }}>
         <SectionCard title="Utvärderingslänk">
           <div style={{ display: 'grid', gap: 12 }}>
@@ -142,6 +198,7 @@ export default function EvaluationDetailPage() {
             <OverviewRow label="Frågebatteri" value={evaluation.questionSetName || payload.questionSet?.name || 'Ej angivet'} />
             <OverviewRow label="Svarsläge" value={evaluation.collectEmail ? 'Med e-post' : 'Anonymt'} />
             <OverviewRow label="Svar hittills" value={`${responses.length}`} />
+            <OverviewRow label="Senaste svar" value={latestResponseAt ? formatDateTime(latestResponseAt) : 'Inga ännu'} />
           </div>
         </SectionCard>
       </div>
@@ -157,17 +214,68 @@ export default function EvaluationDetailPage() {
           </ol>
         </SectionCard>
 
-        <SectionCard title="Inkomna svar">
+        <SectionCard title="Resultat">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" onClick={() => setView('questions')} style={pickerButtonStyle(view === 'questions')}>
+                Per fråga
+              </button>
+              <button type="button" onClick={() => setView('participants')} style={pickerButtonStyle(view === 'participants')}>
+                Per deltagare
+              </button>
+            </div>
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Sök i svaren"
+              style={searchInputStyle}
+            />
+          </div>
+
           {responses.length === 0 ? (
             <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-3)' }}>
               Inga deltagare har svarat ännu.
             </p>
+          ) : view === 'questions' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {filteredQuestionGroups.map(group => (
+                <details key={group.question.id} open style={detailsStyle}>
+                  <summary style={summaryStyle}>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{group.question.text}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
+                        {group.entries.length} svar
+                      </div>
+                    </div>
+                  </summary>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+                    {group.entries.length === 0 ? (
+                      <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Inga matchande svar för den här frågan.</div>
+                    ) : group.entries.map((entry, index) => (
+                      <div key={`${entry.responseId}:${index}`} style={responseCardStyle}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8, alignItems: 'center' }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>
+                            {evaluation.collectEmail ? entry.email : `Svar ${index + 1}`}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{formatDateTime(entry.submittedAt)}</div>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                          {entry.answer || 'Inget svar'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {responses.map(response => (
+              {filteredResponses.map((response, responseIndex) => (
                 <div key={response.responseId} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 14px 12px', background: 'var(--bg)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{response.email || 'Anonym deltagare'}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                      {evaluation.collectEmail ? response.email : `Svar ${responseIndex + 1}`}
+                    </div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{formatDateTime(response.submittedAt)}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -226,6 +334,33 @@ function MetricPill({ label, value, tone = 'muted' }: { label: string; value: nu
   )
 }
 
+function SummaryCard({
+  label,
+  value,
+  detail,
+  tone = 'default',
+}: {
+  label: string
+  value: string
+  detail: string
+  tone?: 'default' | 'ok'
+}) {
+  return (
+    <div style={{
+      background: 'var(--surface)',
+      borderRadius: 10,
+      border: '1px solid var(--border)',
+      padding: '16px 18px',
+    }}>
+      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: tone === 'ok' ? '#166534' : 'var(--text)' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 5 }}>{detail}</div>
+    </div>
+  )
+}
+
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('sv-SE', {
     day: 'numeric',
@@ -261,4 +396,48 @@ const ghostButtonStyle: React.CSSProperties = {
   fontSize: 12.5,
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+function pickerButtonStyle(active: boolean): React.CSSProperties {
+  return {
+    padding: '8px 12px',
+    borderRadius: 999,
+    border: '1px solid var(--border)',
+    background: active ? 'var(--accent-dim)' : 'var(--surface)',
+    color: active ? 'var(--accent)' : 'var(--text-2)',
+    fontSize: 12.5,
+    fontWeight: active ? 700 : 500,
+    cursor: 'pointer',
+  }
+}
+
+const searchInputStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 240,
+  padding: '9px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text)',
+  fontSize: 12.5,
+  outline: 'none',
+}
+
+const detailsStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 10,
+  padding: '12px 14px',
+  background: 'var(--bg)',
+}
+
+const summaryStyle: React.CSSProperties = {
+  listStyle: 'none',
+  cursor: 'pointer',
+}
+
+const responseCardStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 8,
+  padding: '12px 12px 10px',
+  background: 'var(--surface)',
 }
