@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question } from '@/lib/supabase'
+import { slugifyCustomer, type StoredCustomerRecord } from '@/lib/customers'
 import { BriefSubnav } from '@/app/dashboard/brief/ui'
 
 const F: React.CSSProperties = {
@@ -219,6 +220,8 @@ function SendBriefInner() {
   const [customSetName, setCustomSetName] = useState('')
   const [customQuestions, setCustomQuestions] = useState<QuestionDraft[]>([{ text: '' }, { text: '' }])
   const [clientOrg, setClientOrg]           = useState(searchParams.get('organisation') || '')
+  const [storedCustomers, setStoredCustomers] = useState<StoredCustomerRecord[]>([])
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false)
   const [recipientsInput, setRecipientsInput] = useState('')
   const [loading, setLoading]         = useState(true)
   const [sending, setSending]         = useState(false)
@@ -229,8 +232,16 @@ function SendBriefInner() {
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      const { data } = await sb.from('question_sets').select('*').order('updated_at', { ascending: false })
-      setSets(data || []); setLoading(false)
+      const [questionSetsResult, customersResponse] = await Promise.all([
+        sb.from('question_sets').select('*').order('updated_at', { ascending: false }),
+        fetch('/api/customers'),
+      ])
+      setSets(questionSetsResult.data || [])
+      if (customersResponse.ok) {
+        const payload = await customersResponse.json()
+        setStoredCustomers(payload.customers || [])
+      }
+      setLoading(false)
     })
   }, [])
 
@@ -245,6 +256,13 @@ function SendBriefInner() {
       setCustomSetName(buildQuestionSetName(clientOrg))
     }
   }, [clientOrg, customSetName])
+
+  const customerSuggestions = storedCustomers
+    .filter(customer => {
+      if (!clientOrg.trim()) return false
+      return slugifyCustomer(customer.label).includes(slugifyCustomer(clientOrg))
+    })
+    .slice(0, 6)
 
   function updateCustomQuestion(index: number, value: string) {
     setCustomQuestions(prev => prev.map((question, questionIndex) => (
@@ -604,10 +622,66 @@ function SendBriefInner() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Företag</label>
-              <input value={clientOrg} onChange={e => setClientOrg(e.target.value)}
-                     placeholder="Mojang" style={F}
-                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+              <div style={{ position: 'relative' }}>
+                <input
+                  value={clientOrg}
+                  onChange={e => {
+                    setClientOrg(e.target.value)
+                    setShowCustomerSuggestions(true)
+                  }}
+                  placeholder="Mojang"
+                  style={F}
+                  onFocus={e => {
+                    setShowCustomerSuggestions(true)
+                    e.target.style.borderColor = 'var(--accent)'
+                    e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)'
+                  }}
+                  onBlur={e => {
+                    window.setTimeout(() => setShowCustomerSuggestions(false), 120)
+                    e.target.style.borderColor = 'var(--border)'
+                    e.target.style.boxShadow = ''
+                  }}
+                />
+                {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    right: 0,
+                    zIndex: 20,
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+                    overflow: 'hidden',
+                  }}>
+                    {customerSuggestions.map(customer => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => {
+                          setClientOrg(customer.label)
+                          setShowCustomerSuggestions(false)
+                        }}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          border: 'none',
+                          borderBottom: '1px solid var(--border-sub)',
+                          background: 'var(--surface)',
+                          color: 'var(--text)',
+                          fontSize: 13,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {customer.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Vilka ska svara? *</label>
