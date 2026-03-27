@@ -18,6 +18,7 @@ export default function CustomerDetailPage() {
   const [sessions, setSessions] = useState<BriefSession[]>([])
   const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [loading, setLoading] = useState(true)
+  const [lookupLoading, setLookupLoading] = useState(true)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -56,8 +57,11 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     if (sessions.length === 0) {
       setBatchLookup({})
+      setLookupLoading(false)
       return
     }
+
+    setLookupLoading(true)
 
     fetch('/api/briefs/batches', {
       method: 'POST',
@@ -70,9 +74,10 @@ export default function CustomerDetailPage() {
         setBatchLookup(payload.batchLookup || {})
       })
       .catch(() => setBatchLookup({}))
+      .finally(() => setLookupLoading(false))
   }, [sessions])
 
-  if (loading) return <PageLoader />
+  if (loading || lookupLoading) return <PageLoader />
 
   if (!customer) {
     return (
