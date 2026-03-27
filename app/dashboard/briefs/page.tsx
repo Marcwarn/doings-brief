@@ -258,7 +258,7 @@ export default function BriefsPage() {
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           {/* Column headers */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '36px 1fr 140px 150px 220px',
+            display: 'grid', gridTemplateColumns: '36px 1fr 160px 140px 170px',
             padding: '9px 22px', background: 'var(--bg)',
             borderBottom: '1px solid var(--border)',
           }}>
@@ -275,7 +275,7 @@ export default function BriefsPage() {
               <div key={group.key} style={{ borderBottom: '1px solid var(--border)' }}>
                 <div
                   style={{
-                    display: 'grid', gridTemplateColumns: '36px 1fr 140px 150px 220px',
+                    display: 'grid', gridTemplateColumns: '36px 1fr 160px 140px 170px',
                     alignItems: 'center',
                     padding: '14px 22px',
                     background: 'var(--surface)',
@@ -332,11 +332,16 @@ export default function BriefsPage() {
                     </div>
                   </div>
 
-                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                    {new Date(group.lastSentAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text)' }}>
+                      {new Date(group.lastSentAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                      Senaste utskick
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     {dispatchId && (
                       <Link
                         href={`/dashboard/dispatches/${dispatchId}`}
@@ -348,7 +353,7 @@ export default function BriefsPage() {
                           letterSpacing: '0.01em', textDecoration: 'none', flexShrink: 0,
                         }}
                       >
-                        Öppna utskick
+                        Öppna
                       </Link>
                     )}
                     {confirmingGroup === group.key ? (
@@ -373,27 +378,15 @@ export default function BriefsPage() {
                     ) : (
                       <>
                         <button
-                          onClick={() => toggleGroup(group.key)}
-                          style={{
-                            padding: '6px 13px', borderRadius: 6,
-                            background: 'var(--surface)', color: 'var(--text)',
-                            border: '1px solid var(--border)',
-                            fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                            letterSpacing: '0.01em', cursor: 'pointer', flexShrink: 0,
-                          }}
-                        >
-                          {isExpanded ? 'Dölj personer' : 'Visa personer'}
-                        </button>
-                        <button
                           onClick={() => setConfirmingGroup(group.key)}
                           style={{
-                            padding: '6px 10px', borderRadius: 6,
+                            padding: '4px 0',
                             background: 'none', border: '1px solid transparent',
                             fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
-                            transition: 'border-color 0.1s, color 0.1s', flexShrink: 0,
+                            transition: 'color 0.1s', flexShrink: 0,
                           }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}
+                          onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)' }}
+                          onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-3)' }}
                         >
                           Radera utskick
                         </button>
