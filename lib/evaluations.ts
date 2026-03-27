@@ -2,6 +2,15 @@ export const EVALUATION_KEY_PREFIX = 'evaluation:'
 export const EVALUATION_TOKEN_PREFIX = 'evaluation_token:'
 export const EVALUATION_RESPONSE_PREFIX = 'evaluation_response:'
 export const EVALUATION_PARTICIPANT_PREFIX = 'evaluation_participant:'
+export const EVALUATION_QUESTION_META_PREFIX = 'evaluation_question_meta:'
+
+export type EvaluationQuestionType = 'text' | 'scale_1_5'
+
+export type EvaluationQuestionMeta = {
+  questionId: string
+  orderIndex: number
+  type: EvaluationQuestionType
+}
 
 export type EvaluationMetadata = {
   id: string
@@ -52,6 +61,37 @@ export function normalizeEvaluationEmail(email: string) {
 
 export function getEvaluationParticipantKey(evaluationId: string, email: string) {
   return `${EVALUATION_PARTICIPANT_PREFIX}${evaluationId}:${encodeURIComponent(normalizeEvaluationEmail(email))}`
+}
+
+export function getEvaluationQuestionMetaKey(questionSetId: string) {
+  return `${EVALUATION_QUESTION_META_PREFIX}${questionSetId}`
+}
+
+export function parseEvaluationQuestionMetaList(raw: string | null | undefined) {
+  if (!raw) return []
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .map(item => {
+        if (!item || typeof item !== 'object') return null
+        const candidate = item as Record<string, unknown>
+        const type = candidate.type === 'scale_1_5' ? 'scale_1_5' : 'text'
+        if (typeof candidate.questionId !== 'string' || !candidate.questionId) return null
+
+        return {
+          questionId: candidate.questionId,
+          orderIndex: typeof candidate.orderIndex === 'number' ? candidate.orderIndex : 0,
+          type,
+        } satisfies EvaluationQuestionMeta
+      })
+      .filter((value): value is EvaluationQuestionMeta => Boolean(value))
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+  } catch {
+    return []
+  }
 }
 
 export function parseEvaluationMetadata(raw: string | null | undefined) {

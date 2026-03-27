@@ -5,6 +5,7 @@ import { getSupabaseAdminClient } from '@/lib/server-clients'
 import {
   EvaluationMetadata,
   getEvaluationKey,
+  getEvaluationQuestionMetaKey,
   getEvaluationTokenKey,
 } from '@/lib/evaluations'
 
@@ -21,7 +22,25 @@ export async function POST(req: NextRequest) {
     const normalizedLabel = typeof label === 'string' ? label.trim() : ''
     const normalizedCustomQuestionSetName = typeof customQuestionSetName === 'string' ? customQuestionSetName.trim() : ''
     const normalizedCustomQuestions = Array.isArray(customQuestions)
-      ? customQuestions.map(item => `${item ?? ''}`.trim()).filter(Boolean)
+      ? customQuestions
+        .map((item, index) => {
+          if (typeof item === 'string') {
+            const text = item.trim()
+            return text ? { text, type: 'text' as const, orderIndex: index } : null
+          }
+
+          if (!item || typeof item !== 'object') return null
+          const candidate = item as Record<string, unknown>
+          const text = typeof candidate.text === 'string' ? candidate.text.trim() : ''
+          if (!text) return null
+
+          return {
+            text,
+            type: candidate.type === 'scale_1_5' ? 'scale_1_5' as const : 'text' as const,
+            orderIndex: index,
+          }
+        })
+        .filter((value): value is { text: string; type: 'text' | 'scale_1_5'; orderIndex: number } => Boolean(value))
       : []
 
     if (!normalizedCustomer || !normalizedLabel) {
@@ -67,16 +86,35 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Kunde inte skapa frågebatteriet för utvärderingen.' }, { status: 500 })
       }
 
-      const { error: questionInsertError } = await admin
+      const { data: questionInsertRows, error: questionInsertError } = await admin
         .from('questions')
-        .insert(normalizedCustomQuestions.map((text, index) => ({
+        .insert(normalizedCustomQuestions.map((item, index) => ({
           question_set_id: createdQuestionSet.id,
-          text,
+          text: item.text,
           order_index: index,
         })))
+        .select('id, order_index')
 
-      if (questionInsertError) {
+      if (questionInsertError || !questionInsertRows) {
         return NextResponse.json({ error: 'Kunde inte spara frågorna för utvärderingen.' }, { status: 500 })
+      }
+
+      const questionMetaRows = questionInsertRows.map((row, index) => ({
+        questionId: row.id,
+        orderIndex: typeof row.order_index === 'number' ? row.order_index : index,
+        type: normalizedCustomQuestions[index]?.type || 'text',
+      }))
+
+      const { error: questionMetaError } = await admin
+        .from('settings')
+        .upsert({
+          key: getEvaluationQuestionMetaKey(createdQuestionSet.id),
+          value: JSON.stringify(questionMetaRows),
+          updated_at: new Date().toISOString(),
+        })
+
+      if (questionMetaError) {
+        return NextResponse.json({ error: 'Kunde inte spara frågetypen för utvärderingen.' }, { status: 500 })
       }
 
       resolvedQuestionSetId = createdQuestionSet.id

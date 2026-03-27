@@ -25,6 +25,7 @@ type EvaluationDetailPayload = {
     id: string
     text: string
     order_index: number
+    type: 'text' | 'scale_1_5'
   }>
   responses: Array<{
     responseId: string
@@ -242,7 +243,12 @@ export default function EvaluationDetailPage() {
                 <details key={group.question.id} open style={detailsStyle}>
                   <summary style={summaryStyle}>
                     <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{group.question.text}</div>
+                      <span style={questionTypePillStyle(group.question.type)}>
+                        {group.question.type === 'scale_1_5' ? 'Skala 1–5' : 'Fritext'}
+                      </span>
+                    </div>
                       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
                         {group.entries.length} svar
                       </div>
@@ -259,9 +265,13 @@ export default function EvaluationDetailPage() {
                           </div>
                           <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{formatDateTime(entry.submittedAt)}</div>
                         </div>
-                        <div style={{ fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-                          {entry.answer || 'Inget svar'}
-                        </div>
+                        {group.question.type === 'scale_1_5' ? (
+                          <div style={scaleAnswerPillStyle}>{entry.answer || 'Inget svar'}</div>
+                        ) : (
+                          <div style={{ fontSize: 12.5, color: 'var(--text-2)', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                            {entry.answer || 'Inget svar'}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -440,4 +450,29 @@ const responseCardStyle: React.CSSProperties = {
   borderRadius: 8,
   padding: '12px 12px 10px',
   background: 'var(--surface)',
+}
+
+function questionTypePillStyle(type: 'text' | 'scale_1_5'): React.CSSProperties {
+  return {
+    padding: '4px 8px',
+    borderRadius: 999,
+    border: '1px solid var(--border)',
+    background: type === 'scale_1_5' ? 'var(--accent-dim)' : 'var(--surface)',
+    color: type === 'scale_1_5' ? 'var(--accent)' : 'var(--text-3)',
+    fontSize: 11,
+    fontWeight: 700,
+  }
+}
+
+const scaleAnswerPillStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: 36,
+  padding: '8px 12px',
+  borderRadius: 999,
+  background: 'var(--accent-dim)',
+  color: 'var(--accent)',
+  fontSize: 13,
+  fontWeight: 700,
 }

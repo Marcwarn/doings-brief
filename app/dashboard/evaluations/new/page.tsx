@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question, type BriefSession, type Profile } from '@/lib/supabase'
 import { EvaluationSubnav, InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
+import type { EvaluationQuestionType } from '@/lib/evaluations'
 
 type CreatedPayload = {
   evaluation: {
@@ -30,7 +31,10 @@ export default function NewEvaluationPage() {
   const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(false)
   const [questionPreview, setQuestionPreview] = useState<Question[]>([])
   const [customQuestionSetName, setCustomQuestionSetName] = useState('')
-  const [customQuestions, setCustomQuestions] = useState([{ text: '' }, { text: '' }])
+  const [customQuestions, setCustomQuestions] = useState<{ text: string; type: EvaluationQuestionType }[]>([
+    { text: '', type: 'text' },
+    { text: '', type: 'text' },
+  ])
   const [label, setLabel] = useState('')
   const [collectEmail, setCollectEmail] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -93,12 +97,18 @@ export default function NewEvaluationPage() {
 
   function updateCustomQuestion(index: number, value: string) {
     setCustomQuestions(prev => prev.map((question, questionIndex) => (
-      questionIndex === index ? { text: value } : question
+      questionIndex === index ? { ...question, text: value } : question
+    )))
+  }
+
+  function updateCustomQuestionType(index: number, type: EvaluationQuestionType) {
+    setCustomQuestions(prev => prev.map((question, questionIndex) => (
+      questionIndex === index ? { ...question, type } : question
     )))
   }
 
   function addCustomQuestion() {
-    setCustomQuestions(prev => [...prev, { text: '' }])
+    setCustomQuestions(prev => [...prev, { text: '', type: 'text' }])
   }
 
   function removeCustomQuestion(index: number) {
@@ -116,8 +126,8 @@ export default function NewEvaluationPage() {
     setQuestionPreview(nextQuestions)
     setCustomQuestionSetName(prev => prev.trim() ? prev : `${selected?.name || 'Importerade frågor'} · kopia`)
     setCustomQuestions(nextQuestions.length > 0
-      ? nextQuestions.map(question => ({ text: question.text }))
-      : [{ text: '' }, { text: '' }])
+      ? nextQuestions.map(question => ({ text: question.text, type: 'text' as const }))
+      : [{ text: '', type: 'text' }, { text: '', type: 'text' }])
   }
 
   function importSelectedQuestionSetAgain() {
@@ -128,14 +138,16 @@ export default function NewEvaluationPage() {
 
     setError(null)
     setCustomQuestionSetName(prev => prev.trim() ? prev : `${selectedQuestionSet?.name || 'Importerade frågor'} · kopia`)
-    setCustomQuestions(questionPreview.map(question => ({ text: question.text })))
+    setCustomQuestions(questionPreview.map(question => ({ text: question.text, type: 'text' })))
   }
 
   async function createEvaluation(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    const filteredCustomQuestions = customQuestions.map(item => item.text.trim()).filter(Boolean)
+    const filteredCustomQuestions = customQuestions
+      .map(item => ({ text: item.text.trim(), type: item.type }))
+      .filter(item => item.text)
 
     if (!customer.trim() || !label.trim()) {
       setError('Fyll i kund och namn på tillfälle.')
@@ -325,13 +337,23 @@ export default function NewEvaluationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {customQuestions.map((question, index) => (
                     <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                      <textarea
-                        rows={2}
-                        value={question.text}
-                        onChange={e => updateCustomQuestion(index, e.target.value)}
-                        placeholder={`Fråga ${index + 1}`}
-                        style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
-                      />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <textarea
+                          rows={2}
+                          value={question.text}
+                          onChange={e => updateCustomQuestion(index, e.target.value)}
+                          placeholder={`Fråga ${index + 1}`}
+                          style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
+                        />
+                        <select
+                          value={question.type}
+                          onChange={e => updateCustomQuestionType(index, e.target.value === 'scale_1_5' ? 'scale_1_5' : 'text')}
+                          style={inputStyle}
+                        >
+                          <option value="text">Fritext</option>
+                          <option value="scale_1_5">Skala 1–5</option>
+                        </select>
+                      </div>
                       <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
                         Ta bort
                       </button>

@@ -3,7 +3,9 @@ import { getSupabaseRequestClient } from '@/lib/server-auth'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
 import {
   getEvaluationKey,
+  getEvaluationQuestionMetaKey,
   getEvaluationResponsePrefix,
+  parseEvaluationQuestionMetaList,
   parseEvaluationMetadata,
   parseEvaluationResponse,
 } from '@/lib/evaluations'
@@ -45,7 +47,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       return NextResponse.json({ error: 'Du har inte åtkomst till utvärderingen.' }, { status: 403 })
     }
 
-    const [{ data: questionSet }, { data: questions }, { data: responseRows, error: responseError }] = await Promise.all([
+    const [{ data: questionSet }, { data: questions }, { data: responseRows, error: responseError }, { data: questionMetaRow }] = await Promise.all([
       admin
         .from('question_sets')
         .select('id, name, description')
@@ -60,11 +62,19 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
         .from('settings')
         .select('value')
         .like('key', `${getEvaluationResponsePrefix(evaluation.id)}%`),
+      admin
+        .from('settings')
+        .select('value')
+        .eq('key', getEvaluationQuestionMetaKey(evaluation.questionSetId))
+        .single(),
     ])
 
     if (responseError) {
       return NextResponse.json({ error: 'Kunde inte läsa utvärderingssvaren.' }, { status: 500 })
     }
+
+    const questionMeta = parseEvaluationQuestionMetaList(questionMetaRow?.value)
+    const typeByQuestionId = new Map(questionMeta.map(item => [item.questionId, item.type]))
 
     const responses = (responseRows || [])
       .map(row => parseEvaluationResponse(row.value))
@@ -74,7 +84,10 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     return NextResponse.json({
       evaluation,
       questionSet: questionSet || null,
-      questions: questions || [],
+      questions: (questions || []).map(question => ({
+        ...question,
+        type: typeByQuestionId.get(question.id) || 'text',
+      })),
       responses,
     })
   } catch (error) {

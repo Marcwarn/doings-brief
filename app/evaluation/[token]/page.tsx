@@ -7,6 +7,7 @@ type EvaluationQuestion = {
   id: string
   text: string
   order_index: number
+  type: 'text' | 'scale_1_5'
 }
 
 type PublicPayload = {
@@ -45,6 +46,7 @@ export default function EvaluationPublicPage() {
 
   const question = useMemo(() => payload?.questions[current] || null, [payload, current])
   const isLast = payload ? current === payload.questions.length - 1 : false
+  const isScaleQuestion = question?.type === 'scale_1_5'
 
   async function submit() {
     if (!payload) return
@@ -133,13 +135,40 @@ export default function EvaluationPublicPage() {
         description={`Fråga ${current + 1} av ${payload.questions.length}`}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <textarea
-            rows={7}
-            value={answers[current] || ''}
-            onChange={e => setAnswers(prev => prev.map((value, index) => index === current ? e.target.value : value))}
-            placeholder="Skriv ditt svar här…"
-            style={{ ...inputStyle, minHeight: 180, resize: 'vertical' }}
-          />
+          {isScaleQuestion ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 }}>
+              {[1, 2, 3, 4, 5].map(value => {
+                const active = (answers[current] || '') === `${value}`
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setAnswers(prev => prev.map((item, index) => index === current ? `${value}` : item))}
+                    style={{
+                      padding: '16px 0',
+                      borderRadius: 12,
+                      border: `1.5px solid ${active ? '#C62368' : '#f0cdd8'}`,
+                      background: active ? 'rgba(198,35,104,0.08)' : '#fff',
+                      color: active ? '#C62368' : '#1a1a1a',
+                      fontSize: 20,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {value}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <textarea
+              rows={7}
+              value={answers[current] || ''}
+              onChange={e => setAnswers(prev => prev.map((value, index) => index === current ? e.target.value : value))}
+              placeholder="Skriv ditt svar här…"
+              style={{ ...inputStyle, minHeight: 180, resize: 'vertical' }}
+            />
+          )}
           {isLast && payload.evaluation.collectEmail && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input
