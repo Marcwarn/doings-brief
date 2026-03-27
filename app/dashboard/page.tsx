@@ -54,13 +54,45 @@ export default function DashboardPage() {
 
   return (
     <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
-      <div style={{ marginBottom: 34 }}>
+      <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
           Start
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 8, maxWidth: 720 }}>
-          Arbeta i samma ordning som samtalet med kunden sker: börja med företaget, gå igenom frågorna, välj vilka som ska svara, skicka utskicket och följ sedan svaren.
+          Här får nya användare en enkel bild av vad en brief är och hur arbetet går till.
         </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 20, marginBottom: 30 }}>
+        <Panel title="Vad är en brief?" href="/dashboard/send" linkText="Skapa utskick">
+          <div style={{ padding: '18px 0 2px' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
+              En brief är ett enkelt sätt att samla in rätt svar från kunden innan arbetet börjar.
+            </p>
+            <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
+              Du väljer frågor, skickar dem till en eller flera personer och följer sedan vilka som har svarat.
+            </p>
+            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
+              När svaren kommit in kan du läsa varje svar, jämföra perspektiv och använda underlaget i nästa steg med kunden.
+            </p>
+          </div>
+        </Panel>
+
+        <Panel title="Så arbetar du" href="/dashboard/customers" linkText="Öppna kunder">
+          <div style={{ padding: '18px 0 2px' }}>
+            <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                'Börja med företaget du har dialog med.',
+                'Välj eller skapa frågorna du behöver svar på.',
+                'Bestäm vem eller vilka som ska svara.',
+                'Skicka utskicket och följ svarsläget.',
+                'Öppna svaren när de kommit in.',
+              ].map(item => (
+                <li key={item} style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.55 }}>{item}</li>
+              ))}
+            </ol>
+          </div>
+        </Panel>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 30 }}>

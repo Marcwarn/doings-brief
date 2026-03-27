@@ -65,34 +65,12 @@ export default function CustomersPage() {
             Kunder
           </h1>
           <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6 }}>
-            Här börjar arbetet. Välj kund, fundera igenom frågorna och skicka sedan ditt utskick.
+            Här ser du företag ni arbetar med, deras utskick och senaste aktivitet.
           </p>
         </div>
         <Link href="/dashboard/send" style={primaryLinkStyle}>
           Nytt utskick
         </Link>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 18, marginBottom: 22 }}>
-        <InfoCard title="Arbetsordning">
-          <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[
-              'Börja med kunddialogen och vilket företag arbetet gäller.',
-              'Välj eller skapa frågebatteriet som behövs för att komma vidare.',
-              'Bestäm vilka personer som ska svara och skicka utskicket.',
-              'Följ vem som har svarat och gå sedan ner i enskilda svar.',
-            ].map(item => (
-              <li key={item} style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.55 }}>{item}</li>
-            ))}
-          </ol>
-        </InfoCard>
-        <InfoCard title="Snabbval">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Link href="/dashboard/question-sets" style={quickLinkStyle}>Se frågebatterier</Link>
-            <Link href="/dashboard/send" style={quickLinkStyle}>Skapa nytt utskick</Link>
-            <Link href="/dashboard/briefs" style={quickLinkStyle}>Följ utskick och svar</Link>
-          </div>
-        </InfoCard>
       </div>
 
       {customers.length === 0 ? (
@@ -172,17 +150,6 @@ function formatDate(value: string) {
   })
 }
 
-function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{title}</span>
-      </div>
-      <div style={{ padding: 18 }}>{children}</div>
-    </div>
-  )
-}
-
 const primaryLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -197,16 +164,6 @@ const primaryLinkStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.01em',
   textDecoration: 'none',
-}
-
-const quickLinkStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  borderRadius: 8,
-  background: 'var(--bg)',
-  border: '1px solid var(--border)',
-  color: 'var(--text)',
-  textDecoration: 'none',
-  fontSize: 13.5,
 }
 
 const ghostLinkStyle: React.CSSProperties = {
