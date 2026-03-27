@@ -49,6 +49,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
       evaluation: {
         label: evaluation.label,
         customer: evaluation.customer,
+        collectEmail: evaluation.collectEmail,
       },
       questions: questions || [],
     })

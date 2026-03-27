@@ -13,6 +13,7 @@ type PublicPayload = {
   evaluation: {
     label: string
     customer: string
+    collectEmail: boolean
   }
   questions: EvaluationQuestion[]
 }
@@ -106,12 +107,9 @@ export default function EvaluationPublicPage() {
       <Shell>
         <Card
           title={payload.evaluation.label}
-          description={`Det här är en utvärdering för ${payload.evaluation.customer}. Svara först på frågorna och lämna sedan din e-post i slutet.`}
+          description={`Det här är en utvärdering för ${payload.evaluation.customer}.`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={noticeStyle}>
-              Din e-post samlas in i slutet tillsammans med svaret, men visas inte öppet för gruppen.
-            </div>
             <button
               onClick={() => {
                 setError('')
@@ -142,11 +140,8 @@ export default function EvaluationPublicPage() {
             placeholder="Skriv ditt svar här…"
             style={{ ...inputStyle, minHeight: 180, resize: 'vertical' }}
           />
-          {isLast && (
+          {isLast && payload.evaluation.collectEmail && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={noticeStyle}>
-                Ange din e-post innan du skickar. Den sparas tillsammans med svaret men visas inte öppet för gruppen.
-              </div>
               <input
                 type="email"
                 value={email}
@@ -183,7 +178,7 @@ export default function EvaluationPublicPage() {
                     setError('Svara på frågan innan du skickar.')
                     return
                   }
-                  if (!email.trim()) {
+                  if (payload.evaluation.collectEmail && !email.trim()) {
                     setError('Ange din e-post innan du skickar.')
                     return
                   }
@@ -277,16 +272,6 @@ const secondaryButtonStyle: React.CSSProperties = {
   background: '#fff',
   color: '#C62368',
   border: '1px solid #f0cdd8',
-}
-
-const noticeStyle: React.CSSProperties = {
-  padding: '12px 14px',
-  borderRadius: 10,
-  border: '1px solid #f0cdd8',
-  background: '#fff',
-  color: '#6b7280',
-  fontSize: 12.5,
-  lineHeight: 1.5,
 }
 
 const errorStyle: React.CSSProperties = {

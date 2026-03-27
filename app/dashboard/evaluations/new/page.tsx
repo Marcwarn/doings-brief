@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { createClient, type QuestionSet, type BriefSession } from '@/lib/supabase'
+import { createClient, type QuestionSet, type BriefSession, type Profile } from '@/lib/supabase'
 import { EvaluationSubnav, InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 
 type CreatedPayload = {
@@ -13,6 +13,7 @@ type CreatedPayload = {
     customer: string
     questionSetId: string
     questionSetName: string | null
+    collectEmail: boolean
     createdAt: string
   }
   publicUrl: string
@@ -22,9 +23,11 @@ export default function NewEvaluationPage() {
   const sb = createClient()
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
   const [customers, setCustomers] = useState<string[]>([])
+  const [profile, setProfile] = useState<Profile | null>(null)
   const [customer, setCustomer] = useState('')
   const [questionSetId, setQuestionSetId] = useState('')
   const [label, setLabel] = useState('')
+  const [collectEmail, setCollectEmail] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,12 +39,19 @@ export default function NewEvaluationPage() {
 
   useEffect(() => {
     Promise.all([
+      sb.auth.getUser(),
       sb.from('question_sets').select('*').order('updated_at', { ascending: false }),
       sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(200),
-    ]).then(([{ data: questionSetRows }, { data: sessionRows }]) => {
+    ]).then(async ([{ data: authData }, { data: questionSetRows }, { data: sessionRows }]) => {
       const nextCustomers = Array.from(new Set((sessionRows || [])
         .map((session: BriefSession) => session.client_organisation?.trim() || '')
         .filter(Boolean)))
+
+      const userId = authData.user?.id
+      if (userId) {
+        const { data: nextProfile } = await sb.from('profiles').select('*').eq('id', userId).single()
+        setProfile(nextProfile || null)
+      }
 
       setQuestionSets(questionSetRows || [])
       setCustomers(nextCustomers)
@@ -69,6 +79,7 @@ export default function NewEvaluationPage() {
         customer: customer.trim(),
         questionSetId,
         label: label.trim(),
+        collectEmail,
       }),
     })
     const payload = await response.json().catch(() => null)
@@ -135,6 +146,33 @@ export default function NewEvaluationPage() {
             />
           </Field>
 
+          {profile?.role === 'admin' && (
+            <label style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              padding: '12px 14px',
+              borderRadius: 10,
+              border: '1px solid var(--border)',
+              background: 'var(--bg)',
+            }}>
+              <input
+                type="checkbox"
+                checked={collectEmail}
+                onChange={e => setCollectEmail(e.target.checked)}
+                style={{ marginTop: 2 }}
+              />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                  Samla in deltagarnas e-post i slutet
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
+                  Stäng av för helt anonym utvärdering.
+                </div>
+              </div>
+            </label>
+          )}
+
           <button type="submit" disabled={saving} style={submitButtonStyle(saving)}>
             {saving ? 'Skapar…' : 'Skapa publik länk + QR-kod'}
           </button>
@@ -147,6 +185,9 @@ export default function NewEvaluationPage() {
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 16 }}>
               {created.evaluation.customer} · {created.evaluation.questionSetName || 'Frågebatteri'}
+              <span style={{ marginLeft: 6 }}>
+                · {created.evaluation.collectEmail ? 'E-post samlas in' : 'Helt anonym'}
+              </span>
             </div>
             <div style={{ display: 'grid', gap: 14 }}>
               <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 14px 12px' }}>

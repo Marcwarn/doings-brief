@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { customer, questionSetId, label } = await req.json()
+    const { customer, questionSetId, label, collectEmail } = await req.json()
 
     const normalizedCustomer = typeof customer === 'string' ? customer.trim() : ''
     const normalizedQuestionSetId = typeof questionSetId === 'string' ? questionSetId.trim() : ''
@@ -28,6 +28,16 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const resolvedCollectEmail = profile?.role === 'admin'
+      ? collectEmail !== false
+      : true
 
     const { data: questionSet, error: questionSetError } = await admin
       .from('question_sets')
@@ -50,6 +60,7 @@ export async function POST(req: NextRequest) {
       customer: normalizedCustomer,
       questionSetId: questionSet.id,
       questionSetName: questionSet.name,
+      collectEmail: resolvedCollectEmail,
       createdBy: user.id,
       createdAt,
     }

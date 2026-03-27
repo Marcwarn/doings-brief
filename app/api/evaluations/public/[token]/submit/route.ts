@@ -16,9 +16,8 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     const admin = getSupabaseAdminClient()
     const { email, answers } = await req.json()
 
-    const normalizedEmail = typeof email === 'string' ? normalizeEvaluationEmail(email) : ''
-    if (!normalizedEmail || !Array.isArray(answers) || answers.length === 0) {
-      return NextResponse.json({ error: 'E-post och svar krävs.' }, { status: 400 })
+    if (!Array.isArray(answers) || answers.length === 0) {
+      return NextResponse.json({ error: 'Svar krävs.' }, { status: 400 })
     }
 
     const { data: tokenRow, error: tokenError } = await admin
@@ -48,6 +47,14 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       return NextResponse.json({ error: 'Ogiltig utvärdering.' }, { status: 500 })
     }
 
+    const normalizedEmail = evaluation.collectEmail && typeof email === 'string'
+      ? normalizeEvaluationEmail(email)
+      : ''
+
+    if (evaluation.collectEmail && !normalizedEmail) {
+      return NextResponse.json({ error: 'E-post krävs för den här utvärderingen.' }, { status: 400 })
+    }
+
     const normalizedAnswers = answers
       .map((answer: Record<string, unknown>, index: number) => {
         const questionText = typeof answer?.questionText === 'string' ? answer.questionText.trim() : ''
@@ -67,16 +74,22 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       return NextResponse.json({ error: 'Fyll i minst ett svar.' }, { status: 400 })
     }
 
-    const participantKey = getEvaluationParticipantKey(evaluation.id, normalizedEmail)
-    const { data: participantRow } = await admin
-      .from('settings')
-      .select('value')
-      .eq('key', participantKey)
-      .single()
+    let responseId: string = randomUUID()
+    let participantKey: string | null = null
 
-    const responseId = typeof participantRow?.value === 'string' && participantRow.value
-      ? participantRow.value
-      : randomUUID()
+    if (evaluation.collectEmail) {
+      participantKey = getEvaluationParticipantKey(evaluation.id, normalizedEmail)
+      const { data: participantRow } = await admin
+        .from('settings')
+        .select('value')
+        .eq('key', participantKey)
+        .single()
+
+      responseId = typeof participantRow?.value === 'string' && participantRow.value
+        ? participantRow.value
+        : randomUUID()
+    }
+
     const submittedAt = new Date().toISOString()
 
     const response: EvaluationResponseRecord = {
@@ -87,18 +100,23 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       answers: normalizedAnswers,
     }
 
-    const { error: upsertError } = await admin.from('settings').upsert([
-      {
-        key: participantKey,
-        value: responseId,
-        updated_at: submittedAt,
-      },
+    const rows = [
       {
         key: getEvaluationResponseKey(evaluation.id, responseId),
         value: JSON.stringify(response),
         updated_at: submittedAt,
       },
-    ])
+    ]
+
+    if (participantKey) {
+      rows.unshift({
+        key: participantKey,
+        value: responseId,
+        updated_at: submittedAt,
+      })
+    }
+
+    const { error: upsertError } = await admin.from('settings').upsert(rows)
 
     if (upsertError) {
       console.error('evaluation submit upsert error:', upsertError)

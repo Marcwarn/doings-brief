@@ -10,6 +10,7 @@ export type EvaluationMetadata = {
   customer: string
   questionSetId: string
   questionSetName: string | null
+  collectEmail: boolean
   createdBy: string
   createdAt: string
 }
@@ -78,6 +79,7 @@ export function parseEvaluationMetadata(raw: string | null | undefined) {
       customer: parsed.customer,
       questionSetId: parsed.questionSetId,
       questionSetName: typeof parsed.questionSetName === 'string' && parsed.questionSetName.trim() ? parsed.questionSetName.trim() : null,
+      collectEmail: parsed.collectEmail !== false,
       createdBy: parsed.createdBy,
       createdAt: parsed.createdAt,
     } satisfies EvaluationMetadata

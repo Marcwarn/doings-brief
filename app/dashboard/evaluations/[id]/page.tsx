@@ -13,6 +13,7 @@ type EvaluationDetailPayload = {
     customer: string
     questionSetId: string
     questionSetName: string | null
+    collectEmail: boolean
     createdAt: string
   }
   questionSet: {
@@ -123,6 +124,7 @@ export default function EvaluationDetailPage() {
           <div style={{ display: 'grid', gap: 10 }}>
             <OverviewRow label="Kund" value={evaluation.customer} />
             <OverviewRow label="Frågebatteri" value={evaluation.questionSetName || payload.questionSet?.name || 'Ej angivet'} />
+            <OverviewRow label="Svarsläge" value={evaluation.collectEmail ? 'Med e-post' : 'Anonymt'} />
             <OverviewRow label="Svar hittills" value={`${responses.length}`} />
           </div>
         </SectionCard>
@@ -149,7 +151,7 @@ export default function EvaluationDetailPage() {
               {responses.map(response => (
                 <div key={response.responseId} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '14px 14px 12px', background: 'var(--bg)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{response.email}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{response.email || 'Anonym deltagare'}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{formatDateTime(response.submittedAt)}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
