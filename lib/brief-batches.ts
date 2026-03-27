@@ -62,6 +62,8 @@ export type CustomerSummary = {
   pendingCount: number
   lastSentAt: string
   latestDispatchId: string | null
+  dispatchIds: string[]
+  contacts: BriefDispatchContact[]
 }
 
 function normalizeDispatchContacts(value: unknown) {
@@ -261,6 +263,15 @@ export function groupCustomers(groups: GroupedBriefSessions[], batchLookup: Brie
       existing.recipientCount += group.sessions.length
       existing.submittedCount += group.submittedCount
       existing.pendingCount += group.pendingCount
+      if (dispatchId && !existing.dispatchIds.includes(dispatchId)) {
+        existing.dispatchIds.push(dispatchId)
+      }
+      const dispatchContacts = firstSession ? (batchLookup[firstSession.id]?.contacts || []) : []
+      for (const contact of dispatchContacts) {
+        if (!existing.contacts.some(existingContact => existingContact.sessionId === contact.sessionId)) {
+          existing.contacts.push(contact)
+        }
+      }
       if (new Date(group.lastSentAt) > new Date(existing.lastSentAt)) {
         existing.lastSentAt = group.lastSentAt
         existing.latestDispatchId = dispatchId
@@ -277,6 +288,8 @@ export function groupCustomers(groups: GroupedBriefSessions[], batchLookup: Brie
       pendingCount: group.pendingCount,
       lastSentAt: group.lastSentAt,
       latestDispatchId: dispatchId,
+      dispatchIds: dispatchId ? [dispatchId] : [],
+      contacts: firstSession ? (batchLookup[firstSession.id]?.contacts || []) : [],
     })
   }
 

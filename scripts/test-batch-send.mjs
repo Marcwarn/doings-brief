@@ -30,6 +30,8 @@ async function main() {
     await fillBatchForm(page, organisation, recipients)
     await submitBatch(page, recipients.length)
     await verifyDashboardGrouping(page, organisation, recipientEmails)
+    const customerUrl = await openCustomerPage(page, organisation)
+    await verifyCustomerPage(page, organisation, recipientEmails)
     const dispatchUrl = await openDispatchPage(page, organisation)
     await verifyDispatchPage(page, organisation, recipientEmails)
 
@@ -38,6 +40,7 @@ async function main() {
       baseUrl: BASE_URL,
       organisation,
       recipients: recipientEmails,
+      customerUrl,
       dispatchUrl,
     }, null, 2))
   } finally {
@@ -96,6 +99,8 @@ async function verifyDashboardGrouping(page, organisation, recipientEmails) {
 }
 
 async function openDispatchPage(page, organisation) {
+  await page.locator('aside').getByRole('link', { name: /^Utskick$/i }).click()
+  await page.waitForURL('**/dashboard/briefs', { timeout: 15000 })
   const row = page.getByText(organisation, { exact: false }).first()
   await row.waitFor({ timeout: 15000 })
 
@@ -108,6 +113,39 @@ async function openDispatchPage(page, organisation) {
   ])
 
   return page.url()
+}
+
+async function openCustomerPage(page, organisation) {
+  await page.locator('aside').getByRole('link', { name: /^Kunder$/i }).click()
+  await page.waitForURL('**/dashboard/customers', { timeout: 15000 })
+  const row = page.getByText(organisation, { exact: false }).first()
+  await row.waitFor({ timeout: 15000 })
+
+  const container = row.locator('xpath=ancestor::div[contains(@style, "grid-template-columns")]').first()
+  const openLink = container.getByRole('link', { name: /öppna kund/i })
+
+  await Promise.all([
+    page.waitForURL('**/dashboard/customers/**', { timeout: 15000 }),
+    openLink.click(),
+  ])
+
+  return page.url()
+}
+
+async function verifyCustomerPage(page, organisation, recipientEmails) {
+  const main = page.locator('main')
+  await page.getByRole('heading', { name: new RegExp(organisation, 'i') }).waitFor({ timeout: 15000 })
+  await main.getByText('Kontaktpersoner', { exact: true }).waitFor({ timeout: 15000 })
+  await main.getByText('Utskick för kunden', { exact: true }).waitFor({ timeout: 15000 })
+  const customerText = await main.textContent()
+  assertIncludes(customerText || '', 'VD', 'customer first role')
+  assertIncludes(customerText || '', 'Marknad', 'customer second role')
+
+  for (const recipientEmail of recipientEmails) {
+    await page.getByText(recipientEmail, { exact: false }).waitFor({ timeout: 15000 })
+  }
+
+  await page.goBack({ waitUntil: 'networkidle' })
 }
 
 async function verifyDispatchPage(page, organisation, recipientEmails) {

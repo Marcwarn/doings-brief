@@ -147,6 +147,9 @@ export default function CustomersPage() {
                 <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={ghostLinkStyle}>
                   Nytt utskick
                 </Link>
+                <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={filledLinkStyle}>
+                  Öppna kund
+                </Link>
                 {customer.latestDispatchId ? (
                   <Link href={`/dashboard/dispatches/${customer.latestDispatchId}`} style={filledLinkStyle}>
                     Se senaste utskick

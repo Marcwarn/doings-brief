@@ -117,6 +117,9 @@ export default function DashboardPage() {
                   <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={smallGhostLink}>
                     Nytt utskick
                   </Link>
+                  <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={smallGhostLink}>
+                    Kund
+                  </Link>
                   <Link href={customer.latestDispatchId ? `/dashboard/dispatches/${customer.latestDispatchId}` : '/dashboard/briefs'} style={smallLink}>
                     Se senaste
                   </Link>
