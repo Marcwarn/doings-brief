@@ -106,7 +106,11 @@ export default function DashboardPage() {
           {groupedSessions.length === 0
             ? <Empty text="Inga briefs skickade ännu" />
             : groupedSessions.slice(0, 5).map(group => (
-              <Link key={group.key} href="/dashboard/briefs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-sub)', textDecoration: 'none' }}>
+              <Link
+                key={group.key}
+                href={batchLookup[group.sessions[0]?.id || '']?.dispatchId ? `/dashboard/dispatches/${batchLookup[group.sessions[0]?.id || '']?.dispatchId}` : '/dashboard/briefs'}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-sub)', textDecoration: 'none' }}
+              >
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.label}</div>
                   <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>

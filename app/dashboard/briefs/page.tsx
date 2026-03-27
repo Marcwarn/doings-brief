@@ -139,6 +139,7 @@ export default function BriefsPage() {
 
           {groups.map(group => {
             const isExpanded = expandedGroups.includes(group.key)
+            const dispatchId = batchLookup[group.sessions[0]?.id || '']?.dispatchId || null
 
             return (
               <div key={group.key} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -198,6 +199,20 @@ export default function BriefsPage() {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end' }}>
+                    {dispatchId && (
+                      <Link
+                        href={`/dashboard/dispatches/${dispatchId}`}
+                        style={{
+                          padding: '6px 13px', borderRadius: 6,
+                          background: 'var(--surface)', color: 'var(--text)',
+                          border: '1px solid var(--border)',
+                          fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                          letterSpacing: '0.01em', textDecoration: 'none', flexShrink: 0,
+                        }}
+                      >
+                        Öppna utskick
+                      </Link>
+                    )}
                     <button
                       onClick={() => toggleGroup(group.key)}
                       style={{

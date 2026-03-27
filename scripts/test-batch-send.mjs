@@ -26,12 +26,15 @@ async function main() {
     await fillBatchForm(page, organisation, recipients)
     await submitBatch(page, recipients.length)
     await verifyDashboardGrouping(page, organisation, recipients)
+    const dispatchUrl = await openDispatchPage(page, organisation)
+    await verifyDispatchPage(page, organisation, recipients)
 
     console.log(JSON.stringify({
       ok: true,
       baseUrl: BASE_URL,
       organisation,
       recipients,
+      dispatchUrl,
     }, null, 2))
   } finally {
     await context.close()
@@ -82,6 +85,38 @@ async function verifyDashboardGrouping(page, organisation, recipients) {
   assertIncludes(pageText || '', 'Väntar: 2', 'pending count')
 
   await page.getByRole('button', { name: /visa personer/i }).first().click()
+
+  for (const recipient of recipients) {
+    await page.getByText(recipient, { exact: false }).waitFor({ timeout: 15000 })
+  }
+}
+
+async function openDispatchPage(page, organisation) {
+  const row = page.getByText(organisation, { exact: false }).first()
+  await row.waitFor({ timeout: 15000 })
+
+  const container = row.locator('xpath=ancestor::div[contains(@style, "grid-template-columns")]').first()
+  const openLink = container.getByRole('link', { name: /öppna utskick/i })
+
+  await Promise.all([
+    page.waitForURL('**/dashboard/dispatches/**', { timeout: 15000 }),
+    openLink.click(),
+  ])
+
+  return page.url()
+}
+
+async function verifyDispatchPage(page, organisation, recipients) {
+  await page.getByRole('heading', { name: new RegExp(organisation, 'i') }).waitFor({ timeout: 15000 })
+  await page.getByText('Översikt', { exact: true }).waitFor({ timeout: 15000 })
+  await page.getByText('Mottagare', { exact: true }).waitFor({ timeout: 15000 })
+  await page.getByText('Historik', { exact: true }).waitFor({ timeout: 15000 })
+
+  const bodyText = await page.locator('body').textContent()
+  assertIncludes(bodyText || '', 'Mottagare: 2', 'dispatch recipient count')
+  assertIncludes(bodyText || '', 'Svar: 0', 'dispatch submitted count')
+  assertIncludes(bodyText || '', 'Väntar: 2', 'dispatch pending count')
+  assertIncludes(bodyText || '', 'Utskicket skapades', 'dispatch history')
 
   for (const recipient of recipients) {
     await page.getByText(recipient, { exact: false }).waitFor({ timeout: 15000 })
