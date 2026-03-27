@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseRequestClient } from '@/lib/server-auth'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
-import { BriefBatchMetadata, getBatchLookupKey, getBatchSettingKey } from '@/lib/brief-batches'
+import {
+  BriefDispatchMetadata,
+  getBatchLookupKey,
+  getBatchSettingKey,
+  getDispatchLookupKey,
+  getDispatchSettingKey,
+} from '@/lib/brief-batches'
 
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { batchId, label, organisation, questionSetId, sessionIds } = await req.json()
+    const { dispatchId, batchId, label, organisation, questionSetId, sessionIds } = await req.json()
+    const resolvedDispatchId = typeof dispatchId === 'string' && dispatchId
+      ? dispatchId
+      : (typeof batchId === 'string' ? batchId : '')
 
-    if (!batchId || !Array.isArray(sessionIds) || sessionIds.length === 0) {
+    if (!resolvedDispatchId || !Array.isArray(sessionIds) || sessionIds.length === 0) {
       return NextResponse.json({ error: 'Ogiltig payload' }, { status: 400 })
     }
 
@@ -37,8 +46,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Alla sessioner kunde inte verifieras' }, { status: 403 })
     }
 
-    const metadata: BriefBatchMetadata = {
-      batchId,
+    const metadata: BriefDispatchMetadata = {
+      dispatchId: resolvedDispatchId,
       label: typeof label === 'string' && label.trim() ? label.trim() : 'Utskick',
       organisation: typeof organisation === 'string' && organisation.trim() ? organisation.trim() : null,
       consultantId: user.id,
@@ -49,13 +58,23 @@ export async function POST(req: NextRequest) {
 
     const rows = [
       {
-        key: getBatchSettingKey(batchId),
+        key: getDispatchSettingKey(resolvedDispatchId),
+        value: JSON.stringify(metadata),
+        updated_at: metadata.createdAt,
+      },
+      {
+        key: getBatchSettingKey(resolvedDispatchId),
         value: JSON.stringify(metadata),
         updated_at: metadata.createdAt,
       },
       ...uniqueSessionIds.map(sessionId => ({
+        key: getDispatchLookupKey(sessionId),
+        value: resolvedDispatchId,
+        updated_at: metadata.createdAt,
+      })),
+      ...uniqueSessionIds.map(sessionId => ({
         key: getBatchLookupKey(sessionId),
-        value: batchId,
+        value: resolvedDispatchId,
         updated_at: metadata.createdAt,
       })),
     ]

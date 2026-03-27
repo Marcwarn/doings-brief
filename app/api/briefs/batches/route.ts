@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseRequestClient } from '@/lib/server-auth'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
 import {
+  BRIEF_DISPATCH_KEY_PREFIX,
+  BRIEF_DISPATCH_LOOKUP_PREFIX,
   BRIEF_BATCH_KEY_PREFIX,
   BriefBatchLookupMap,
   getBatchLookupKey,
-  parseBatchMetadata,
+  getDispatchIdFromLookupValue,
+  getDispatchLookupKey,
+  parseDispatchMetadata,
 } from '@/lib/brief-batches'
 
 export async function POST(req: NextRequest) {
@@ -53,7 +57,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ batchLookup: {} satisfies BriefBatchLookupMap })
     }
 
-    const lookupKeys = allowedIds.map(getBatchLookupKey)
+    const lookupKeys = [
+      ...allowedIds.map(getDispatchLookupKey),
+      ...allowedIds.map(getBatchLookupKey),
+    ]
     const { data: lookupRows, error: lookupError } = await admin
       .from('settings')
       .select('key, value')
@@ -63,12 +70,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Kunde inte läsa batch-uppslag' }, { status: 500 })
     }
 
-    const batchIds = Array.from(new Set((lookupRows || []).map(row => row.value).filter((value): value is string => Boolean(value))))
+    const lookupBySessionId = new Map<string, string>()
+    for (const row of lookupRows || []) {
+      const dispatchId = getDispatchIdFromLookupValue(row.value)
+      if (!dispatchId) continue
+
+      const sessionId = row.key.startsWith(BRIEF_DISPATCH_LOOKUP_PREFIX)
+        ? row.key.replace(/^brief_dispatch_lookup:/, '')
+        : row.key.replace(/^brief_batch_lookup:/, '')
+
+      if (!sessionId) continue
+
+      if (row.key.startsWith('brief_dispatch_lookup:') || !lookupBySessionId.has(sessionId)) {
+        lookupBySessionId.set(sessionId, dispatchId)
+      }
+    }
+
+    const batchIds = Array.from(new Set(Array.from(lookupBySessionId.values())))
     if (batchIds.length === 0) {
       return NextResponse.json({ batchLookup: {} satisfies BriefBatchLookupMap })
     }
 
-    const batchKeys = batchIds.map(batchId => `${BRIEF_BATCH_KEY_PREFIX}${batchId}`)
+    const batchKeys = [
+      ...batchIds.map(batchId => `${BRIEF_DISPATCH_KEY_PREFIX}${batchId}`),
+      ...batchIds.map(batchId => `${BRIEF_BATCH_KEY_PREFIX}${batchId}`),
+    ]
     const { data: batchRows, error: batchError } = await admin
       .from('settings')
       .select('key, value')
@@ -80,15 +106,14 @@ export async function POST(req: NextRequest) {
 
     const batchById = Object.fromEntries(
       (batchRows || [])
-        .map(row => parseBatchMetadata(row.value))
+        .map(row => parseDispatchMetadata(row.value))
         .filter((value): value is NonNullable<typeof value> => Boolean(value))
-        .map(batch => [batch.batchId, batch])
+        .map(batch => [batch.dispatchId, batch])
     )
 
     const batchLookup: BriefBatchLookupMap = {}
-    for (const row of lookupRows || []) {
-      const sessionId = row.key.replace(/^brief_batch_lookup:/, '')
-      const batch = row.value ? batchById[row.value] : null
+    for (const [sessionId, dispatchId] of Array.from(lookupBySessionId.entries())) {
+      const batch = batchById[dispatchId]
       if (sessionId && batch) {
         batchLookup[sessionId] = batch
       }

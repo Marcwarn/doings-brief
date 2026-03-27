@@ -133,7 +133,7 @@ function SendBriefInner() {
     if (parseError) { setError(parseError); return }
     setSending(true); setError('')
     const { data: { user } } = await sb.auth.getUser()
-    const batchId = crypto.randomUUID()
+    const dispatchId = crypto.randomUUID()
     const payload = recipients.map(recipient => ({
       consultant_id: user?.id,
       client_name: recipient.name,
@@ -192,7 +192,7 @@ function SendBriefInner() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        batchId,
+        dispatchId,
         label: formatBatchLabel(clientOrg.trim()),
         organisation: clientOrg.trim() || null,
         questionSetId: selectedSet,

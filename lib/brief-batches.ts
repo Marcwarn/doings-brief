@@ -1,11 +1,13 @@
 import type { BriefSession } from '@/lib/supabase'
 
+export const BRIEF_DISPATCH_KEY_PREFIX = 'brief_dispatch:'
+export const BRIEF_DISPATCH_LOOKUP_PREFIX = 'brief_dispatch_lookup:'
 export const BRIEF_BATCH_KEY_PREFIX = 'brief_batch:'
 export const BRIEF_BATCH_LOOKUP_PREFIX = 'brief_batch_lookup:'
 export const BRIEF_SUMMARY_KEY_PREFIX = 'brief_summary:'
 
-export type BriefBatchMetadata = {
-  batchId: string
+export type BriefDispatchMetadata = {
+  dispatchId: string
   label: string
   organisation: string | null
   consultantId: string | null
@@ -13,6 +15,8 @@ export type BriefBatchMetadata = {
   sessionIds: string[]
   createdAt: string
 }
+
+export type BriefBatchMetadata = BriefDispatchMetadata
 
 export type BriefBatchLookupMap = Record<string, BriefBatchMetadata>
 
@@ -49,21 +53,33 @@ export function getBatchLookupKey(sessionId: string) {
   return `${BRIEF_BATCH_LOOKUP_PREFIX}${sessionId}`
 }
 
+export function getDispatchSettingKey(dispatchId: string) {
+  return `${BRIEF_DISPATCH_KEY_PREFIX}${dispatchId}`
+}
+
+export function getDispatchLookupKey(sessionId: string) {
+  return `${BRIEF_DISPATCH_LOOKUP_PREFIX}${sessionId}`
+}
+
 export function getBriefSummaryKey(sessionId: string) {
   return `${BRIEF_SUMMARY_KEY_PREFIX}${sessionId}`
 }
 
-export function parseBatchMetadata(raw: string | null | undefined) {
+export function parseDispatchMetadata(raw: string | null | undefined) {
   if (!raw) return null
 
   try {
-    const parsed = JSON.parse(raw) as BriefBatchMetadata
-    if (!parsed || !parsed.batchId || !Array.isArray(parsed.sessionIds)) {
+    const parsed = JSON.parse(raw) as Partial<BriefDispatchMetadata> & { batchId?: string }
+    const dispatchId = typeof parsed?.dispatchId === 'string' && parsed.dispatchId
+      ? parsed.dispatchId
+      : (typeof parsed?.batchId === 'string' ? parsed.batchId : '')
+
+    if (!parsed || !dispatchId || !Array.isArray(parsed.sessionIds)) {
       return null
     }
 
     return {
-      batchId: parsed.batchId,
+      dispatchId,
       label: parsed.label || 'Utskick',
       organisation: parsed.organisation || null,
       consultantId: parsed.consultantId || null,
@@ -74,6 +90,14 @@ export function parseBatchMetadata(raw: string | null | undefined) {
   } catch {
     return null
   }
+}
+
+export function parseBatchMetadata(raw: string | null | undefined) {
+  return parseDispatchMetadata(raw)
+}
+
+export function getDispatchIdFromLookupValue(value: string | null | undefined) {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
 function normalizeStringList(value: unknown) {
@@ -133,11 +157,11 @@ export function groupBriefSessions(sessions: BriefSession[], batchLookup: BriefB
   const groups = new Map<string, GroupedBriefSessions>()
 
   for (const session of sessions) {
-    const batch = batchLookup[session.id]
-    const key = batch ? `batch:${batch.batchId}` : fallbackGroupKey(session)
-    const label = batch?.organisation || fallbackGroupLabel(session)
-    const sublabel = batch
-      ? batch.label
+    const dispatch = batchLookup[session.id]
+    const key = dispatch ? `dispatch:${dispatch.dispatchId}` : fallbackGroupKey(session)
+    const label = dispatch?.organisation || fallbackGroupLabel(session)
+    const sublabel = dispatch
+      ? dispatch.label
       : (session.client_organisation?.trim() ? session.client_name : session.client_email)
 
     const existing = groups.get(key)
@@ -155,7 +179,7 @@ export function groupBriefSessions(sessions: BriefSession[], batchLookup: BriefB
       key,
       label,
       sublabel,
-      batchLabel: batch?.label || null,
+      batchLabel: dispatch?.label || null,
       sessions: [session],
       submittedCount: session.status === 'submitted' ? 1 : 0,
       pendingCount: session.status === 'submitted' ? 0 : 1,
