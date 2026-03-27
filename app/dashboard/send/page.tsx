@@ -503,22 +503,39 @@ function SendBriefInner() {
                 <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
                   Klistra in flera rader eller importera en fil med namn och e-post.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 7,
-                    border: '1px solid var(--border)',
-                    background: 'var(--bg)',
-                    color: 'var(--text)',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Importera CSV/XLSX
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Link
+                    href="/api/briefs/recipients-template"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 7,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      color: 'var(--text)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Ladda ner mall
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 7,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      color: 'var(--text)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Importera CSV/XLSX
+                  </button>
+                </div>
               </div>
               <textarea
                 value={recipientsInput}
