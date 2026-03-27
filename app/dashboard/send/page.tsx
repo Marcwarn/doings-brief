@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question } from '@/lib/supabase'
@@ -104,6 +104,83 @@ function parseRecipients(input: string) {
   return { recipients, error: '' }
 }
 
+function buildRecipientLine(name: string, email: string, role: string) {
+  const cleanName = name.trim()
+  const cleanEmail = email.trim().toLowerCase()
+  const cleanRole = role.trim()
+
+  if (cleanName && cleanRole) return `${cleanName}, ${cleanEmail}, ${cleanRole}`
+  if (cleanName) return `${cleanName}, ${cleanEmail}`
+  if (cleanRole) return `${cleanEmail}, ${cleanRole}`
+  return cleanEmail
+}
+
+function normalizeHeader(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function parseSpreadsheetRows(rows: string[][]) {
+  const normalizedRows = rows
+    .map(row => row.map(cell => cell.trim()))
+    .filter(row => row.some(cell => cell.length > 0))
+
+  if (normalizedRows.length === 0) {
+    return { lines: [] as string[], error: 'Filen innehåller inga mottagare.' }
+  }
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i
+  const firstRow = normalizedRows[0].map(normalizeHeader)
+  const emailIndexFromHeader = firstRow.findIndex(cell => ['email', 'e-post', 'epost', 'mail'].includes(cell))
+  const nameIndexFromHeader = firstRow.findIndex(cell => ['name', 'namn', 'person', 'kontaktperson'].includes(cell))
+  const roleIndexFromHeader = firstRow.findIndex(cell => ['role', 'roll', 'titel', 'title'].includes(cell))
+  const hasHeaderRow = emailIndexFromHeader >= 0
+
+  const lines: string[] = []
+
+  for (let rowIndex = hasHeaderRow ? 1 : 0; rowIndex < normalizedRows.length; rowIndex += 1) {
+    const row = normalizedRows[rowIndex]
+    if (row.length === 1) {
+      lines.push(row[0])
+      continue
+    }
+
+    let name = ''
+    let email = ''
+    let role = ''
+
+    if (hasHeaderRow) {
+      email = row[emailIndexFromHeader] || ''
+      name = nameIndexFromHeader >= 0 ? (row[nameIndexFromHeader] || '') : ''
+      role = roleIndexFromHeader >= 0 ? (row[roleIndexFromHeader] || '') : ''
+    } else {
+      const emailIndex = row.findIndex(cell => emailPattern.test(cell))
+      if (emailIndex === -1) {
+        return {
+          lines: [],
+          error: `Rad ${rowIndex + 1} saknar giltig e-postadress.`,
+        }
+      }
+
+      email = row[emailIndex]
+      name = row.slice(0, emailIndex).join(' ').trim()
+      role = row.slice(emailIndex + 1).join(' ').trim()
+    }
+
+    if (!email.trim()) continue
+    lines.push(buildRecipientLine(name, email, role))
+  }
+
+  if (lines.length === 0) {
+    return { lines: [], error: 'Filen innehåller inga giltiga mottagare.' }
+  }
+
+  return { lines, error: '' }
+}
+
 function formatBatchLabel(organisation: string) {
   const date = new Date().toLocaleDateString('sv-SE', {
     day: 'numeric',
@@ -118,6 +195,7 @@ function SendBriefInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sb = createClient()
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const [sets, setSets]               = useState<QuestionSet[]>([])
   const [selectedSet, setSelectedSet] = useState<string>(searchParams.get('set') || '')
@@ -128,6 +206,7 @@ function SendBriefInner() {
   const [sending, setSending]         = useState(false)
   const [sent, setSent]               = useState<SentSession[] | null>(null)
   const [error, setError]             = useState('')
+  const [importMessage, setImportMessage] = useState('')
 
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
@@ -142,6 +221,56 @@ function SendBriefInner() {
     sb.from('questions').select('*').eq('question_set_id', selectedSet).order('order_index')
       .then(({ data }) => setQuestions(data || []))
   }, [selectedSet])
+
+  async function importRecipientsFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setError('')
+    setImportMessage('')
+
+    try {
+      let importedLines: string[] = []
+
+      if (file.name.toLowerCase().endsWith('.txt')) {
+        const text = await file.text()
+        importedLines = text
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(Boolean)
+      } else {
+        const XLSX = await import('xlsx')
+        const buffer = await file.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const firstSheetName = workbook.SheetNames[0]
+        const firstSheet = workbook.Sheets[firstSheetName]
+        const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(firstSheet, { header: 1, defval: '' })
+          .map(row => row.map(cell => `${cell ?? ''}`))
+        const { lines, error: importError } = parseSpreadsheetRows(rows)
+        if (importError) {
+          setError(importError)
+          e.target.value = ''
+          return
+        }
+        importedLines = lines
+      }
+
+      const mergedInput = [recipientsInput.trim(), importedLines.join('\n')].filter(Boolean).join('\n')
+      const { recipients, error: parseError } = parseRecipients(mergedInput)
+      if (parseError) {
+        setError(parseError)
+        e.target.value = ''
+        return
+      }
+
+      setRecipientsInput(recipients.map(recipient => buildRecipientLine(recipient.name, recipient.email, recipient.role || '')).join('\n'))
+      setImportMessage(`${importedLines.length} mottagare importerade.`)
+    } catch {
+      setError('Kunde inte läsa filen. Använd .csv, .xlsx, .xls eller .txt.')
+    } finally {
+      e.target.value = ''
+    }
+  }
 
   async function send(e: React.FormEvent) {
     e.preventDefault()
@@ -363,6 +492,34 @@ function SendBriefInner() {
             </div>
             <div>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Vilka ska svara? *</label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,.xlsx,.xls,.txt"
+                onChange={importRecipientsFile}
+                style={{ display: 'none' }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+                  Klistra in flera rader eller importera en fil med namn och e-post.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: 7,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Importera CSV/XLSX
+                </button>
+              </div>
               <textarea
                 value={recipientsInput}
                 onChange={e => setRecipientsInput(e.target.value)}
@@ -376,6 +533,11 @@ function SendBriefInner() {
               <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
                 En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
               </p>
+              {importMessage && (
+                <p style={{ fontSize: 12, color: '#166534', margin: '8px 0 0', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 7 }}>
+                  {importMessage}
+                </p>
+              )}
             </div>
           </div>
         </div>
