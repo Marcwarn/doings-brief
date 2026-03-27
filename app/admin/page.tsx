@@ -203,18 +203,18 @@ export default function AdminPage() {
             cursor: 'pointer',
             boxShadow: adding ? 'none' : '0 4px 16px rgba(198,35,104,0.22)',
           }}>
-            {adding ? 'Avbryt' : '+ Lägg till kollega'}
+            {adding ? 'Avbryt' : '+ Ny användare'}
           </button>
         </div>
 
         {/* Invite form */}
         {adding && (
-          <form onSubmit={inviteUser} style={{
+          <form autoComplete="off" onSubmit={inviteUser} style={{
             background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)',
             padding: '22px 24px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 14,
           }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
-              Ny kollega
+              Ny användare
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
@@ -222,6 +222,8 @@ export default function AdminPage() {
                   E-post *
                 </label>
                 <input value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                       name="new-user-email"
+                       autoComplete="email"
                        type="email" placeholder="anna@doings.se" required style={F}
                        onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
@@ -231,6 +233,8 @@ export default function AdminPage() {
                   Namn *
                 </label>
                 <input value={newName} onChange={e => setNewName(e.target.value)}
+                       name="new-user-name"
+                       autoComplete="name"
                        placeholder="Anna Andersson" required style={F}
                        onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
@@ -242,6 +246,8 @@ export default function AdminPage() {
                   Lösenord
                 </label>
                 <input value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                       name="new-user-password"
+                       autoComplete="new-password"
                        type="password" placeholder="Minst 8 tecken" style={F}
                        onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
@@ -251,13 +257,15 @@ export default function AdminPage() {
                   Avsändaradress
                 </label>
                 <input value={newSenderEmail} onChange={e => setNewSenderEmail(e.target.value)}
+                       name="new-user-sender-email"
+                       autoComplete="off"
                        placeholder="anna@doingsclients.se" style={F}
                        onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
               </div>
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
-              Ange ett lösenord om kollegan ska kunna logga in direkt. Lämna tomt för att skicka en inbjudningslänk via e-post.
+              Ange ett lösenord om användaren ska kunna logga in direkt. Lämna tomt för att skicka en inbjudningslänk via e-post.
             </p>
             {inviteResult && (
               <p style={{ fontSize: 13, margin: 0, color: inviteResult.startsWith('Fel') ? '#dc2626' : '#16a34a' }}>
