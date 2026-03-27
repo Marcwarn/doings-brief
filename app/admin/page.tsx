@@ -64,15 +64,24 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: newEmail, fullName: newName, senderEmail: newSenderEmail, password: newPassword || undefined }),
     })
-    const { ok, error } = await res.json()
+    const { ok, error, profile } = await res.json()
     if (ok) {
       const msg = newPassword
         ? `${newName || newEmail} skapad — de kan logga in direkt med lösenordet du angav.`
         : `Inbjudan skickad till ${newEmail}`
       setInviteResult(msg)
+      if (profile) {
+        setProfiles(prev => {
+          const exists = prev.some(existingProfile => existingProfile.id === profile.id)
+          if (exists) {
+            return prev.map(existingProfile => existingProfile.id === profile.id ? profile : existingProfile)
+          }
+          return [...prev, profile].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''))
+        })
+      }
       setNewEmail(''); setNewName(''); setNewSenderEmail(''); setNewPassword('')
       setAdding(false)
-      setTimeout(loadProfiles, 1000)
+      await loadProfiles()
     } else {
       setInviteResult(`Fel: ${error || 'Okänt fel'}`)
     }

@@ -31,13 +31,19 @@ export async function POST(req: NextRequest) {
 
     // Upsert profile
     if (userId) {
-      await supabaseAdmin.from('profiles').upsert({
+      const { data: profile, error: profileError } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
         email,
         full_name: fullName || null,
         sender_email: senderEmail || null,
         role: 'consultant',
-      })
+      }).select().single()
+
+      if (profileError) {
+        return NextResponse.json({ error: profileError.message }, { status: 400 })
+      }
+
+      return NextResponse.json({ ok: true, profile })
     }
 
     return NextResponse.json({ ok: true })
