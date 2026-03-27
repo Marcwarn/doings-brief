@@ -135,11 +135,11 @@ async function verifyStartPage(page) {
   await main.getByText('Kunddialog', { exact: true }).waitFor({ timeout: 15000 })
   await main.getByText('Frågor', { exact: true }).waitFor({ timeout: 15000 })
   await main.getByText('Mottagare', { exact: true }).waitFor({ timeout: 15000 })
-  await page.getByRole('link', { name: /kunder/i }).waitFor({ timeout: 15000 })
+  await page.locator('aside').getByRole('link', { name: /^Kunder$/i }).waitFor({ timeout: 15000 })
 }
 
 async function openCustomersPage(page) {
-  await page.getByRole('link', { name: /^Kunder$/i }).click()
+  await page.locator('aside').getByRole('link', { name: /^Kunder$/i }).click()
   await page.waitForURL('**/dashboard/customers', { timeout: 15000 })
   await page.getByRole('heading', { name: /kunder/i }).waitFor({ timeout: 15000 })
 }
