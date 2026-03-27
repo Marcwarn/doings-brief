@@ -82,25 +82,68 @@ export default function AdminPage() {
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const text = await file.text()
-    const lines = text.split(/\r?\n/).filter(l => l.trim())
-    // Skip header row if it contains "namn" or "e-post" or "fullständigt"
-    const start = lines[0]?.toLowerCase().includes('namn') || lines[0]?.toLowerCase().includes('e-post') ? 1 : 0
-    const rows = lines.slice(start).map(l => {
-      // Handle quoted CSV values
+
+    function parseCsvLine(line: string) {
       const parts: string[] = []
-      let cur = '', inQ = false
-      for (const ch of l) {
-        if (ch === '"') { inQ = !inQ }
-        else if (ch === ',' && !inQ) { parts.push(cur.trim()); cur = '' }
-        else { cur += ch }
+      let cur = ''
+      let inQ = false
+      for (const ch of line) {
+        if (ch === '"') {
+          inQ = !inQ
+        } else if (ch === ',' && !inQ) {
+          parts.push(cur.trim())
+          cur = ''
+        } else {
+          cur += ch
+        }
       }
       parts.push(cur.trim())
-      return { name: parts[0] || '', email: parts[1] || '', password: parts[2] || '' }
-    }).filter(r => r.email.includes('@'))
-    setImportRows(rows)
-    setImportStatus([])
-    e.target.value = ''
+      return parts
+    }
+
+    function toImportRows(matrix: string[][]) {
+      const normalized = matrix
+        .map(row => row.map(cell => `${cell || ''}`.trim()))
+        .filter(row => row.some(cell => cell))
+
+      const start = normalized[0]?.some(cell => {
+        const lower = cell.toLowerCase()
+        return lower.includes('namn') || lower.includes('e-post') || lower.includes('fullständigt')
+      }) ? 1 : 0
+
+      return normalized
+        .slice(start)
+        .map(row => ({
+          name: row[0] || '',
+          email: row[1] || '',
+          password: row[2] || '',
+        }))
+        .filter(row => row.email.includes('@'))
+    }
+
+    try {
+      let rows: { name: string; email: string; password: string }[] = []
+      const lowerName = file.name.toLowerCase()
+
+      if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
+        const XLSX = await import('xlsx')
+        const buffer = await file.arrayBuffer()
+        const workbook = XLSX.read(buffer, { type: 'array' })
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+        const matrix = XLSX.utils.sheet_to_json<(string | number | null)[]>(firstSheet, { header: 1, defval: '' })
+          .map(row => row.map(cell => `${cell ?? ''}`))
+        rows = toImportRows(matrix)
+      } else {
+        const text = await file.text()
+        const lines = text.split(/\r?\n/).filter(line => line.trim())
+        rows = toImportRows(lines.map(parseCsvLine))
+      }
+
+      setImportRows(rows)
+      setImportStatus([])
+    } finally {
+      e.target.value = ''
+    }
   }
 
   async function runImport() {
@@ -255,7 +298,7 @@ export default function AdminPage() {
                 Importera flera användare
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                Ladda upp en CSV-fil med kolumnerna: namn, e-post, lösenord
+                Ladda upp en CSV- eller Excel-fil med kolumnerna: namn, e-post, lösenord
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -273,7 +316,7 @@ export default function AdminPage() {
               }}>
                 Välj fil…
               </button>
-              <input ref={importRef} type="file" accept=".csv,.txt" onChange={handleImportFile} style={{ display: 'none' }} />
+              <input ref={importRef} type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleImportFile} style={{ display: 'none' }} />
             </div>
           </div>
 
