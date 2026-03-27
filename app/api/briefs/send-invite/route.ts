@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
               <tr>
-                <td align="center">
-                  <a href="${briefUrl}" style="display:inline-block;background:linear-gradient(135deg,#6b2d82 0%,#c62368 100%);color:#ffffff !important;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;box-shadow:0 10px 24px rgba(198,35,104,.18);">
+                <td align="center" style="background:#6b2d82;border-radius:12px;">
+                  <a href="${briefUrl}" style="display:inline-block;background:#6b2d82;color:#ffffff !important;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;border:1px solid #6b2d82;">
                     Svara på frågorna →
                   </a>
                 </td>
@@ -70,13 +70,6 @@ export async function POST(req: NextRequest) {
             <p style="margin:22px 0 0;font-size:12px;color:#7b748e;text-align:center;line-height:1.6;">
               Länken är personlig och giltig i 30 dagar.
             </p>
-            <div style="margin-top:24px;padding-top:18px;border-top:1px solid #eee7f4;">
-              <p style="margin:0;font-size:12px;color:#7b748e;line-height:1.7;text-align:center;">
-                Om knappen inte fungerar kan du öppna länken direkt här:
-                <br />
-                <a href="${briefUrl}" style="color:#6b2d82;text-decoration:none;font-weight:600;word-break:break-all;">${briefUrl}</a>
-              </p>
-            </div>
           </td>
         </tr>
         <tr>

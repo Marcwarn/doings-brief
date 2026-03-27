@@ -314,7 +314,7 @@ export default function BriefPage() {
         </div>
       }>
         <p style={{ fontSize: 14, color: '#6b3348', fontFamily: 'var(--font-sans)', lineHeight: 1.65, marginBottom: 20 }}>
-          Du är den viktigaste personen i det här rummet — och det här är ditt tillfälle att sätta tonen för hela projektet. Inga rätta svar. Bara dina.
+          Här är ett par frågor som du gärna får svara på.
         </p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 22 }}>
           {questions.map((_, i) => (
