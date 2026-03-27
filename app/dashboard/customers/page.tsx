@@ -279,9 +279,6 @@ export default function CustomersPage() {
                   </>
                 ) : (
                   <>
-                    <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={ghostLinkStyle}>
-                      Nytt utskick
-                    </Link>
                     <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={filledLinkStyle}>
                       Öppna kund
                     </Link>
@@ -333,17 +330,6 @@ const primaryLinkStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.01em',
   textDecoration: 'none',
-}
-
-const ghostLinkStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  borderRadius: 6,
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'var(--text-2)',
-  textDecoration: 'none',
-  fontSize: 12,
-  fontWeight: 500,
 }
 
 const filledLinkStyle: React.CSSProperties = {
