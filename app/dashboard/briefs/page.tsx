@@ -306,14 +306,6 @@ export default function BriefsPage() {
                     >
                       {isExpanded ? '−' : '+'}
                     </button>
-                    <div style={{
-                      width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                      background: 'linear-gradient(135deg, var(--accent), #6b2d82)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff',
-                    }}>
-                      {group.label.charAt(0).toUpperCase() || '?'}
-                    </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {group.label}
