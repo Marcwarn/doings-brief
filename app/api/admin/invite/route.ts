@@ -6,38 +6,85 @@ export async function POST(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdminClient()
     const { email, fullName, senderEmail, password, createdBy } = await req.json()
-    if (!email) return NextResponse.json({ error: 'E-post krävs' }, { status: 400 })
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+    const normalizedFullName = typeof fullName === 'string' ? fullName.trim() : ''
+    const normalizedSenderEmail = typeof senderEmail === 'string' ? senderEmail.trim().toLowerCase() : ''
+
+    if (!normalizedEmail) return NextResponse.json({ error: 'E-post krävs' }, { status: 400 })
 
     let userId: string | undefined
+    let linkedExisting = false
 
     if (password) {
       // Create user directly with a password — ready to log in immediately
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: normalizedEmail,
         password,
         email_confirm: true, // skip email confirmation
-        user_metadata: { full_name: fullName },
+        user_metadata: { full_name: normalizedFullName },
       })
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-      userId = data.user?.id
+      if (error) {
+        if (!error.message.toLowerCase().includes('already been registered')) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+      } else {
+        userId = data.user?.id
+      }
     } else {
       // Fall back to invite email flow
-      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        data: { full_name: fullName },
+      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(normalizedEmail, {
+        data: { full_name: normalizedFullName },
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://doings-brief.vercel.app'}/auth/reset-password`,
       })
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-      userId = data.user?.id
+      if (error) {
+        if (!error.message.toLowerCase().includes('already been registered')) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+      } else {
+        userId = data.user?.id
+      }
+    }
+
+    if (!userId) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email, full_name, sender_email, role')
+        .eq('email', normalizedEmail)
+        .single()
+
+      if (existingProfile?.id) {
+        userId = existingProfile.id
+        linkedExisting = true
+      }
+    }
+
+    if (!userId) {
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers()
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 400 })
+      }
+
+      const existingUser = (data?.users || []).find(user => user.email?.trim().toLowerCase() === normalizedEmail)
+      if (existingUser?.id) {
+        userId = existingUser.id
+        linkedExisting = true
+      }
     }
 
     // Upsert profile
     if (userId) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
       const { data: profile, error: profileError } = await supabaseAdmin.from('profiles').upsert({
         id: userId,
-        email,
-        full_name: fullName || null,
-        sender_email: senderEmail || null,
-        role: 'consultant',
+        email: normalizedEmail,
+        full_name: normalizedFullName || existingProfile?.full_name || null,
+        sender_email: normalizedSenderEmail || existingProfile?.sender_email || null,
+        role: existingProfile?.role || 'consultant',
       }).select().single()
 
       if (profileError) {
@@ -51,7 +98,7 @@ export async function POST(req: NextRequest) {
           key: getBriefAccessKey(userId),
           value: JSON.stringify({
             userId,
-            email,
+            email: normalizedEmail,
             enabled: true,
             createdAt: accessCreatedAt,
             createdBy: typeof createdBy === 'string' && createdBy.trim() ? createdBy : userId,
@@ -63,7 +110,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: accessError.message }, { status: 400 })
       }
 
-      return NextResponse.json({ ok: true, profile })
+      return NextResponse.json({ ok: true, profile, mode: linkedExisting ? 'linked_existing' : 'created' })
     }
 
     return NextResponse.json({ ok: true })

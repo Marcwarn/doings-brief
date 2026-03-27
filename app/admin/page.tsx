@@ -80,11 +80,13 @@ export default function AdminPage() {
         createdBy: user?.id,
       }),
     })
-    const { ok, error, profile } = await res.json()
+    const { ok, error, profile, mode } = await res.json()
     if (ok) {
-      const msg = newPassword
-        ? `${newName || newEmail} skapad — de kan logga in direkt med lösenordet du angav.`
-        : `Inbjudan skickad till ${newEmail}`
+      const msg = mode === 'linked_existing'
+        ? `${newName || newEmail} fanns redan och har nu aktiverats i Brief.`
+        : newPassword
+          ? `${newName || newEmail} skapad — de kan logga in direkt med lösenordet du angav.`
+          : `Inbjudan skickad till ${newEmail}`
       setInviteResult(msg)
       if (profile) {
         setProfiles(prev => {
@@ -186,8 +188,14 @@ export default function AdminPage() {
           createdBy: user?.id,
         }),
       })
-      const { ok, error } = await res.json()
-      statuses.push(ok ? `✓ ${row.email}` : `✗ ${row.email} — ${error}`)
+      const { ok, error, mode } = await res.json()
+      statuses.push(
+        ok
+          ? mode === 'linked_existing'
+            ? `✓ ${row.email} — aktiverad i Brief`
+            : `✓ ${row.email}`
+          : `✗ ${row.email} — ${error}`
+      )
       setImportStatus([...statuses])
     }
     setImporting(false)
