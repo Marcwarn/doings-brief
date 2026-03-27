@@ -213,7 +213,7 @@ export default function NewEvaluationPage() {
           Skapa utvärdering
         </h1>
         <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, maxWidth: 700 }}>
-          Välj kund och frågebatteri, namnge tillfället och generera sedan en publik länk med QR-kod för deltagarna.
+          Välj kund, formulera frågorna och skapa sedan en publik länk med QR-kod för deltagarna.
         </p>
       </div>
 
@@ -245,7 +245,7 @@ export default function NewEvaluationPage() {
                   <div>
                     <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                      Välj ett befintligt batteri om du vill utgå från det och justera frågorna här.
+                      Välj ett befintligt batteri om du vill använda det som startpunkt.
                     </div>
                   </div>
                   <button type="button" onClick={() => setShowQuestionSetPicker(prev => !prev)} style={ghostButtonStyle}>
@@ -262,7 +262,7 @@ export default function NewEvaluationPage() {
                       )}
                     </div>
                     <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      Vald källa
+                      Aktiv källa
                     </div>
                   </div>
                 )}
@@ -325,7 +325,7 @@ export default function NewEvaluationPage() {
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {selectedQuestionSet && (
                       <button type="button" onClick={importSelectedQuestionSetAgain} style={ghostButtonStyle}>
-                        Importera vald källa igen
+                        Hämta in källan igen
                       </button>
                     )}
                     <button type="button" onClick={addCustomQuestion} style={ghostButtonStyle}>
@@ -391,17 +391,17 @@ export default function NewEvaluationPage() {
               />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                  Samla in deltagarnas e-post i slutet
+                  Samla in deltagarnas e-post sist
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
-                  Stäng av för helt anonym utvärdering.
+                  Stäng av om utvärderingen ska vara helt anonym.
                 </div>
               </div>
             </label>
           )}
 
           <button type="submit" disabled={saving} style={submitButtonStyle(saving)}>
-            {saving ? 'Skapar…' : 'Skapa publik länk + QR-kod'}
+            {saving ? 'Skapar…' : 'Skapa länk och QR-kod'}
           </button>
         </form>
 
@@ -419,7 +419,7 @@ export default function NewEvaluationPage() {
             <div style={{ display: 'grid', gap: 14 }}>
               <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 14px 12px' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6 }}>
-                  Publik länk
+                  Länk till deltagarna
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--text)', wordBreak: 'break-all' }}>{created.publicUrl}</div>
               </div>
