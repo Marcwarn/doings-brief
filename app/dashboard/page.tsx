@@ -71,38 +71,6 @@ export default function DashboardPage() {
 
       <BriefSubnav active="overview" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 20, marginBottom: 30 }}>
-        <Panel title="Vad är en brief?" href="/dashboard/send" linkText="Skapa utskick">
-          <div style={{ padding: '18px 0 2px' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
-              En brief är ett enkelt sätt att samla in rätt svar från kunden innan arbetet börjar.
-            </p>
-            <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
-              Du väljer frågor, skickar dem till en eller flera personer och följer sedan vilka som har svarat.
-            </p>
-            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
-              När svaren kommit in kan du läsa varje svar, jämföra perspektiv och använda underlaget i nästa steg med kunden.
-            </p>
-          </div>
-        </Panel>
-
-        <Panel title="Så arbetar du" href="/dashboard/customers" linkText="Öppna kunder">
-          <div style={{ padding: '18px 0 2px' }}>
-            <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                'Skapa en kund du vill skicka frågor till.',
-                'Välj eller skapa frågorna du behöver svar på.',
-                'Bestäm vem eller vilka som ska svara.',
-                'Skicka utskicket och följ svarsläget.',
-                'Öppna svaren när de kommit in.',
-              ].map(item => (
-                <li key={item} style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.55 }}>{item}</li>
-              ))}
-            </ol>
-          </div>
-        </Panel>
-      </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 30 }}>
         <StepCard
           step="1"

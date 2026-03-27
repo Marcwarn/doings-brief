@@ -34,11 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const nav = [
     { href: '/dashboard',               label: 'Brief',          Icon: HomeIcon },
-    { href: '/dashboard/customers',     label: 'Kunder',         Icon: BuildingIcon },
-    { href: '/dashboard/question-sets', label: 'Frågebatterier', Icon: ListIcon },
     { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },
-    { href: '/dashboard/send',          label: 'Nytt utskick',   Icon: SendIcon },
-    { href: '/dashboard/briefs',        label: 'Utskick',        Icon: InboxIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
 
@@ -149,30 +145,6 @@ type IconProps = { size?: number; color?: string }
 const HomeIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-  </svg>
-)
-const ListIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-    <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
-    <line x1="4" y1="6" x2="4.01" y2="6"/><line x1="4" y1="12" x2="4.01" y2="12"/><line x1="4" y1="18" x2="4.01" y2="18"/>
-  </svg>
-)
-const SendIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-  </svg>
-)
-const InboxIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
-    <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
-  </svg>
-)
-const BuildingIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-    <rect x="3" y="3" width="18" height="18" rx="2"/>
-    <path d="M9 21V9h6v12"/>
-    <path d="M9 7h.01"/><path d="M15 7h.01"/><path d="M9 11h.01"/><path d="M15 11h.01"/>
   </svg>
 )
 const ShieldIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
