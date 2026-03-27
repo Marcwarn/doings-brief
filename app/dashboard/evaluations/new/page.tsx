@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { createClient, type QuestionSet, type BriefSession, type Profile } from '@/lib/supabase'
+import { createClient, type QuestionSet, type Question, type BriefSession, type Profile } from '@/lib/supabase'
 import { EvaluationSubnav, InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 
 type CreatedPayload = {
@@ -26,6 +26,11 @@ export default function NewEvaluationPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [customer, setCustomer] = useState('')
   const [questionSetId, setQuestionSetId] = useState('')
+  const [questionSetQuery, setQuestionSetQuery] = useState('')
+  const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(false)
+  const [questionPreview, setQuestionPreview] = useState<Question[]>([])
+  const [customQuestionSetName, setCustomQuestionSetName] = useState('')
+  const [customQuestions, setCustomQuestions] = useState([{ text: '' }, { text: '' }])
   const [label, setLabel] = useState('')
   const [collectEmail, setCollectEmail] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -36,6 +41,14 @@ export default function NewEvaluationPage() {
   const qrUrl = useMemo(() => (
     created ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(created.publicUrl)}` : ''
   ), [created])
+
+  const selectedQuestionSet = questionSets.find(item => item.id === questionSetId) || null
+  const filteredQuestionSets = questionSets.filter(item => {
+    if (!questionSetQuery.trim()) return true
+    const query = questionSetQuery.trim().toLowerCase()
+    return `${item.name} ${item.description || ''}`.toLowerCase().includes(query)
+  })
+  const visibleQuestionSets = filteredQuestionSets.slice(0, questionSetQuery.trim() ? 12 : 8)
 
   useEffect(() => {
     Promise.all([
@@ -62,12 +75,80 @@ export default function NewEvaluationPage() {
     })
   }, [sb])
 
+  useEffect(() => {
+    if (!questionSetId) {
+      setQuestionPreview([])
+      return
+    }
+
+    sb.from('questions').select('*').eq('question_set_id', questionSetId).order('order_index')
+      .then(({ data }) => setQuestionPreview(data || []))
+  }, [questionSetId, sb])
+
+  useEffect(() => {
+    if (!customQuestionSetName.trim() && label.trim()) {
+      setCustomQuestionSetName(`${label.trim()} · Frågor`)
+    }
+  }, [label, customQuestionSetName])
+
+  function updateCustomQuestion(index: number, value: string) {
+    setCustomQuestions(prev => prev.map((question, questionIndex) => (
+      questionIndex === index ? { text: value } : question
+    )))
+  }
+
+  function addCustomQuestion() {
+    setCustomQuestions(prev => [...prev, { text: '' }])
+  }
+
+  function removeCustomQuestion(index: number) {
+    setCustomQuestions(prev => prev.length <= 1 ? prev : prev.filter((_, questionIndex) => questionIndex !== index))
+  }
+
+  async function selectQuestionSetSource(setId: string) {
+    const selected = questionSets.find(item => item.id === setId) || null
+    setQuestionSetId(setId)
+    setQuestionSetQuery('')
+    setShowQuestionSetPicker(false)
+
+    const { data } = await sb.from('questions').select('*').eq('question_set_id', setId).order('order_index')
+    const nextQuestions = data || []
+    setQuestionPreview(nextQuestions)
+    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selected?.name || 'Importerade frågor'} · kopia`)
+    setCustomQuestions(nextQuestions.length > 0
+      ? nextQuestions.map(question => ({ text: question.text }))
+      : [{ text: '' }, { text: '' }])
+  }
+
+  function importSelectedQuestionSetAgain() {
+    if (!questionSetId || questionPreview.length === 0) {
+      setError('Välj ett frågebatteri först om du vill importera det.')
+      return
+    }
+
+    setError(null)
+    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selectedQuestionSet?.name || 'Importerade frågor'} · kopia`)
+    setCustomQuestions(questionPreview.map(question => ({ text: question.text })))
+  }
+
   async function createEvaluation(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (!customer.trim() || !questionSetId || !label.trim()) {
-      setError('Fyll i kund, frågebatteri och namn på tillfälle.')
+    const filteredCustomQuestions = customQuestions.map(item => item.text.trim()).filter(Boolean)
+
+    if (!customer.trim() || !label.trim()) {
+      setError('Fyll i kund och namn på tillfälle.')
+      return
+    }
+
+    if (!customQuestionSetName.trim()) {
+      setError('Ge frågorna ett namn innan du skapar utvärderingen.')
+      return
+    }
+
+    if (filteredCustomQuestions.length === 0) {
+      setError('Lägg till minst en fråga i utvärderingen.')
       return
     }
 
@@ -80,6 +161,8 @@ export default function NewEvaluationPage() {
         questionSetId,
         label: label.trim(),
         collectEmail,
+        customQuestionSetName: customQuestionSetName.trim(),
+        customQuestions: filteredCustomQuestions,
       }),
     })
     const payload = await response.json().catch(() => null)
@@ -144,12 +227,119 @@ export default function NewEvaluationPage() {
           </Field>
 
           <Field label="Frågebatteri">
-            <select value={questionSetId} onChange={e => setQuestionSetId(e.target.value)} style={inputStyle}>
-              <option value="">Välj frågebatteri</option>
-              {questionSets.map(questionSet => (
-                <option key={questionSet.id} value={questionSet.id}>{questionSet.name}</option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                      Välj ett befintligt batteri om du vill utgå från det och justera frågorna här.
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setShowQuestionSetPicker(prev => !prev)} style={ghostButtonStyle}>
+                    {selectedQuestionSet ? 'Byt källa' : 'Välj frågebatteri'}
+                  </button>
+                </div>
+
+                {selectedQuestionSet && !showQuestionSetPicker && (
+                  <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedQuestionSet.name}</div>
+                      {selectedQuestionSet.description && (
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{selectedQuestionSet.description}</div>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      Vald källa
+                    </div>
+                  </div>
+                )}
+
+                {showQuestionSetPicker && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                    <input
+                      value={questionSetQuery}
+                      onChange={e => setQuestionSetQuery(e.target.value)}
+                      placeholder="Sök frågebatteri"
+                      style={inputStyle}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
+                      {visibleQuestionSets.map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => { void selectQuestionSetSource(item.id) }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 12,
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '12px 14px',
+                            borderRadius: 7,
+                            cursor: 'pointer',
+                            border: `1.5px solid ${questionSetId === item.id ? 'var(--accent)' : 'var(--border)'}`,
+                            background: questionSetId === item.id ? 'var(--accent-dim)' : 'var(--surface)',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
+                            {item.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{item.description}</div>}
+                          </div>
+                        </button>
+                      ))}
+                      {visibleQuestionSets.length === 0 && (
+                        <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
+                          Inga frågebatterier matchar din sökning.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <Field label="Namn på frågebatteri">
+                  <input
+                    value={customQuestionSetName}
+                    onChange={e => setCustomQuestionSetName(e.target.value)}
+                    placeholder="Till exempel Ledarutbildning Malmö · Frågor"
+                    style={inputStyle}
+                  />
+                </Field>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)' }}>Egna frågor</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {selectedQuestionSet && (
+                      <button type="button" onClick={importSelectedQuestionSetAgain} style={ghostButtonStyle}>
+                        Importera vald källa igen
+                      </button>
+                    )}
+                    <button type="button" onClick={addCustomQuestion} style={ghostButtonStyle}>
+                      Lägg till fråga
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {customQuestions.map((question, index) => (
+                    <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <textarea
+                        rows={2}
+                        value={question.text}
+                        onChange={e => updateCustomQuestion(index, e.target.value)}
+                        placeholder={`Fråga ${index + 1}`}
+                        style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
+                      />
+                      <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
+                        Ta bort
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </Field>
 
           <Field label="Namn på tillfälle">
@@ -283,6 +473,18 @@ const ghostButtonStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: 'pointer',
+}
+
+const smallDeleteStyle: React.CSSProperties = {
+  flexShrink: 0,
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text-3)',
   fontSize: 12.5,
   fontWeight: 600,
   cursor: 'pointer',

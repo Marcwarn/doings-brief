@@ -14,14 +14,18 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { customer, questionSetId, label, collectEmail } = await req.json()
+    const { customer, questionSetId, label, collectEmail, customQuestionSetName, customQuestions } = await req.json()
 
     const normalizedCustomer = typeof customer === 'string' ? customer.trim() : ''
     const normalizedQuestionSetId = typeof questionSetId === 'string' ? questionSetId.trim() : ''
     const normalizedLabel = typeof label === 'string' ? label.trim() : ''
+    const normalizedCustomQuestionSetName = typeof customQuestionSetName === 'string' ? customQuestionSetName.trim() : ''
+    const normalizedCustomQuestions = Array.isArray(customQuestions)
+      ? customQuestions.map(item => `${item ?? ''}`.trim()).filter(Boolean)
+      : []
 
-    if (!normalizedCustomer || !normalizedQuestionSetId || !normalizedLabel) {
-      return NextResponse.json({ error: 'Kund, frågebatteri och tillfälle krävs.' }, { status: 400 })
+    if (!normalizedCustomer || !normalizedLabel) {
+      return NextResponse.json({ error: 'Kund och tillfälle krävs.' }, { status: 400 })
     }
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -39,14 +43,61 @@ export async function POST(req: NextRequest) {
       ? collectEmail !== false
       : true
 
-    const { data: questionSet, error: questionSetError } = await admin
-      .from('question_sets')
-      .select('id, name')
-      .eq('id', normalizedQuestionSetId)
-      .single()
+    let resolvedQuestionSetId = normalizedQuestionSetId
+    let resolvedQuestionSetName: string | null = null
 
-    if (questionSetError || !questionSet) {
-      return NextResponse.json({ error: 'Frågebatteriet kunde inte verifieras.' }, { status: 404 })
+    if (normalizedCustomQuestions.length > 0) {
+      if (!normalizedCustomQuestionSetName) {
+        return NextResponse.json({ error: 'Ge frågorna ett namn innan du skapar utvärderingen.' }, { status: 400 })
+      }
+
+      const { data: createdQuestionSet, error: questionSetCreateError } = await admin
+        .from('question_sets')
+        .insert({
+          user_id: user.id,
+          name: normalizedCustomQuestionSetName,
+          description: normalizedQuestionSetId
+            ? 'Skapad i utvärderingsflödet från befintligt frågebatteri'
+            : 'Skapad direkt i utvärderingsflödet',
+        })
+        .select('id, name')
+        .single()
+
+      if (questionSetCreateError || !createdQuestionSet) {
+        return NextResponse.json({ error: 'Kunde inte skapa frågebatteriet för utvärderingen.' }, { status: 500 })
+      }
+
+      const { error: questionInsertError } = await admin
+        .from('questions')
+        .insert(normalizedCustomQuestions.map((text, index) => ({
+          question_set_id: createdQuestionSet.id,
+          text,
+          order_index: index,
+        })))
+
+      if (questionInsertError) {
+        return NextResponse.json({ error: 'Kunde inte spara frågorna för utvärderingen.' }, { status: 500 })
+      }
+
+      resolvedQuestionSetId = createdQuestionSet.id
+      resolvedQuestionSetName = createdQuestionSet.name
+    } else {
+      if (!normalizedQuestionSetId) {
+        return NextResponse.json({ error: 'Välj ett frågebatteri eller skapa egna frågor.' }, { status: 400 })
+      }
+
+      const { data: questionSet, error: questionSetError } = await admin
+        .from('question_sets')
+        .select('id, name')
+        .eq('id', normalizedQuestionSetId)
+        .single()
+
+      if (questionSetError || !questionSet) {
+        return NextResponse.json({ error: 'Frågebatteriet kunde inte verifieras.' }, { status: 404 })
+      }
+
+      resolvedQuestionSetId = questionSet.id
+      resolvedQuestionSetName = questionSet.name
     }
 
     const evaluationId = randomUUID()
@@ -58,8 +109,8 @@ export async function POST(req: NextRequest) {
       token,
       label: normalizedLabel,
       customer: normalizedCustomer,
-      questionSetId: questionSet.id,
-      questionSetName: questionSet.name,
+      questionSetId: resolvedQuestionSetId,
+      questionSetName: resolvedQuestionSetName,
       collectEmail: resolvedCollectEmail,
       createdBy: user.id,
       createdAt,
