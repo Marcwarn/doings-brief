@@ -25,7 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard',               label: 'Start',          Icon: HomeIcon },
+    { href: '/dashboard',               label: 'Brief',          Icon: HomeIcon },
     { href: '/dashboard/customers',     label: 'Kunder',         Icon: BuildingIcon },
     { href: '/dashboard/question-sets', label: 'Frågebatterier', Icon: ListIcon },
     { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },

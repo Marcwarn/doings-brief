@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
+import { BriefSubnav } from '@/app/dashboard/brief/ui'
 import { groupBriefSessions, type BriefBatchLookupMap } from '@/lib/brief-batches'
 
 export default function BriefsPage() {
@@ -182,6 +183,8 @@ export default function BriefsPage() {
           Skicka ny
         </Link>
       </div>
+
+      <BriefSubnav active="briefs" />
 
       {pageError && (
         <div style={{

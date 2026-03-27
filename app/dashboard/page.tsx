@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { createClient, type BriefSession, type QuestionSet } from '@/lib/supabase'
+import { BriefEmptyCard, BriefSubnav } from '@/app/dashboard/brief/ui'
 import {
   groupBriefSessions,
   groupCustomers,
@@ -54,14 +55,21 @@ export default function DashboardPage() {
 
   return (
     <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-          Start
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 8, maxWidth: 720 }}>
-          Här får nya användare en enkel bild av vad en brief är och hur arbetet går till.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
+            Brief
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 8, maxWidth: 720 }}>
+            Samla kunder, frågor, mottagare och utskick i ett sammanhållet brief-flöde.
+          </p>
+        </div>
+        <Link href="/dashboard/send" style={primaryLinkStyle}>
+          Nytt utskick
+        </Link>
       </div>
+
+      <BriefSubnav active="overview" />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 20, marginBottom: 30 }}>
         <Panel title="Vad är en brief?" href="/dashboard/send" linkText="Skapa utskick">
@@ -136,7 +144,7 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 20 }}>
         <Panel title="Kunder att jobba vidare med" href="/dashboard/customers" linkText="Alla kunder">
           {customers.length === 0
-            ? <Empty text="Inga kunder ännu. Skapa en kund genom att börja med ett nytt utskick." />
+            ? <BriefEmptyCard title="Inga kunder ännu" text="Skapa en kund genom att börja med ett nytt utskick." />
             : customers.slice(0, 5).map(customer => (
               <div key={customer.key} style={rowStyle}>
                 <div style={{ minWidth: 0 }}>
@@ -163,7 +171,7 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <Panel title="Behöver uppmärksamhet" href="/dashboard/briefs" linkText="Alla utskick">
             {activeDispatches.length === 0
-              ? <Empty text="Inga pågående utskick just nu." />
+              ? <BriefEmptyCard title="Inga pågående utskick" text="Det finns inga aktiva utskick som väntar på svar just nu." />
               : activeDispatches.map(group => (
                 <Link
                   key={group.key}
@@ -183,7 +191,7 @@ export default function DashboardPage() {
 
           <Panel title="Frågebatterier att använda" href="/dashboard/question-sets" linkText="Hantera">
             {questionSets.length === 0
-              ? <Empty text="Skapa ditt första frågebatteri." />
+              ? <BriefEmptyCard title="Inga frågebatterier ännu" text="Skapa ditt första frågebatteri för att komma igång med briefs." />
               : questionSets.slice(0, 4).map(qs => (
                 <Link key={qs.id} href={`/dashboard/send?set=${qs.id}`} style={{ ...rowStyle, textDecoration: 'none' }}>
                   <div>
@@ -233,6 +241,20 @@ function StepCard({
   )
 }
 
+const primaryLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '10px 18px',
+  borderRadius: 8,
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  border: '1px solid var(--border)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 13,
+  fontWeight: 700,
+  textDecoration: 'none',
+}
+
 function Panel({ title, href, linkText, children }: { title: string; href: string; linkText: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -257,10 +279,6 @@ function Pill({ ok }: { ok: boolean }) {
       {ok ? 'Klart' : 'Pågår'}
     </span>
   )
-}
-
-function Empty({ text }: { text: string }) {
-  return <p style={{ fontSize: 12.5, color: 'var(--text-3)', padding: '18px 0', fontStyle: 'italic' }}>{text}</p>
 }
 
 function formatDate(value: string) {

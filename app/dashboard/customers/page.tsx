@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
+import { BriefSubnav } from '@/app/dashboard/brief/ui'
 import {
   groupBriefSessions,
   groupCustomers,
@@ -145,6 +146,8 @@ export default function CustomersPage() {
           Nytt utskick
         </Link>
       </div>
+
+      <BriefSubnav active="customers" />
 
       {pageError && (
         <div style={{

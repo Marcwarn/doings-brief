@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient, type QuestionSet } from '@/lib/supabase'
+import { BriefSubnav } from '@/app/dashboard/brief/ui'
 
 export default function QuestionSetsPage() {
   const sb = createClient()
@@ -62,6 +63,8 @@ export default function QuestionSetsPage() {
           Nytt batteri
         </Link>
       </div>
+
+      <BriefSubnav active="question-sets" />
 
       {sets.length === 0 ? (
         <div style={{

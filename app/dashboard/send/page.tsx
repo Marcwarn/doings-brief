@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question } from '@/lib/supabase'
+import { BriefSubnav } from '@/app/dashboard/brief/ui'
 
 const F: React.CSSProperties = {
   width: '100%', padding: '10px 14px', borderRadius: 7,
@@ -572,6 +573,8 @@ function SendBriefInner() {
           Börja med företaget, välj frågorna, bestäm vilka som ska svara och skicka sedan ut briefen.
         </p>
       </div>
+
+      <BriefSubnav active="send" />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
         {[
