@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
+import { slugifyCustomer, type StoredCustomerRecord } from '@/lib/customers'
 import {
   groupBriefSessions,
   groupCustomers,
@@ -22,18 +23,36 @@ export default function CustomerDetailPage() {
   const [lookupLoading, setLookupLoading] = useState(true)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deletingCustomer, setDeletingCustomer] = useState(false)
+  const [storedCustomers, setStoredCustomers] = useState<StoredCustomerRecord[]>([])
+  const [pageError, setPageError] = useState<string | null>(null)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
+  const standaloneCustomer = useMemo(() => {
+    const normalizedSlug = decodeURIComponent(slug || '').trim().toLowerCase()
+    return storedCustomers.find(item => slugifyCustomer(item.label) === normalizedSlug) || null
+  }, [storedCustomers, slug])
   const customer = useMemo(() => {
     const normalizedSlug = decodeURIComponent(slug || '').trim().toLowerCase()
-    return customers.find(item => slugify(item.label) === normalizedSlug) || null
+    return customers.find(item => slugifyCustomer(item.label) === normalizedSlug) || null
   }, [customers, slug])
+  const resolvedCustomer = customer || (standaloneCustomer ? {
+    key: `customer:${slugifyCustomer(standaloneCustomer.label)}`,
+    label: standaloneCustomer.label,
+    dispatchCount: 0,
+    recipientCount: 0,
+    submittedCount: 0,
+    pendingCount: 0,
+    lastSentAt: standaloneCustomer.createdAt,
+    latestDispatchId: null,
+    dispatchIds: [],
+    contacts: [],
+  } satisfies CustomerSummary : null)
   const customerDispatches = useMemo(() => {
-    if (!customer) return []
-    return dispatchGroups.filter(group => group.label === customer.label)
-  }, [customer, dispatchGroups])
-  const customerContacts = useMemo(() => dedupeContacts(customer?.contacts || []), [customer])
+    if (!resolvedCustomer) return []
+    return dispatchGroups.filter(group => group.label === resolvedCustomer.label)
+  }, [resolvedCustomer, dispatchGroups])
+  const customerContacts = useMemo(() => dedupeContacts(resolvedCustomer?.contacts || []), [resolvedCustomer])
 
   useEffect(() => {
     async function load() {
@@ -44,9 +63,16 @@ export default function CustomerDetailPage() {
         return
       }
 
-      const { data } = await sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
+      const [sessionsResult, customersResponse] = await Promise.all([
+        sb.from('brief_sessions').select('*').order('created_at', { ascending: false }),
+        fetch('/api/customers'),
+      ])
 
-      setSessions(data || [])
+      setSessions(sessionsResult.data || [])
+      if (customersResponse.ok) {
+        const payload = await customersResponse.json()
+        setStoredCustomers(payload.customers || [])
+      }
       setLoading(false)
     }
 
@@ -77,7 +103,28 @@ export default function CustomerDetailPage() {
   }, [sessions])
 
   async function deleteCustomer() {
-    if (!customer) return
+    if (!resolvedCustomer) return
+
+    if (customerDispatches.length === 0 && standaloneCustomer) {
+      setDeletingCustomer(true)
+      setPageError(null)
+      const response = await fetch('/api/customers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: standaloneCustomer.id }),
+      })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        setPageError(payload?.error || 'Kunde inte radera kunden.')
+        setDeletingCustomer(false)
+        return
+      }
+
+      router.push('/dashboard/customers')
+      router.refresh()
+      return
+    }
 
     const sessionIds = customerDispatches.flatMap(group => group.sessions.map(session => session.id))
     setDeletingCustomer(true)
@@ -90,7 +137,7 @@ export default function CustomerDetailPage() {
     const payload = await response.json().catch(() => null)
 
     if (!response.ok) {
-      alert(`Kunde inte radera kunden: ${payload?.error || 'Okänt fel.'}`)
+      setPageError(`Kunde inte radera kunden: ${payload?.error || 'Okänt fel.'}`)
       setDeletingCustomer(false)
       return
     }
@@ -101,7 +148,7 @@ export default function CustomerDetailPage() {
 
   if (loading || lookupLoading) return <PageLoader />
 
-  if (!customer) {
+  if (!resolvedCustomer) {
     return (
       <div style={{ padding: '40px 44px', maxWidth: 940 }}>
         <div style={{ marginBottom: 20 }}>
@@ -126,20 +173,26 @@ export default function CustomerDetailPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 26, fontSize: 12.5 }}>
         <Link href="/dashboard/customers" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Kunder</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
-        <span style={{ color: 'var(--text)', fontWeight: 500 }}>{customer.label}</span>
+        <span style={{ color: 'var(--text)', fontWeight: 500 }}>{resolvedCustomer.label}</span>
       </div>
+
+      {pageError && (
+        <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(185, 28, 28, 0.18)', background: '#fef2f2', color: '#b91c1c', fontSize: 13 }}>
+          {pageError}
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 28 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-            {customer.label}
+            {resolvedCustomer.label}
           </h1>
           <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8 }}>
             Här samlas kundens kontaktpersoner, utskick och svarshistorik.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={primaryLinkStyle}>
+          <Link href={`/dashboard/send?organisation=${encodeURIComponent(resolvedCustomer.label)}`} style={primaryLinkStyle}>
             Nytt utskick
           </Link>
           {confirmingDelete ? (
@@ -160,10 +213,10 @@ export default function CustomerDetailPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-        <MetricCard label="Utskick" value={customer.dispatchCount} />
+        <MetricCard label="Utskick" value={resolvedCustomer.dispatchCount} />
         <MetricCard label="Kontakter" value={customerContacts.length} />
-        <MetricCard label="Svar" value={customer.submittedCount} />
-        <MetricCard label="Väntar" value={customer.pendingCount} />
+        <MetricCard label="Svar" value={resolvedCustomer.submittedCount} />
+        <MetricCard label="Väntar" value={resolvedCustomer.pendingCount} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: 20, marginBottom: 20 }}>
@@ -189,9 +242,9 @@ export default function CustomerDetailPage() {
 
         <SectionCard title="Senaste aktivitet">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <TimelineItem title="Senaste utskick" meta={formatDate(customer.lastSentAt)} />
-            <TimelineItem title="Svarade hittills" meta={`${customer.submittedCount} av ${customer.recipientCount}`} />
-            <TimelineItem title="Pågående utskick" meta={`${customer.pendingCount > 0 ? 'Ja' : 'Nej'}`} />
+            <TimelineItem title="Senaste utskick" meta={formatDate(resolvedCustomer.lastSentAt)} />
+            <TimelineItem title="Svarade hittills" meta={`${resolvedCustomer.submittedCount} av ${resolvedCustomer.recipientCount}`} />
+            <TimelineItem title="Pågående utskick" meta={`${resolvedCustomer.pendingCount > 0 ? 'Ja' : 'Nej'}`} />
           </div>
         </SectionCard>
       </div>
@@ -231,10 +284,6 @@ export default function CustomerDetailPage() {
       </SectionCard>
     </div>
   )
-}
-
-function slugify(value: string) {
-  return value.trim().toLowerCase()
 }
 
 function dedupeContacts(contacts: BriefDispatchContact[]) {

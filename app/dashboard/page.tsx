@@ -61,7 +61,7 @@ export default function DashboardPage() {
             Brief
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 8, maxWidth: 720 }}>
-            Samla kunder, frågor, mottagare och utskick i ett sammanhållet brief-flöde.
+            Samla kund, frågor, mottagare och utskick i ett flöde.
           </p>
         </div>
         <Link href="/dashboard/send" style={primaryLinkStyle}>

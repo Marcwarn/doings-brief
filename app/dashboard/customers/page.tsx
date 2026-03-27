@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
 import { BriefSubnav } from '@/app/dashboard/brief/ui'
+import { slugifyCustomer, type StoredCustomerRecord } from '@/lib/customers'
 import {
   groupBriefSessions,
   groupCustomers,
@@ -23,9 +24,36 @@ export default function CustomersPage() {
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [pageError, setPageError] = useState<string | null>(null)
+  const [storedCustomers, setStoredCustomers] = useState<StoredCustomerRecord[]>([])
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
+  const [newCustomerName, setNewCustomerName] = useState('')
+  const [savingCustomer, setSavingCustomer] = useState(false)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
-  const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
+  const sessionCustomers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
+  const customers = useMemo(() => {
+    const merged = [...sessionCustomers]
+    const seen = new Set(sessionCustomers.map(customer => slugifyCustomer(customer.label)))
+
+    for (const storedCustomer of storedCustomers) {
+      const slug = slugifyCustomer(storedCustomer.label)
+      if (seen.has(slug)) continue
+      merged.push({
+        key: `customer:${slug}`,
+        label: storedCustomer.label,
+        dispatchCount: 0,
+        recipientCount: 0,
+        submittedCount: 0,
+        pendingCount: 0,
+        lastSentAt: storedCustomer.createdAt,
+        latestDispatchId: null,
+        dispatchIds: [],
+        contacts: [],
+      })
+    }
+
+    return merged.sort((a, b) => new Date(b.lastSentAt).getTime() - new Date(a.lastSentAt).getTime())
+  }, [sessionCustomers, storedCustomers])
 
   useEffect(() => {
     async function load() {
@@ -36,9 +64,16 @@ export default function CustomersPage() {
         return
       }
 
-      const { data } = await sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
+      const [sessionsResult, customersResponse] = await Promise.all([
+        sb.from('brief_sessions').select('*').order('created_at', { ascending: false }),
+        fetch('/api/customers'),
+      ])
 
-      setSessions(data || [])
+      setSessions(sessionsResult.data || [])
+      if (customersResponse.ok) {
+        const payload = await customersResponse.json()
+        setStoredCustomers(payload.customers || [])
+      }
       setLoading(false)
     }
 
@@ -129,6 +164,44 @@ export default function CustomersPage() {
     setSelectedCustomers(prev => prev.length === customers.length ? [] : customers.map(customer => customer.key))
   }
 
+  async function createCustomer() {
+    const label = newCustomerName.trim()
+    if (!label) {
+      setPageError('Ange ett kundnamn.')
+      return
+    }
+
+    setSavingCustomer(true)
+    setPageError(null)
+
+    const response = await fetch('/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label }),
+    })
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      setPageError(payload?.error || 'Kunde inte skapa kunden.')
+      setSavingCustomer(false)
+      return
+    }
+
+    const createdCustomer = payload?.customer as StoredCustomerRecord | undefined
+    if (createdCustomer) {
+      setStoredCustomers(prev => {
+        const next = prev.filter(item => slugifyCustomer(item.label) !== slugifyCustomer(createdCustomer.label))
+        return [createdCustomer, ...next]
+      })
+    }
+
+    setNewCustomerName('')
+    setCreatingCustomer(false)
+    setSavingCustomer(false)
+    router.push(`/dashboard/customers/${encodeURIComponent(slugifyCustomer(createdCustomer?.label || label))}`)
+    router.refresh()
+  }
+
   if (loading) return <PageLoader />
 
   return (
@@ -142,9 +215,26 @@ export default function CustomersPage() {
             Här ser du företag ni arbetar med, deras utskick och senaste aktivitet.
           </p>
         </div>
-        <Link href="/dashboard/send" style={primaryLinkStyle}>
-          Nytt utskick
-        </Link>
+        {creatingCustomer ? (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <input
+              value={newCustomerName}
+              onChange={e => setNewCustomerName(e.target.value)}
+              placeholder="Namn på kund"
+              style={{ ...inputStyle, width: 220 }}
+            />
+            <button onClick={() => void createCustomer()} disabled={savingCustomer} style={primaryButtonStyle(savingCustomer)}>
+              {savingCustomer ? 'Sparar…' : 'Spara kund'}
+            </button>
+            <button onClick={() => { setCreatingCustomer(false); setNewCustomerName('') }} disabled={savingCustomer} style={secondaryButtonStyle}>
+              Avbryt
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setCreatingCustomer(true)} style={primaryLinkStyle}>
+            Skapa kund
+          </button>
+        )}
       </div>
 
       <BriefSubnav active="customers" />
@@ -243,12 +333,14 @@ export default function CustomersPage() {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={selectedCustomers.includes(customer.key)}
-                  onChange={() => toggleCustomerSelection(customer.key)}
-                  aria-label={`Välj kund ${customer.label}`}
-                />
+                {customer.dispatchCount > 0 ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedCustomers.includes(customer.key)}
+                    onChange={() => toggleCustomerSelection(customer.key)}
+                    aria-label={`Välj kund ${customer.label}`}
+                  />
+                ) : null}
               </div>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{customer.label}</div>
@@ -282,7 +374,7 @@ export default function CustomersPage() {
                   </>
                 ) : (
                   <>
-                    <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={filledLinkStyle}>
+                    <Link href={`/dashboard/customers/${encodeURIComponent(slugifyCustomer(customer.label))}`} style={filledLinkStyle}>
                       Öppna kund
                     </Link>
                     {customer.latestDispatchId ? (
@@ -294,12 +386,34 @@ export default function CustomersPage() {
                         Se utskick
                       </Link>
                     )}
-                    <button
-                      onClick={() => setConfirmingCustomer(customer.key)}
-                      style={deleteTriggerStyle}
-                    >
-                      Radera kund
-                    </button>
+                    {customer.dispatchCount > 0 ? (
+                      <button
+                        onClick={() => setConfirmingCustomer(customer.key)}
+                        style={deleteTriggerStyle}
+                      >
+                        Radera kund
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          const storedCustomer = storedCustomers.find(item => slugifyCustomer(item.label) === slugifyCustomer(customer.label))
+                          if (!storedCustomer) return
+                          const response = await fetch('/api/customers', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: storedCustomer.id }),
+                          })
+                          if (!response.ok) {
+                            setPageError('Kunde inte radera kunden.')
+                            return
+                          }
+                          setStoredCustomers(prev => prev.filter(item => item.id !== storedCustomer.id))
+                        }}
+                        style={deleteTriggerStyle}
+                      >
+                        Radera kund
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -322,6 +436,7 @@ function formatDate(value: string) {
 const primaryLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
+  justifyContent: 'center',
   gap: 7,
   padding: '10px 18px',
   borderRadius: 8,
@@ -333,6 +448,41 @@ const primaryLinkStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.01em',
   textDecoration: 'none',
+  cursor: 'pointer',
+}
+
+const primaryButtonStyle = (disabled: boolean): React.CSSProperties => ({
+  padding: '10px 18px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: disabled ? 'var(--bg)' : 'var(--surface)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 13,
+  fontWeight: 700,
+  color: disabled ? 'var(--text-3)' : 'var(--text)',
+  cursor: disabled ? 'not-allowed' : 'pointer',
+})
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: '10px 14px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  fontSize: 12.5,
+  color: 'var(--text-2)',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-sans)',
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--bg)',
+  fontSize: 13,
+  color: 'var(--text)',
+  outline: 'none',
+  fontFamily: 'var(--font-sans)',
 }
 
 const filledLinkStyle: React.CSSProperties = {
