@@ -94,6 +94,21 @@ export default function NewEvaluationPage() {
     setSaving(false)
   }
 
+  async function downloadQrPng() {
+    if (!created || !qrUrl) return
+
+    const response = await fetch(qrUrl)
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = `${slugify(created.evaluation.label)}-qr.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(objectUrl)
+  }
+
   if (loading) return <PageLoader />
 
   return (
@@ -203,6 +218,9 @@ export default function NewEvaluationPage() {
                 <button type="button" onClick={() => navigator.clipboard.writeText(created.publicUrl)} style={ghostButtonStyle}>
                   Kopiera länk
                 </button>
+                <button type="button" onClick={() => void downloadQrPng()} style={ghostButtonStyle}>
+                  Ladda ner QR som PNG
+                </button>
                 <Link href={`/dashboard/evaluations/${created.evaluation.id}`} style={secondaryLinkStyle}>
                   Öppna utvärdering
                 </Link>
@@ -222,6 +240,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   )
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'utvardering'
 }
 
 const inputStyle: React.CSSProperties = {

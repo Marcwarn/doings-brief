@@ -67,6 +67,21 @@ export default function EvaluationDetailPage() {
     publicUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(publicUrl)}` : ''
   ), [publicUrl])
 
+  async function downloadQrPng() {
+    if (!payload || !qrUrl) return
+
+    const response = await fetch(qrUrl)
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = `${slugify(payload.evaluation.label)}-qr.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(objectUrl)
+  }
+
   if (loading) return <PageLoader />
 
   if (error || !payload) {
@@ -105,6 +120,7 @@ export default function EvaluationDetailPage() {
           <MetricPill label="Frågor" value={questions.length} />
           <MetricPill label="Svar" value={responses.length} tone="ok" />
           <button onClick={() => navigator.clipboard.writeText(publicUrl)} style={ghostButtonStyle}>Kopiera länk</button>
+          <button onClick={() => void downloadQrPng()} style={ghostButtonStyle}>Ladda ner QR som PNG</button>
         </div>
       </div>
 
@@ -226,6 +242,14 @@ function formatDateTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'utvardering'
 }
 
 const ghostButtonStyle: React.CSSProperties = {
