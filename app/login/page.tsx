@@ -49,10 +49,13 @@ export default function LoginPage() {
   async function handleForgot(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const { error: err } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+    const response = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
-    if (err) {
+    await response.json().catch(() => null)
+    if (!response.ok) {
       setError('Kunde inte skicka återställningsmail. Kontrollera adressen.')
       setLoading(false)
     } else {
