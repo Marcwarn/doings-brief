@@ -21,11 +21,7 @@ export default function BriefsPage() {
     setLoading(true)
     const { data: { user } } = await sb.auth.getUser()
     if (!user) { setLoading(false); return }
-    const { data: profile } = await sb.from('profiles').select('role').eq('id', user.id).single()
-    const query = sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
-    const { data } = profile?.role === 'admin'
-      ? await query
-      : await query.eq('consultant_id', user.id)
+    const { data } = await sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
     setSessions(data || [])
     setLoading(false)
   }

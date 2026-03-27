@@ -30,22 +30,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    let sessionQuery = admin
+    const { data: session, error: sessionError } = await admin
       .from('brief_sessions')
       .select('*')
       .eq('id', sessionId)
-
-    if (profile?.role !== 'admin') {
-      sessionQuery = sessionQuery.eq('consultant_id', user.id)
-    }
-
-    const { data: session, error: sessionError } = await sessionQuery.single()
+      .single()
     if (sessionError || !session) {
       return NextResponse.json({ error: 'Brief hittades inte' }, { status: 404 })
     }

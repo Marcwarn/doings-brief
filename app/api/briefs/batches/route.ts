@@ -32,22 +32,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    let sessionsQuery = admin
+    const { data: visibleSessions, error: sessionError } = await admin
       .from('brief_sessions')
       .select('id')
       .in('id', uniqueSessionIds)
-
-    if (profile?.role !== 'admin') {
-      sessionsQuery = sessionsQuery.eq('consultant_id', user.id)
-    }
-
-    const { data: visibleSessions, error: sessionError } = await sessionsQuery
     if (sessionError) {
       return NextResponse.json({ error: 'Kunde inte läsa briefs' }, { status: 500 })
     }

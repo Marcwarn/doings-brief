@@ -22,12 +22,6 @@ export async function GET(_: NextRequest, context: { params: { id: string } }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
     const metadataKeys = [
       getDispatchSettingKey(dispatchId),
       getBatchSettingKey(dispatchId),
@@ -51,23 +45,13 @@ export async function GET(_: NextRequest, context: { params: { id: string } }) {
       return NextResponse.json({ error: 'Utskicket hittades inte' }, { status: 404 })
     }
 
-    let sessionsQuery = admin
+    const { data: sessions, error: sessionsError } = await admin
       .from('brief_sessions')
       .select('*')
       .in('id', dispatch.sessionIds)
       .order('created_at', { ascending: false })
-
-    if (profile?.role !== 'admin') {
-      sessionsQuery = sessionsQuery.eq('consultant_id', user.id)
-    }
-
-    const { data: sessions, error: sessionsError } = await sessionsQuery
     if (sessionsError) {
       return NextResponse.json({ error: 'Kunde inte läsa utskickets mottagare' }, { status: 500 })
-    }
-
-    if (profile?.role !== 'admin' && dispatch.consultantId && dispatch.consultantId !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     return NextResponse.json({
