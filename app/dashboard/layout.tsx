@@ -25,10 +25,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard',               label: 'Översikt',       Icon: HomeIcon },
+    { href: '/dashboard',               label: 'Start',          Icon: HomeIcon },
+    { href: '/dashboard/customers',     label: 'Kunder',         Icon: BuildingIcon },
     { href: '/dashboard/question-sets', label: 'Frågebatterier', Icon: ListIcon },
-    { href: '/dashboard/send',          label: 'Skicka brief',   Icon: SendIcon },
-    { href: '/dashboard/briefs',        label: 'Svar',           Icon: InboxIcon },
+    { href: '/dashboard/send',          label: 'Nytt utskick',   Icon: SendIcon },
+    { href: '/dashboard/briefs',        label: 'Utskick',        Icon: InboxIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
 
@@ -156,6 +157,13 @@ const InboxIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
     <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+  </svg>
+)
+const BuildingIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <path d="M9 21V9h6v12"/>
+    <path d="M9 7h.01"/><path d="M15 7h.01"/><path d="M9 11h.01"/><path d="M15 11h.01"/>
   </svg>
 )
 const ShieldIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (

@@ -45,6 +45,17 @@ export type GroupedBriefSessions = {
   lastSentAt: string
 }
 
+export type CustomerSummary = {
+  key: string
+  label: string
+  dispatchCount: number
+  recipientCount: number
+  submittedCount: number
+  pendingCount: number
+  lastSentAt: string
+  latestDispatchId: string | null
+}
+
 export function getBatchSettingKey(batchId: string) {
   return `${BRIEF_BATCH_KEY_PREFIX}${batchId}`
 }
@@ -199,5 +210,43 @@ export function groupBriefSessions(sessions: BriefSession[], batchLookup: BriefB
               : `${group.sessions.length} respondenter`
           ),
     }))
+    .sort((a, b) => new Date(b.lastSentAt).getTime() - new Date(a.lastSentAt).getTime())
+}
+
+export function groupCustomers(groups: GroupedBriefSessions[], batchLookup: BriefBatchLookupMap = {}) {
+  const customers = new Map<string, CustomerSummary>()
+
+  for (const group of groups) {
+    const firstSession = group.sessions[0]
+    const rawKey = group.label.trim().toLowerCase()
+    const customerKey = rawKey ? `customer:${rawKey}` : `customer:${group.key}`
+    const dispatchId = firstSession ? (batchLookup[firstSession.id]?.dispatchId || null) : null
+
+    const existing = customers.get(customerKey)
+    if (existing) {
+      existing.dispatchCount += 1
+      existing.recipientCount += group.sessions.length
+      existing.submittedCount += group.submittedCount
+      existing.pendingCount += group.pendingCount
+      if (new Date(group.lastSentAt) > new Date(existing.lastSentAt)) {
+        existing.lastSentAt = group.lastSentAt
+        existing.latestDispatchId = dispatchId
+      }
+      continue
+    }
+
+    customers.set(customerKey, {
+      key: customerKey,
+      label: group.label,
+      dispatchCount: 1,
+      recipientCount: group.sessions.length,
+      submittedCount: group.submittedCount,
+      pendingCount: group.pendingCount,
+      lastSentAt: group.lastSentAt,
+      latestDispatchId: dispatchId,
+    })
+  }
+
+  return Array.from(customers.values())
     .sort((a, b) => new Date(b.lastSentAt).getTime() - new Date(a.lastSentAt).getTime())
 }

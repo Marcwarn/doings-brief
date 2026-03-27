@@ -21,6 +21,9 @@ async function main() {
 
   try {
     await login(page)
+    await verifyStartPage(page)
+    await openCustomersPage(page)
+    await startDispatchFromCustomers(page)
     await openSendPage(page)
     await chooseFirstQuestionSet(page)
     await fillBatchForm(page, organisation, recipients)
@@ -53,7 +56,7 @@ async function login(page) {
 }
 
 async function openSendPage(page) {
-  await page.goto('/dashboard/send', { waitUntil: 'networkidle' })
+  await page.waitForURL('**/dashboard/send**', { timeout: 15000 })
   await page.locator('input[type="radio"]').first().waitFor({ timeout: 15000 })
 }
 
@@ -122,6 +125,30 @@ async function verifyDispatchPage(page, organisation, recipients) {
   for (const recipient of recipients) {
     await page.getByText(recipient, { exact: false }).waitFor({ timeout: 15000 })
   }
+}
+
+async function verifyStartPage(page) {
+  await page.goto('/dashboard', { waitUntil: 'networkidle' })
+  await page.getByRole('heading', { name: /start/i }).waitFor({ timeout: 15000 })
+
+  const main = page.locator('main')
+  await main.getByText('Kunddialog', { exact: true }).waitFor({ timeout: 15000 })
+  await main.getByText('Frågor', { exact: true }).waitFor({ timeout: 15000 })
+  await main.getByText('Mottagare', { exact: true }).waitFor({ timeout: 15000 })
+  await page.getByRole('link', { name: /kunder/i }).waitFor({ timeout: 15000 })
+}
+
+async function openCustomersPage(page) {
+  await page.getByRole('link', { name: /^Kunder$/i }).click()
+  await page.waitForURL('**/dashboard/customers', { timeout: 15000 })
+  await page.getByRole('heading', { name: /kunder/i }).waitFor({ timeout: 15000 })
+}
+
+async function startDispatchFromCustomers(page) {
+  await Promise.all([
+    page.waitForURL('**/dashboard/send**', { timeout: 15000 }),
+    page.getByRole('link', { name: /nytt utskick/i }).first().click(),
+  ])
 }
 
 function requireEnv(name, value) {

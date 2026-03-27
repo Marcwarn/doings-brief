@@ -105,7 +105,7 @@ function SendBriefInner() {
   const [sets, setSets]               = useState<QuestionSet[]>([])
   const [selectedSet, setSelectedSet] = useState<string>(searchParams.get('set') || '')
   const [questions, setQuestions]     = useState<Question[]>([])
-  const [clientOrg, setClientOrg]           = useState('')
+  const [clientOrg, setClientOrg]           = useState(searchParams.get('organisation') || '')
   const [recipientsInput, setRecipientsInput] = useState('')
   const [loading, setLoading]         = useState(true)
   const [sending, setSending]         = useState(false)
@@ -280,7 +280,7 @@ function SendBriefInner() {
             </button>
           </div>
           <Link href="/dashboard/briefs" style={{ display: 'block', marginTop: 18, fontSize: 13, color: 'var(--text-3)', textDecoration: 'none' }}>
-            Se alla briefs →
+            Se alla utskick →
           </Link>
         </div>
       </div>
@@ -289,15 +289,74 @@ function SendBriefInner() {
 
   return (
     <div style={{ padding: '40px 44px', maxWidth: 700, animation: 'fadeUp 0.35s ease both' }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
+          Nytt utskick
+        </h1>
+        <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8 }}>
+          Börja med företaget, välj frågorna, bestäm vilka som ska svara och skicka sedan ut briefen.
+        </p>
+      </div>
 
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: '0 0 32px' }}>
-        Skicka brief
-      </h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
+        {[
+          ['1', 'Kunddialog', 'Vilket företag och vilka personer gäller detta?'],
+          ['2', 'Frågor', 'Vilket frågebatteri ska användas för den här dialogen?'],
+          ['3', 'Skicka', 'Skicka länkarna och följ sedan svaren i utskicket.'],
+        ].map(([step, title, text]) => (
+          <div key={step} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 16px 14px' }}>
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
+              {step}
+            </div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{title}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{text}</div>
+          </div>
+        ))}
+      </div>
 
       <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Question set */}
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <StepBadge value="1" />
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Kunddialog och mottagare
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Företag</label>
+              <input value={clientOrg} onChange={e => setClientOrg(e.target.value)}
+                     placeholder="Mojang" style={F}
+                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Vilka ska svara? *</label>
+              <textarea
+                value={recipientsInput}
+                onChange={e => setRecipientsInput(e.target.value)}
+                placeholder={'Anna Lindqvist, anna@mojang.se\nJohan Berg <johan@mojang.se>\nfatima@mojang.se'}
+                required
+                rows={6}
+                style={{ ...F, minHeight: 148, resize: 'vertical', lineHeight: 1.55 }}
+                onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+              />
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
+                En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <StepBadge value="2" />
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Frågor att skicka
+            </div>
+          </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 14 }}>
             Frågebatteri *
           </div>
@@ -342,54 +401,36 @@ function SendBriefInner() {
           )}
         </div>
 
-        {/* Client info */}
-        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, border: '1px solid var(--border)' }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
-            Mottagare
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Organisation</label>
-            <input value={clientOrg} onChange={e => setClientOrg(e.target.value)}
-                   placeholder="Mojang" style={F}
-                   onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                   onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Mottagare *</label>
-            <textarea
-              value={recipientsInput}
-              onChange={e => setRecipientsInput(e.target.value)}
-              placeholder={'Anna Lindqvist, anna@mojang.se\nJohan Berg <johan@mojang.se>\nfatima@mojang.se'}
-              required
-              rows={6}
-              style={{ ...F, minHeight: 148, resize: 'vertical', lineHeight: 1.55 }}
-              onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-              onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
-            />
-            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
-              En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
-            </p>
-          </div>
-        </div>
-
         {error && (
           <p style={{ fontSize: 13, color: '#dc2626', margin: 0, padding: '10px 14px', background: '#fef2f2', borderRadius: 7, border: '1px solid #fecaca' }}>
             {error}
           </p>
         )}
 
-        <button type="submit" disabled={sending || sets.length === 0} style={{
-          padding: '13px 0', borderRadius: 7, border: '1px solid var(--border)',
-          background: (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)',
-          fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-          letterSpacing: '0.01em', color: (sending || sets.length === 0) ? 'var(--text-3)' : 'var(--text)',
-          cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
-          transition: 'border-color 0.15s, background 0.15s',
-        }}
-        onMouseEnter={e => { if (!sending && sets.length > 0) { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.background = 'var(--accent-dim)' } }}
-        onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.background = (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)' }}>
-          {sending ? 'Skickar…' : 'Skicka brief till klient →'}
-        </button>
+        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <StepBadge value="3" />
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Skicka utskicket
+            </div>
+          </div>
+          <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '0 0 14px' }}>
+            När du skickar skapas ett utskick som du sedan följer under <strong style={{ color: 'var(--text)' }}>Utskick</strong>.
+          </p>
+          <button type="submit" disabled={sending || sets.length === 0} style={{
+            width: '100%',
+            padding: '13px 0', borderRadius: 7, border: '1px solid var(--border)',
+            background: (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)',
+            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
+            letterSpacing: '0.01em', color: (sending || sets.length === 0) ? 'var(--text-3)' : 'var(--text)',
+            cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
+            transition: 'border-color 0.15s, background 0.15s',
+          }}
+          onMouseEnter={e => { if (!sending && sets.length > 0) { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.background = 'var(--accent-dim)' } }}
+          onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.background = (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)' }}>
+            {sending ? 'Skickar…' : 'Skicka utskick →'}
+          </button>
+        </div>
       </form>
     </div>
   )
@@ -407,6 +448,14 @@ function PageLoader() {
           <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
+    </div>
+  )
+}
+
+function StepBadge({ value }: { value: string }) {
+  return (
+    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>
+      {value}
     </div>
   )
 }

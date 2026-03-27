@@ -83,10 +83,10 @@ export default function BriefsPage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-            Skickade briefs
+            Utskick
           </h1>
           <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, fontWeight: 400 }}>
-            Alla briefs och deras svar
+            Följ vem som har fått, svarat eller fortfarande väntar
           </p>
         </div>
         <Link href="/dashboard/send" style={{
@@ -118,10 +118,10 @@ export default function BriefsPage() {
       {sessions.length === 0 ? (
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '64px 24px', textAlign: 'center', border: '1px solid var(--border)' }}>
           <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 16px', fontStyle: 'italic' }}>
-            Inga briefs skickade ännu.
+            Inga utskick skickade ännu.
           </p>
           <Link href="/dashboard/send" style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}>
-            Skicka din första brief →
+            Skapa ditt första utskick →
           </Link>
         </div>
       ) : (

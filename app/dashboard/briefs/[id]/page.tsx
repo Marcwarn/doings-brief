@@ -225,7 +225,7 @@ export default function BriefResponsesPage() {
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, fontSize: 12.5 }}>
-        <Link href="/dashboard/briefs" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Briefs</Link>
+        <Link href="/dashboard/briefs" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Utskick</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
         <span style={{ color: 'var(--text)', fontWeight: 500 }}>{session?.client_name}</span>
       </div>
