@@ -109,7 +109,7 @@ export default function EvaluationPublicPage() {
       <Shell>
         <Card
           title={payload.evaluation.label}
-          description={`Det här är en utvärdering för ${payload.evaluation.customer}.`}
+          description={`Det här är en utvärdering för ${payload.evaluation.customer}. Det tar bara ett par minuter att svara.`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <button
@@ -136,7 +136,12 @@ export default function EvaluationPublicPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {isScaleQuestion ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8a6074' }}>
+                <span>Lågt</span>
+                <span>Högt</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 }}>
               {[1, 2, 3, 4, 5].map(value => {
                 const active = (answers[current] || '') === `${value}`
                 return (
@@ -159,18 +164,22 @@ export default function EvaluationPublicPage() {
                   </button>
                 )
               })}
+              </div>
             </div>
           ) : (
             <textarea
               rows={7}
               value={answers[current] || ''}
               onChange={e => setAnswers(prev => prev.map((value, index) => index === current ? e.target.value : value))}
-              placeholder="Skriv ditt svar här…"
+              placeholder="Skriv ditt svar här"
               style={{ ...inputStyle, minHeight: 180, resize: 'vertical' }}
             />
           )}
           {isLast && payload.evaluation.collectEmail && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 12.5, color: '#8a6074' }}>
+                Skriv din e-post innan du skickar in svaret.
+              </div>
               <input
                 type="email"
                 value={email}
