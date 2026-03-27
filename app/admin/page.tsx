@@ -39,20 +39,28 @@ export default function AdminPage() {
       if (!user) { router.replace('/login'); return }
       const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single()
       if (profile?.role !== 'admin') { router.replace('/dashboard'); return }
-      loadProfiles()
+      void loadProfiles()
     })
   }, [])
 
   async function loadProfiles() {
-    const { data } = await sb.from('profiles').select('*').order('created_at')
-    setProfiles(data || [])
+    const response = await fetch('/api/admin/users', { cache: 'no-store' })
+    const payload = await response.json().catch(() => null)
+    setProfiles(payload?.profiles || [])
     setLoading(false)
   }
 
   async function updateProfile(id: string, fields: Partial<Profile>) {
     setSaving(id)
-    await sb.from('profiles').update(fields).eq('id', id)
-    setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...fields } : p))
+    const response = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, fields }),
+    })
+    const payload = await response.json().catch(() => null)
+    if (response.ok && payload?.profile) {
+      setProfiles(prev => prev.map(p => p.id === id ? payload.profile : p))
+    }
     setSaving(null)
   }
 
