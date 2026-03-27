@@ -71,7 +71,7 @@ async function fillBatchForm(page, organisation, recipients) {
 }
 
 async function submitBatch(page, recipientCount) {
-  const button = page.getByRole('button', { name: /skicka brief till klient/i })
+  const button = page.getByRole('button', { name: /skicka utskick/i })
   await Promise.all([
     page.getByText(new RegExp(`${recipientCount} briefs skickade!|Brief skickad!`, 'i')).waitFor({ timeout: 20000 }),
     button.click(),
