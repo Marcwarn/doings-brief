@@ -79,7 +79,7 @@ async function submitBatch(page, recipientCount) {
 }
 
 async function verifyDashboardGrouping(page, organisation, recipients) {
-  await page.getByRole('link', { name: /se alla briefs/i }).click()
+  await page.getByRole('link', { name: /se alla utskick/i }).click()
   await page.waitForURL('**/dashboard/briefs', { timeout: 15000 })
   await page.getByText(organisation, { exact: false }).waitFor({ timeout: 15000 })
 
