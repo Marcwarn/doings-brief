@@ -107,12 +107,13 @@ async function openDispatchPage(page, organisation) {
 }
 
 async function verifyDispatchPage(page, organisation, recipients) {
+  const main = page.locator('main')
   await page.getByRole('heading', { name: new RegExp(organisation, 'i') }).waitFor({ timeout: 15000 })
-  await page.getByText('Översikt', { exact: true }).waitFor({ timeout: 15000 })
-  await page.getByText('Mottagare', { exact: true }).waitFor({ timeout: 15000 })
-  await page.getByText('Historik', { exact: true }).waitFor({ timeout: 15000 })
+  await main.getByText('Översikt', { exact: true }).waitFor({ timeout: 15000 })
+  await main.getByText('Mottagare', { exact: true }).waitFor({ timeout: 15000 })
+  await main.getByText('Historik', { exact: true }).waitFor({ timeout: 15000 })
 
-  const bodyText = await page.locator('body').textContent()
+  const bodyText = await main.textContent()
   assertIncludes(bodyText || '', 'Mottagare: 2', 'dispatch recipient count')
   assertIncludes(bodyText || '', 'Svar: 0', 'dispatch submitted count')
   assertIncludes(bodyText || '', 'Väntar: 2', 'dispatch pending count')
