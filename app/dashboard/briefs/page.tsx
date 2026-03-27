@@ -17,6 +17,9 @@ export default function BriefsPage() {
   const [confirmingGroup, setConfirmingGroup] = useState<string | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
   const [deletingGroup, setDeletingGroup] = useState<string | null>(null)
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const groups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
 
   async function load() {
@@ -95,9 +98,44 @@ export default function BriefsPage() {
     router.refresh()
   }
 
+  async function deleteSelectedGroups() {
+    const selectedSessionIds = groups
+      .filter(group => selectedGroups.includes(group.key))
+      .flatMap(group => group.sessions.map(session => session.id))
+
+    if (selectedSessionIds.length === 0) return
+
+    setBulkDeleting(true)
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: selectedSessionIds }),
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      alert(`Kunde inte radera valda utskick: ${payload?.error || 'Okänt fel.'}`)
+      setBulkDeleting(false)
+      return
+    }
+
+    const deletedIds = new Set<string>(payload?.deletedSessionIds || selectedSessionIds)
+    setSessions(prev => prev.filter(session => !deletedIds.has(session.id)))
+    setExpandedGroups(prev => prev.filter(key => !selectedGroups.includes(key)))
+    setSelectedGroups([])
+    setConfirmingBulkDelete(false)
+    setBulkDeleting(false)
+    router.refresh()
+  }
+
   function briefUrl(token: string) { return `${window.location.origin}/brief/${token}` }
   function toggleGroup(groupKey: string) {
     setExpandedGroups(prev => prev.includes(groupKey) ? prev.filter(key => key !== groupKey) : [...prev, groupKey])
+  }
+  function toggleGroupSelection(groupKey: string) {
+    setSelectedGroups(prev => prev.includes(groupKey) ? prev.filter(key => key !== groupKey) : [...prev, groupKey])
+  }
+  function toggleSelectAllGroups() {
+    setSelectedGroups(prev => prev.length === groups.length ? [] : groups.map(group => group.key))
   }
 
   if (loading) return <PageLoader />
@@ -141,6 +179,51 @@ export default function BriefsPage() {
         </Link>
       </div>
 
+      {groups.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          marginBottom: 16,
+          padding: '12px 14px',
+          borderRadius: 10,
+          border: '1px solid var(--border)',
+          background: 'var(--surface)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text)' }}>
+              <input
+                type="checkbox"
+                checked={groups.length > 0 && selectedGroups.length === groups.length}
+                onChange={toggleSelectAllGroups}
+              />
+              Välj alla utskick
+            </label>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              {selectedGroups.length === 0 ? 'Inga valda' : `${selectedGroups.length} valda`}
+            </span>
+          </div>
+          {selectedGroups.length > 0 && (
+            confirmingBulkDelete ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera valda utskick?</span>
+                <button onClick={() => void deleteSelectedGroups()} disabled={bulkDeleting} style={confirmButtonStyle(bulkDeleting)}>
+                  {bulkDeleting ? 'Raderar…' : 'Ja'}
+                </button>
+                <button onClick={() => setConfirmingBulkDelete(false)} disabled={bulkDeleting} style={cancelButtonStyle}>
+                  Avbryt
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmingBulkDelete(true)} style={bulkDeleteButtonStyle}>
+                Radera valda
+              </button>
+            )
+          )}
+        </div>
+      )}
+
       {sessions.length === 0 ? (
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '64px 24px', textAlign: 'center', border: '1px solid var(--border)' }}>
           <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 16px', fontStyle: 'italic' }}>
@@ -154,11 +237,11 @@ export default function BriefsPage() {
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           {/* Column headers */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 140px 150px 220px',
+            display: 'grid', gridTemplateColumns: '36px 1fr 140px 150px 220px',
             padding: '9px 22px', background: 'var(--bg)',
             borderBottom: '1px solid var(--border)',
           }}>
-            {['Företag', 'Respondenter', 'Senast skickad', ''].map((h, i) => (
+            {['', 'Företag', 'Respondenter', 'Senast skickad', ''].map((h, i) => (
               <span key={i} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.01em' }}>{h}</span>
             ))}
           </div>
@@ -171,7 +254,7 @@ export default function BriefsPage() {
               <div key={group.key} style={{ borderBottom: '1px solid var(--border)' }}>
                 <div
                   style={{
-                    display: 'grid', gridTemplateColumns: '1fr 140px 150px 220px',
+                    display: 'grid', gridTemplateColumns: '36px 1fr 140px 150px 220px',
                     alignItems: 'center',
                     padding: '14px 22px',
                     background: 'var(--surface)',
@@ -180,6 +263,14 @@ export default function BriefsPage() {
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-dim)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'var(--surface)')}
                 >
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedGroups.includes(group.key)}
+                      onChange={() => toggleGroupSelection(group.key)}
+                      aria-label={`Välj utskick ${group.label}`}
+                    />
+                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
                     <button
                       onClick={() => toggleGroup(group.key)}
@@ -426,4 +517,40 @@ function PageLoader() {
       </div>
     </div>
   )
+}
+
+const bulkDeleteButtonStyle: React.CSSProperties = {
+  padding: '6px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'none',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const cancelButtonStyle: React.CSSProperties = {
+  padding: '5px 10px',
+  borderRadius: 6,
+  border: '1px solid var(--border)',
+  background: 'none',
+  fontSize: 12,
+  color: 'var(--text-3)',
+  cursor: 'pointer',
+}
+
+function confirmButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '5px 10px',
+    borderRadius: 6,
+    border: 'none',
+    background: 'var(--text)',
+    color: 'var(--bg)',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1,
+  }
 }

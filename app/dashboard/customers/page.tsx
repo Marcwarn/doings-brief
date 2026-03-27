@@ -18,6 +18,9 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true)
   const [confirmingCustomer, setConfirmingCustomer] = useState<string | null>(null)
   const [deletingCustomer, setDeletingCustomer] = useState<string | null>(null)
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([])
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -82,6 +85,46 @@ export default function CustomersPage() {
     router.refresh()
   }
 
+  async function deleteSelectedCustomers() {
+    const selectedSessionIds = dispatchGroups
+      .filter(group => {
+        const customerKey = `customer:${group.label.trim().toLowerCase()}`
+        return selectedCustomers.includes(customerKey)
+      })
+      .flatMap(group => group.sessions.map(session => session.id))
+
+    if (selectedSessionIds.length === 0) return
+
+    setBulkDeleting(true)
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: selectedSessionIds }),
+    })
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      alert(`Kunde inte radera valda kunder: ${payload?.error || 'Okänt fel.'}`)
+      setBulkDeleting(false)
+      return
+    }
+
+    const deletedIds = new Set<string>(payload?.deletedSessionIds || selectedSessionIds)
+    setSessions(prev => prev.filter(session => !deletedIds.has(session.id)))
+    setSelectedCustomers([])
+    setConfirmingBulkDelete(false)
+    setBulkDeleting(false)
+    router.refresh()
+  }
+
+  function toggleCustomerSelection(customerKey: string) {
+    setSelectedCustomers(prev => prev.includes(customerKey) ? prev.filter(key => key !== customerKey) : [...prev, customerKey])
+  }
+
+  function toggleSelectAllCustomers() {
+    setSelectedCustomers(prev => prev.length === customers.length ? [] : customers.map(customer => customer.key))
+  }
+
   if (loading) return <PageLoader />
 
   return (
@@ -100,6 +143,51 @@ export default function CustomersPage() {
         </Link>
       </div>
 
+      {customers.length > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          marginBottom: 16,
+          padding: '12px 14px',
+          borderRadius: 10,
+          border: '1px solid var(--border)',
+          background: 'var(--surface)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text)' }}>
+              <input
+                type="checkbox"
+                checked={customers.length > 0 && selectedCustomers.length === customers.length}
+                onChange={toggleSelectAllCustomers}
+              />
+              Välj alla kunder
+            </label>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              {selectedCustomers.length === 0 ? 'Inga valda' : `${selectedCustomers.length} valda`}
+            </span>
+          </div>
+          {selectedCustomers.length > 0 && (
+            confirmingBulkDelete ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera valda kunder?</span>
+                <button onClick={() => void deleteSelectedCustomers()} disabled={bulkDeleting} style={confirmButtonStyle(bulkDeleting)}>
+                  {bulkDeleting ? 'Raderar…' : 'Ja'}
+                </button>
+                <button onClick={() => setConfirmingBulkDelete(false)} disabled={bulkDeleting} style={cancelButtonStyle}>
+                  Avbryt
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmingBulkDelete(true)} style={bulkDeleteButtonStyle}>
+                Radera valda
+              </button>
+            )
+          )}
+        </div>
+      )}
+
       {customers.length === 0 ? (
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '60px 28px', border: '1px solid var(--border)' }}>
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-3)' }}>
@@ -110,12 +198,12 @@ export default function CustomersPage() {
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 120px 160px 220px',
+            gridTemplateColumns: '36px 1fr 120px 160px 220px',
             padding: '9px 18px',
             background: 'var(--bg)',
             borderBottom: '1px solid var(--border)',
           }}>
-            {['Kund', 'Utskick', 'Status', ''].map(header => (
+            {['', 'Kund', 'Utskick', 'Status', ''].map(header => (
               <span key={header} style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
                 {header}
               </span>
@@ -127,13 +215,21 @@ export default function CustomersPage() {
               key={customer.key}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 120px 160px 220px',
+                gridTemplateColumns: '36px 1fr 120px 160px 220px',
                 alignItems: 'center',
                 padding: '14px 18px',
                 background: 'var(--surface)',
                 borderBottom: '1px solid var(--border-sub)',
               }}
             >
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedCustomers.includes(customer.key)}
+                  onChange={() => toggleCustomerSelection(customer.key)}
+                  aria-label={`Välj kund ${customer.label}`}
+                />
+              </div>
               <div>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{customer.label}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
@@ -253,6 +349,18 @@ const deleteTriggerStyle: React.CSSProperties = {
   border: '1px solid transparent',
   fontSize: 12,
   color: 'var(--text-3)',
+  cursor: 'pointer',
+}
+
+const bulkDeleteButtonStyle: React.CSSProperties = {
+  padding: '6px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'none',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 12,
+  fontWeight: 700,
   cursor: 'pointer',
 }
 
