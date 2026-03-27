@@ -28,6 +28,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard',               label: 'Start',          Icon: HomeIcon },
     { href: '/dashboard/customers',     label: 'Kunder',         Icon: BuildingIcon },
     { href: '/dashboard/question-sets', label: 'Frågebatterier', Icon: ListIcon },
+    { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },
     { href: '/dashboard/send',          label: 'Nytt utskick',   Icon: SendIcon },
     { href: '/dashboard/briefs',        label: 'Utskick',        Icon: InboxIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
@@ -169,6 +170,12 @@ const BuildingIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
 const ShieldIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+)
+const ChartIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M3 3v18h18"/>
+    <path d="M7 14l4-4 3 3 5-7"/>
   </svg>
 )
 const LogoutIcon = () => (
