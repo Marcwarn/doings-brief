@@ -14,8 +14,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     sb.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.replace('/login'); return }
-      const { data: p } = await sb.from('profiles').select('*').eq('id', data.session.user.id).single()
-      setProfile(p)
+
+      const response = await fetch('/api/brief-access', { cache: 'no-store' })
+      if (!response.ok) {
+        await sb.auth.signOut()
+        router.replace('/login')
+        return
+      }
+
+      const payload = await response.json().catch(() => null)
+      setProfile(payload?.profile || null)
     })
   }, [])
 

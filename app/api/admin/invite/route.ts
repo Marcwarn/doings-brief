@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
+import { getBriefAccessKey } from '@/lib/brief-access'
 
 export async function POST(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdminClient()
-    const { email, fullName, senderEmail, password } = await req.json()
+    const { email, fullName, senderEmail, password, createdBy } = await req.json()
     if (!email) return NextResponse.json({ error: 'E-post krävs' }, { status: 400 })
 
     let userId: string | undefined
@@ -41,6 +42,25 @@ export async function POST(req: NextRequest) {
 
       if (profileError) {
         return NextResponse.json({ error: profileError.message }, { status: 400 })
+      }
+
+      const accessCreatedAt = new Date().toISOString()
+      const { error: accessError } = await supabaseAdmin
+        .from('settings')
+        .upsert({
+          key: getBriefAccessKey(userId),
+          value: JSON.stringify({
+            userId,
+            email,
+            enabled: true,
+            createdAt: accessCreatedAt,
+            createdBy: typeof createdBy === 'string' && createdBy.trim() ? createdBy : userId,
+          }),
+          updated_at: accessCreatedAt,
+        })
+
+      if (accessError) {
+        return NextResponse.json({ error: accessError.message }, { status: 400 })
       }
 
       return NextResponse.json({ ok: true, profile })

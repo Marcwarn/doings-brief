@@ -14,8 +14,15 @@ export default function LoginPage() {
   const [sent,     setSent]     = useState(false)
 
   useEffect(() => {
-    createClient().auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/dashboard')
+    createClient().auth.getSession().then(async ({ data }) => {
+      if (!data.session) return
+
+      const response = await fetch('/api/brief-access', { cache: 'no-store' })
+      if (response.ok) {
+        router.replace('/dashboard')
+      } else {
+        await createClient().auth.signOut()
+      }
     })
   }, [])
 
@@ -27,6 +34,14 @@ export default function LoginPage() {
       setError('Fel e-post eller lösenord.')
       setLoading(false)
     } else {
+      const accessResponse = await fetch('/api/brief-access', { cache: 'no-store' })
+      if (!accessResponse.ok) {
+        await createClient().auth.signOut()
+        setError('Du har inte tillgång till Brief ännu.')
+        setLoading(false)
+        return
+      }
+
       router.replace('/dashboard')
     }
   }

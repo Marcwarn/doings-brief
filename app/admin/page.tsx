@@ -37,8 +37,9 @@ export default function AdminPage() {
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      const { data: profile } = await sb.from('profiles').select('*').eq('id', user.id).single()
-      if (profile?.role !== 'admin') { router.replace('/dashboard'); return }
+      const response = await fetch('/api/brief-access', { cache: 'no-store' })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || payload?.profile?.role !== 'admin') { router.replace('/dashboard'); return }
       void loadProfiles()
     })
   }, [])
@@ -67,10 +68,17 @@ export default function AdminPage() {
   async function inviteUser(e: React.FormEvent) {
     e.preventDefault()
     setInviting(true); setInviteResult('')
+    const { data: { user } } = await sb.auth.getUser()
     const res = await fetch('/api/admin/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newEmail, fullName: newName, senderEmail: newSenderEmail, password: newPassword || undefined }),
+      body: JSON.stringify({
+        email: newEmail,
+        fullName: newName,
+        senderEmail: newSenderEmail,
+        password: newPassword || undefined,
+        createdBy: user?.id,
+      }),
     })
     const { ok, error, profile } = await res.json()
     if (ok) {
@@ -166,11 +174,17 @@ export default function AdminPage() {
   async function runImport() {
     setImporting(true)
     const statuses: string[] = []
+    const { data: { user } } = await sb.auth.getUser()
     for (const row of importRows) {
       const res = await fetch('/api/admin/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: row.email, fullName: row.name, password: row.password || undefined }),
+        body: JSON.stringify({
+          email: row.email,
+          fullName: row.name,
+          password: row.password || undefined,
+          createdBy: user?.id,
+        }),
       })
       const { ok, error } = await res.json()
       statuses.push(ok ? `✓ ${row.email}` : `✗ ${row.email} — ${error}`)
