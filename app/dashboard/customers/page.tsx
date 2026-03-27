@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
 import {
   groupBriefSessions,
@@ -11,9 +12,12 @@ import {
 
 export default function CustomersPage() {
   const sb = createClient()
+  const router = useRouter()
   const [sessions, setSessions] = useState<BriefSession[]>([])
   const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [loading, setLoading] = useState(true)
+  const [confirmingCustomer, setConfirmingCustomer] = useState<string | null>(null)
+  const [deletingCustomer, setDeletingCustomer] = useState<string | null>(null)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -54,6 +58,29 @@ export default function CustomersPage() {
       })
       .catch(() => setBatchLookup({}))
   }, [sessions])
+
+  async function deleteCustomer(customerKey: string, sessionIds: string[]) {
+    setDeletingCustomer(customerKey)
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds }),
+    })
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      alert(`Kunde inte radera kunden: ${payload?.error || 'Okänt fel.'}`)
+      setDeletingCustomer(null)
+      setConfirmingCustomer(null)
+      return
+    }
+
+    const deletedIds = new Set<string>(payload?.deletedSessionIds || sessionIds)
+    setSessions(prev => prev.filter(session => !deletedIds.has(session.id)))
+    setDeletingCustomer(null)
+    setConfirmingCustomer(null)
+    router.refresh()
+  }
 
   if (loading) return <PageLoader />
 
@@ -118,20 +145,49 @@ export default function CustomersPage() {
                 {customer.submittedCount} svarade · {customer.pendingCount} väntar
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
-                <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={ghostLinkStyle}>
-                  Nytt utskick
-                </Link>
-                <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={filledLinkStyle}>
-                  Öppna kund
-                </Link>
-                {customer.latestDispatchId ? (
-                  <Link href={`/dashboard/dispatches/${customer.latestDispatchId}`} style={filledLinkStyle}>
-                    Se senaste utskick
-                  </Link>
+                {confirmingCustomer === customer.key ? (
+                  <>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)', alignSelf: 'center' }}>Radera hela kunden?</span>
+                    <button
+                      onClick={() => {
+                        const customerSessionIds = dispatchGroups
+                          .filter(group => group.label === customer.label)
+                          .flatMap(group => group.sessions.map(session => session.id))
+                        void deleteCustomer(customer.key, customerSessionIds)
+                      }}
+                      disabled={deletingCustomer === customer.key}
+                      style={confirmButtonStyle(deletingCustomer === customer.key)}
+                    >
+                      {deletingCustomer === customer.key ? '…' : 'Ja'}
+                    </button>
+                    <button onClick={() => setConfirmingCustomer(null)} style={cancelButtonStyle}>
+                      Avbryt
+                    </button>
+                  </>
                 ) : (
-                  <Link href="/dashboard/briefs" style={filledLinkStyle}>
-                    Se utskick
-                  </Link>
+                  <>
+                    <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={ghostLinkStyle}>
+                      Nytt utskick
+                    </Link>
+                    <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={filledLinkStyle}>
+                      Öppna kund
+                    </Link>
+                    {customer.latestDispatchId ? (
+                      <Link href={`/dashboard/dispatches/${customer.latestDispatchId}`} style={filledLinkStyle}>
+                        Se senaste utskick
+                      </Link>
+                    ) : (
+                      <Link href="/dashboard/briefs" style={filledLinkStyle}>
+                        Se utskick
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => setConfirmingCustomer(customer.key)}
+                      style={deleteTriggerStyle}
+                    >
+                      Radera kund
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -188,6 +244,40 @@ const filledLinkStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: '0.01em',
+}
+
+const deleteTriggerStyle: React.CSSProperties = {
+  padding: '6px 10px',
+  borderRadius: 6,
+  background: 'none',
+  border: '1px solid transparent',
+  fontSize: 12,
+  color: 'var(--text-3)',
+  cursor: 'pointer',
+}
+
+const cancelButtonStyle: React.CSSProperties = {
+  padding: '5px 10px',
+  borderRadius: 6,
+  border: '1px solid var(--border)',
+  background: 'none',
+  fontSize: 12,
+  color: 'var(--text-3)',
+  cursor: 'pointer',
+}
+
+function confirmButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '5px 10px',
+    borderRadius: 6,
+    border: 'none',
+    background: 'var(--text)',
+    color: 'var(--bg)',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1,
+  }
 }
 
 function PageLoader() {

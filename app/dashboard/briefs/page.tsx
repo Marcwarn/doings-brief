@@ -14,7 +14,9 @@ export default function BriefsPage() {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const [loading, setLoading]       = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [confirmingGroup, setConfirmingGroup] = useState<string | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
+  const [deletingGroup, setDeletingGroup] = useState<string | null>(null)
   const groups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
 
   async function load() {
@@ -55,13 +57,41 @@ export default function BriefsPage() {
 
   async function deleteSession(id: string) {
     setDeleting(id)
-    const { error, count } = await sb.from('brief_sessions').delete({ count: 'exact' }).eq('id', id)
-    if (error || count === 0) {
-      alert(`Kunde inte radera: ${error?.message || 'Behörighet saknas — briefen kan tillhöra en annan användare.'}`)
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: [id] }),
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      alert(`Kunde inte radera: ${payload?.error || 'Okänt fel.'}`)
       setDeleting(null); setConfirming(null); return
     }
     setSessions(prev => prev.filter(s => s.id !== id))
     setConfirming(null); setDeleting(null)
+    router.refresh()
+  }
+
+  async function deleteGroup(groupKey: string, sessionIds: string[]) {
+    setDeletingGroup(groupKey)
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds }),
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      alert(`Kunde inte radera utskicket: ${payload?.error || 'Okänt fel.'}`)
+      setDeletingGroup(null)
+      setConfirmingGroup(null)
+      return
+    }
+
+    const deletedIds = new Set<string>(payload?.deletedSessionIds || sessionIds)
+    setSessions(prev => prev.filter(session => !deletedIds.has(session.id)))
+    setExpandedGroups(prev => prev.filter(key => key !== groupKey))
+    setConfirmingGroup(null)
+    setDeletingGroup(null)
     router.refresh()
   }
 
@@ -209,18 +239,54 @@ export default function BriefsPage() {
                         Öppna utskick
                       </Link>
                     )}
-                    <button
-                      onClick={() => toggleGroup(group.key)}
-                      style={{
-                        padding: '6px 13px', borderRadius: 6,
-                        background: 'var(--surface)', color: 'var(--text)',
-                        border: '1px solid var(--border)',
-                        fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
-                        letterSpacing: '0.01em', cursor: 'pointer', flexShrink: 0,
-                      }}
-                    >
-                      {isExpanded ? 'Dölj personer' : 'Visa personer'}
-                    </button>
+                    {confirmingGroup === group.key ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera hela utskicket?</span>
+                        <button onClick={() => deleteGroup(group.key, group.sessions.map(session => session.id))} disabled={deletingGroup === group.key} style={{
+                          padding: '5px 10px', borderRadius: 6, border: 'none',
+                          background: 'var(--text)', color: 'var(--bg)',
+                          fontSize: 12, fontWeight: 600, cursor: deletingGroup === group.key ? 'not-allowed' : 'pointer',
+                          opacity: deletingGroup === group.key ? 0.5 : 1,
+                        }}>
+                          {deletingGroup === group.key ? '…' : 'Ja'}
+                        </button>
+                        <button onClick={() => setConfirmingGroup(null)} style={{
+                          padding: '5px 10px', borderRadius: 6,
+                          border: '1px solid var(--border)', background: 'none',
+                          fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                        }}>
+                          Avbryt
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => toggleGroup(group.key)}
+                          style={{
+                            padding: '6px 13px', borderRadius: 6,
+                            background: 'var(--surface)', color: 'var(--text)',
+                            border: '1px solid var(--border)',
+                            fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700,
+                            letterSpacing: '0.01em', cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >
+                          {isExpanded ? 'Dölj personer' : 'Visa personer'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmingGroup(group.key)}
+                          style={{
+                            padding: '6px 10px', borderRadius: 6,
+                            background: 'none', border: '1px solid transparent',
+                            fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                            transition: 'border-color 0.1s, color 0.1s', flexShrink: 0,
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}
+                        >
+                          Radera utskick
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 

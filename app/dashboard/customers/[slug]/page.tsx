@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient, type BriefSession } from '@/lib/supabase'
 import {
   groupBriefSessions,
@@ -14,11 +14,14 @@ import {
 
 export default function CustomerDetailPage() {
   const { slug } = useParams<{ slug: string }>()
+  const router = useRouter()
   const sb = createClient()
   const [sessions, setSessions] = useState<BriefSession[]>([])
   const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [loading, setLoading] = useState(true)
   const [lookupLoading, setLookupLoading] = useState(true)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deletingCustomer, setDeletingCustomer] = useState(false)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -73,6 +76,29 @@ export default function CustomerDetailPage() {
       .finally(() => setLookupLoading(false))
   }, [sessions])
 
+  async function deleteCustomer() {
+    if (!customer) return
+
+    const sessionIds = customerDispatches.flatMap(group => group.sessions.map(session => session.id))
+    setDeletingCustomer(true)
+
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds }),
+    })
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      alert(`Kunde inte radera kunden: ${payload?.error || 'Okänt fel.'}`)
+      setDeletingCustomer(false)
+      return
+    }
+
+    router.push('/dashboard/customers')
+    router.refresh()
+  }
+
   if (loading || lookupLoading) return <PageLoader />
 
   if (!customer) {
@@ -112,9 +138,25 @@ export default function CustomerDetailPage() {
             Här samlas kundens kontaktpersoner, utskick och svarshistorik.
           </p>
         </div>
-        <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={primaryLinkStyle}>
-          Nytt utskick
-        </Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={primaryLinkStyle}>
+            Nytt utskick
+          </Link>
+          {confirmingDelete ? (
+            <>
+              <button onClick={() => void deleteCustomer()} disabled={deletingCustomer} style={confirmButtonStyle(deletingCustomer)}>
+                {deletingCustomer ? 'Raderar…' : 'Bekräfta radera'}
+              </button>
+              <button onClick={() => setConfirmingDelete(false)} disabled={deletingCustomer} style={cancelButtonStyle}>
+                Avbryt
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmingDelete(true)} style={deleteTriggerStyle}>
+              Radera kund
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
@@ -284,6 +326,46 @@ const rolePillStyle: React.CSSProperties = {
   background: 'var(--bg)',
   border: '1px solid var(--border)',
   color: 'var(--text-2)',
+}
+
+const deleteTriggerStyle: React.CSSProperties = {
+  padding: '10px 18px',
+  borderRadius: 8,
+  background: 'none',
+  color: 'var(--text-3)',
+  border: '1px solid var(--border)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 13,
+  fontWeight: 700,
+  letterSpacing: '0.01em',
+  cursor: 'pointer',
+}
+
+const cancelButtonStyle: React.CSSProperties = {
+  padding: '10px 18px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'none',
+  color: 'var(--text-3)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 13,
+  cursor: 'pointer',
+}
+
+function confirmButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '10px 18px',
+    borderRadius: 8,
+    border: 'none',
+    background: 'var(--text)',
+    color: 'var(--bg)',
+    fontFamily: 'var(--font-display)',
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: '0.01em',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1,
+  }
 }
 
 const cardRowStyle: React.CSSProperties = {

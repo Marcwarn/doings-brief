@@ -34,6 +34,8 @@ export default function DispatchPage() {
   const [payload, setPayload] = useState<DispatchPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deletingDispatch, setDeletingDispatch] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +85,27 @@ export default function DispatchPage() {
   )
   const pendingCount = sessions.length - submittedCount
 
+  async function deleteDispatch() {
+    if (!payload) return
+
+    setDeletingDispatch(true)
+    const response = await fetch('/api/briefs/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionIds: payload.sessions.map(session => session.id) }),
+    })
+    const nextPayload = await response.json().catch(() => null)
+
+    if (!response.ok) {
+      alert(`Kunde inte radera utskicket: ${nextPayload?.error || 'Okänt fel.'}`)
+      setDeletingDispatch(false)
+      return
+    }
+
+    router.push('/dashboard/briefs')
+    router.refresh()
+  }
+
   if (loading) return <PageLoader />
 
   if (error || !payload) {
@@ -129,6 +152,20 @@ export default function DispatchPage() {
           <MetricPill label="Mottagare" value={sessions.length} />
           <MetricPill label="Svar" value={submittedCount} tone="ok" />
           <MetricPill label="Väntar" value={pendingCount} />
+          {confirmingDelete ? (
+            <>
+              <button onClick={() => void deleteDispatch()} disabled={deletingDispatch} style={confirmButtonStyle(deletingDispatch)}>
+                {deletingDispatch ? 'Raderar…' : 'Bekräfta radera'}
+              </button>
+              <button onClick={() => setConfirmingDelete(false)} disabled={deletingDispatch} style={cancelButtonStyle}>
+                Avbryt
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setConfirmingDelete(true)} style={deleteTriggerStyle}>
+              Radera utskick
+            </button>
+          )}
         </div>
       </div>
 
@@ -367,6 +404,43 @@ const ghostButtonStyle: React.CSSProperties = {
   fontFamily: 'var(--font-sans)',
   transition: 'border-color 0.15s',
   textDecoration: 'none',
+}
+
+const deleteTriggerStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text-3)',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.01em',
+  cursor: 'pointer',
+}
+
+const cancelButtonStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'none',
+  color: 'var(--text-3)',
+  fontSize: 11,
+  cursor: 'pointer',
+}
+
+function confirmButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '8px 12px',
+    borderRadius: 999,
+    border: 'none',
+    background: 'var(--text)',
+    color: 'var(--bg)',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.01em',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.5 : 1,
+  }
 }
 
 const linkButtonStyle: React.CSSProperties = {
