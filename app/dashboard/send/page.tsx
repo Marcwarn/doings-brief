@@ -214,14 +214,13 @@ function SendBriefInner() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [sets, setSets]               = useState<QuestionSet[]>([])
-  const [questionMode, setQuestionMode] = useState<'set' | 'custom'>('set')
-  const [selectedSet, setSelectedSet] = useState<string>(searchParams.get('set') || '')
+  const [selectedSet, setSelectedSet] = useState<string>('')
   const [questionSetQuery, setQuestionSetQuery] = useState('')
-  const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(!searchParams.get('set'))
+  const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(false)
   const [questions, setQuestions]     = useState<Question[]>([])
   const [customSetName, setCustomSetName] = useState('')
   const [customQuestions, setCustomQuestions] = useState<QuestionDraft[]>([{ text: '' }, { text: '' }])
-  const [clientOrg, setClientOrg]           = useState(searchParams.get('organisation') || '')
+  const [clientOrg, setClientOrg]           = useState('')
   const [storedCustomers, setStoredCustomers] = useState<StoredCustomerRecord[]>([])
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false)
   const [recipientsInput, setRecipientsInput] = useState('')
@@ -252,6 +251,13 @@ function SendBriefInner() {
     sb.from('questions').select('*').eq('question_set_id', selectedSet).order('order_index')
       .then(({ data }) => setQuestions(data || []))
   }, [selectedSet])
+
+  useEffect(() => {
+    const initialSet = searchParams.get('set')
+    if (initialSet && !selectedSet) {
+      setSelectedSet(initialSet)
+    }
+  }, [searchParams, selectedSet])
 
   useEffect(() => {
     if (!customSetName.trim() && clientOrg.trim()) {
@@ -294,10 +300,29 @@ function SendBriefInner() {
       return
     }
 
-    setQuestionMode('custom')
     setError('')
     setCustomSetName(prev => prev.trim() ? prev : `${sets.find(set => set.id === selectedSet)?.name || 'Importerade frågor'} · kopia`)
     setCustomQuestions(questions.map(question => ({ text: question.text })))
+  }
+
+  async function selectQuestionSetSource(setId: string) {
+    const selected = sets.find(set => set.id === setId) || null
+    setSelectedSet(setId)
+    setShowQuestionSetPicker(false)
+    setQuestionSetQuery('')
+
+    const { data } = await sb
+      .from('questions')
+      .select('*')
+      .eq('question_set_id', setId)
+      .order('order_index')
+
+    const importedQuestions = data || []
+    setQuestions(importedQuestions)
+    setCustomSetName(prev => prev.trim() ? prev : `${selected?.name || 'Importerade frågor'} · kopia`)
+    setCustomQuestions(importedQuestions.length > 0
+      ? importedQuestions.map(question => ({ text: question.text }))
+      : [{ text: '' }, { text: '' }])
   }
 
   async function importRecipientsFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -354,71 +379,61 @@ function SendBriefInner() {
     e.preventDefault()
     let questionSetId = selectedSet
 
-    if (questionMode === 'set' && !selectedSet) {
-      setError('Välj ett frågebatteri.')
+    const filteredQuestions = customQuestions
+      .map(question => question.text.trim())
+      .filter(Boolean)
+
+    if (!customSetName.trim()) {
+      setError('Ge frågorna ett namn innan du skickar.')
       return
     }
 
-    if (questionMode === 'custom') {
-      const filteredQuestions = customQuestions
-        .map(question => question.text.trim())
-        .filter(Boolean)
+    if (filteredQuestions.length === 0) {
+      setError('Lägg till minst en fråga.')
+      return
+    }
 
-      if (!customSetName.trim()) {
-        setError('Ge frågorna ett namn innan du skickar.')
-        return
-      }
+    const { data: { user: currentUser } } = await sb.auth.getUser()
+    const { data: createdQuestionSet, error: questionSetError } = await sb
+      .from('question_sets')
+      .insert({
+        user_id: currentUser?.id,
+        name: customSetName.trim(),
+        description: selectedSet
+          ? `Importerad och justerad från ${selectedSetRecord?.name || 'befintligt frågebatteri'}`
+          : 'Skapad direkt i utskicksflödet',
+      })
+      .select()
+      .single()
 
-      if (filteredQuestions.length === 0) {
-        setError('Lägg till minst en egen fråga.')
-        return
-      }
+    if (questionSetError || !createdQuestionSet) {
+      setError('Kunde inte skapa frågebatteriet för utskicket.')
+      return
+    }
 
-      const { data: { user } } = await sb.auth.getUser()
-      const { data: createdQuestionSet, error: questionSetError } = await sb
-        .from('question_sets')
-        .insert({
-          user_id: user?.id,
-          name: customSetName.trim(),
-          description: 'Skapad direkt i utskicksflödet',
-        })
-        .select()
-        .single()
-
-      if (questionSetError || !createdQuestionSet) {
-        setError('Kunde inte skapa frågebatteriet för utskicket.')
-        return
-      }
-
-      const { error: questionInsertError } = await sb
-        .from('questions')
-        .insert(filteredQuestions.map((text, index) => ({
-          question_set_id: createdQuestionSet.id,
-          text,
-          order_index: index,
-        })))
-
-      if (questionInsertError) {
-        setError('Kunde inte spara frågorna för utskicket.')
-        return
-      }
-
-      setSets(prev => [createdQuestionSet, ...prev])
-      setSelectedSet(createdQuestionSet.id)
-      setQuestions(filteredQuestions.map((text, index) => ({
-        id: `draft-${index}`,
+    const { error: questionInsertError } = await sb
+      .from('questions')
+      .insert(filteredQuestions.map((text, index) => ({
         question_set_id: createdQuestionSet.id,
         text,
         order_index: index,
-        created_at: new Date().toISOString(),
-      } as Question)))
-      questionSetId = createdQuestionSet.id
-    }
+      })))
 
-    if (!questionSetId) {
-      setError('Kunde inte avgöra vilket frågebatteri som ska skickas.')
+    if (questionInsertError) {
+      setError('Kunde inte spara frågorna för utskicket.')
       return
     }
+
+    setSets(prev => [createdQuestionSet, ...prev])
+    setSelectedSet(createdQuestionSet.id)
+    setQuestions(filteredQuestions.map((text, index) => ({
+      id: `draft-${index}`,
+      question_set_id: createdQuestionSet.id,
+      text,
+      order_index: index,
+      created_at: new Date().toISOString(),
+    } as Question)))
+    questionSetId = createdQuestionSet.id
 
     const { recipients, error: parseError } = parseRecipients(recipientsInput)
     if (parseError) { setError(parseError); return }
@@ -639,7 +654,7 @@ function SendBriefInner() {
                     setClientOrg(e.target.value)
                     setShowCustomerSuggestions(true)
                   }}
-                  placeholder="Mojang"
+                  placeholder="Skriv företagsnamn"
                   style={F}
                   onFocus={e => {
                     setShowCustomerSuggestions(true)
@@ -743,7 +758,7 @@ function SendBriefInner() {
               <textarea
                 value={recipientsInput}
                 onChange={e => setRecipientsInput(e.target.value)}
-                placeholder={'Anna Lindqvist, anna@mojang.se\nJohan Berg <johan@mojang.se>\nfatima@mojang.se'}
+                placeholder={'Namn, e-post\nNamn <e-post>\ne-post'}
                 required
                 rows={6}
                 style={{ ...F, minHeight: 148, resize: 'vertical', lineHeight: 1.55 }}
@@ -769,69 +784,47 @@ function SendBriefInner() {
               Frågor att skicka
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            {[
-              { key: 'set', label: 'Frågebatteri' },
-              { key: 'custom', label: 'Egna frågor' },
-            ].map(option => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => {
-                  setQuestionMode(option.key as 'set' | 'custom')
-                  setError('')
-                  if (option.key === 'set') {
-                    setShowQuestionSetPicker(!selectedSet)
-                  }
-                }}
-                style={{
-                  padding: '7px 12px',
-                  borderRadius: 999,
-                  border: '1px solid var(--border)',
-                  background: questionMode === option.key ? 'var(--accent-dim)' : 'var(--surface)',
-                  color: questionMode === option.key ? 'var(--accent)' : 'var(--text-2)',
-                  fontSize: 12.5,
-                  fontWeight: questionMode === option.key ? 700 : 500,
-                  cursor: 'pointer',
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
+              Börja med egna frågor. Om du redan har ett frågebatteri kan du hämta det som utgångspunkt och justera här.
+            </p>
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 14 }}>
-            {questionMode === 'set' ? 'Frågebatteri *' : 'Egna frågor *'}
+            Egna frågor *
           </div>
-          {questionMode === 'set' ? (sets.length === 0 ? (
-            <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: 0 }}>
+          {sets.length === 0 ? (
+            <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 14px' }}>
               Inga batterier ännu.{' '}
               <Link href="/dashboard/question-sets/new" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Skapa ett →</Link>
             </p>
           ) : (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                <button type="button" onClick={importSelectedSetIntoCustomQuestions} style={ghostActionStyle}>
-                  Importera till egna frågor
-                </button>
+            <div style={{ marginBottom: 16, padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                    Välj ett befintligt batteri om du vill utgå från det och justera frågorna här.
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowQuestionSetPicker(prev => !prev)}
                   style={ghostActionStyle}
                 >
-                  {selectedSetRecord ? 'Byt frågebatteri' : 'Välj frågebatteri'}
+                  {selectedSetRecord ? 'Byt källa' : 'Välj frågebatteri'}
                 </button>
               </div>
-              {selectedSetRecord && (
+              {selectedSetRecord && !showQuestionSetPicker && (
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
                   gap: 12,
+                  marginTop: 10,
                   padding: '12px 14px',
                   borderRadius: 10,
-                  border: '1.5px solid var(--accent)',
-                  background: 'var(--accent-dim)',
-                  marginBottom: showQuestionSetPicker ? 12 : 0,
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface)',
                 }}>
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedSetRecord.name}</div>
@@ -840,7 +833,7 @@ function SendBriefInner() {
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    Vald
+                    Vald källa
                   </div>
                 </div>
               )}
@@ -854,31 +847,30 @@ function SendBriefInner() {
                     onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
                   />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto', paddingRight: 2 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
                     {visibleSets.map(s => (
-                      <label key={s.id} style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 12,
-                        padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
-                        border: `1.5px solid ${selectedSet === s.id ? 'var(--accent)' : 'var(--border)'}`,
-                        background: selectedSet === s.id ? 'var(--accent-dim)' : 'var(--bg)',
-                        transition: 'border-color 0.15s, background 0.15s',
-                      }}>
-                        <input type="radio" name="qs" value={s.id}
-                               checked={selectedSet === s.id}
-                               onChange={() => {
-                                 setSelectedSet(s.id)
-                                 setShowQuestionSetPicker(false)
-                                 setQuestionSetQuery('')
-                               }}
-                               style={{ marginTop: 3, accentColor: 'var(--accent)' }} />
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => { void selectQuestionSetSource(s.id) }}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 12,
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
+                          border: `1.5px solid ${selectedSet === s.id ? 'var(--accent)' : 'var(--border)'}`,
+                          background: selectedSet === s.id ? 'var(--accent-dim)' : 'var(--surface)',
+                          transition: 'border-color 0.15s, background 0.15s',
+                        }}
+                      >
                         <div>
                           <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
                           {s.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.description}</div>}
                         </div>
-                      </label>
+                      </button>
                     ))}
                     {visibleSets.length === 0 && (
-                      <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--bg)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
+                      <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
                         Inga frågebatterier matchar din sökning.
                       </div>
                     )}
@@ -888,82 +880,59 @@ function SendBriefInner() {
                       Visar {visibleSets.length} av {filteredSets.length} träffar. Skriv fler tecken för att smalna av listan.
                     </p>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowQuestionSetPicker(false)
-                        setQuestionSetQuery('')
-                      }}
-                      style={ghostActionStyle}
-                    >
-                      Stäng
-                    </button>
-                  </div>
                 </div>
               )}
-            </>
-          )) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
-                  Namn på frågebatteri
-                </label>
-                <input
-                  value={customSetName}
-                  onChange={e => setCustomSetName(e.target.value)}
-                  placeholder="Till exempel Workshop kickoff frågor"
-                  style={F}
-                  onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                  onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
-                />
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
+                Namn på frågebatteri
+              </label>
+              <input
+                value={customSetName}
+                onChange={e => setCustomSetName(e.target.value)}
+                placeholder="Till exempel Workshop kickoff frågor"
+                style={F}
+                onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
+                Egna frågor
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
-                  Egna frågor
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {selectedSetRecord && (
                   <button type="button" onClick={importSelectedSetIntoCustomQuestions} style={ghostActionStyle}>
-                    Importera valt frågebatteri
+                    Importera vald källa igen
                   </button>
-                  <button type="button" onClick={addCustomQuestion} style={ghostActionStyle}>
-                    Lägg till fråga
+                )}
+                <button type="button" onClick={addCustomQuestion} style={ghostActionStyle}>
+                  Lägg till fråga
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {customQuestions.map((question, index) => (
+                <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <textarea
+                    value={question.text}
+                    onChange={e => updateCustomQuestion(index, e.target.value)}
+                    rows={2}
+                    placeholder={`Fråga ${index + 1}`}
+                    style={{ ...F, resize: 'vertical', minHeight: 72 }}
+                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+                  />
+                  <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
+                    Ta bort
                   </button>
                 </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {customQuestions.map((question, index) => (
-                  <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <textarea
-                      value={question.text}
-                      onChange={e => updateCustomQuestion(index, e.target.value)}
-                      rows={2}
-                      placeholder={`Fråga ${index + 1}`}
-                      style={{ ...F, resize: 'vertical', minHeight: 72 }}
-                      onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                      onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
-                    />
-                    <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
-                      Ta bort
-                    </button>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
-          )}
-          {questionMode === 'set' && questions.length > 0 && (
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-sub)' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 8 }}>
-                {questions.length} frågor
-              </div>
-              <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {questions.map(q => (
-                  <li key={q.id} style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{q.text}</li>
-                ))}
-              </ol>
-            </div>
-          )}
-          {questionMode === 'custom' && customQuestions.some(question => question.text.trim()) && (
+          </div>
+          {customQuestions.some(question => question.text.trim()) && (
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-sub)' }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 8 }}>
                 {customQuestions.filter(question => question.text.trim()).length} frågor i utskicket
