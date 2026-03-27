@@ -10,17 +10,25 @@ export async function POST(req: NextRequest) {
     const resend = getResendClient()
     const supabaseAdmin = getSupabaseAdminClient()
     const { clientName, clientEmail, token, consultantEmail } = await req.json()
+    const fromEmail = process.env.FROM_EMAIL || 'brief@doingsclients.se'
 
-    // Get consultant profile for sender name
+    // Keep a central sending address for deliverability, but expose the
+    // consultant's direct email as the reply/contact address.
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('full_name, sender_email')
+      .select('full_name')
       .eq('email', consultantEmail)
       .single()
 
-    const senderName  = profile?.full_name  || 'Doings'
-    const senderEmail = profile?.sender_email || process.env.FROM_EMAIL || 'brief@doingsclients.se'
-    const briefUrl    = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://doings-brief.vercel.app'}/brief/${token}`
+    const senderName = profile?.full_name || 'Doings'
+    const contactEmail = consultantEmail || fromEmail
+    const briefUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://doings-brief.vercel.app'}/brief/${token}`
+    const footerContactHtml = consultantEmail
+      ? `Har du frågor? Kontakta <a href="mailto:${escHtml(contactEmail)}" style="color:#6b2d82;">${escHtml(contactEmail)}</a>`
+      : 'Har du frågor? Kontakta oss via Doings'
+    const footerContactText = consultantEmail
+      ? `Har du frågor? Kontakta ${contactEmail}`
+      : 'Har du frågor? Kontakta oss via Doings'
 
     const html = `<!DOCTYPE html>
 <html lang="sv">
@@ -59,7 +67,7 @@ export async function POST(req: NextRequest) {
         <tr>
           <td style="padding:20px 32px;background:#f5f4f8;border-top:1px solid #e8d9f0;">
             <p style="margin:0;font-size:12px;color:#999;text-align:center;">
-              Skickat via <strong>Doings Brief</strong> · doingsclients.se
+              Skickat via <strong>Doings Brief</strong> · ${footerContactHtml}
             </p>
           </td>
         </tr>
@@ -75,11 +83,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from:    `${senderName} <${senderEmail}>`,
+      from:    `${senderName} via Doings <${fromEmail}>`,
+      reply_to: consultantEmail || undefined,
       to:      clientEmail,
       subject: `Brief inför ert arbete – ${senderName} på Doings`,
       html,
-      text:    `Hej ${clientName}!\n\n${senderName} på Doings har skickat dig ett frågeformulär.\nSvara här: ${briefUrl}\n\n– Doings Brief`,
+      text:    `Hej ${clientName}!\n\n${senderName} på Doings har skickat dig ett frågeformulär.\nSvara här: ${briefUrl}\n\n${footerContactText}\n\n– Doings Brief`,
     })
 
     if (emailError) {
