@@ -33,11 +33,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: ownedSessions, error: sessionsError } = await admin
+    const { data: profile, error: profileError } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      return NextResponse.json({ error: 'Kunde inte verifiera användaren' }, { status: 500 })
+    }
+
+    let sessionsQuery = admin
       .from('brief_sessions')
       .select('id, consultant_id')
       .in('id', uniqueSessionIds)
-      .eq('consultant_id', user.id)
+
+    if (profile?.role !== 'admin') {
+      sessionsQuery = sessionsQuery.eq('consultant_id', user.id)
+    }
+
+    const { data: ownedSessions, error: sessionsError } = await sessionsQuery
 
     if (sessionsError) {
       return NextResponse.json({ error: 'Kunde inte verifiera briefs' }, { status: 500 })
@@ -158,7 +173,6 @@ export async function POST(req: NextRequest) {
       .from('brief_sessions')
       .delete({ count: 'exact' })
       .in('id', targetSessionIds)
-      .eq('consultant_id', user.id)
 
     if (deleteSessionsError) {
       return NextResponse.json({ error: 'Kunde inte radera briefs' }, { status: 500 })

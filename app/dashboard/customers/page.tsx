@@ -21,6 +21,7 @@ export default function CustomersPage() {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([])
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [pageError, setPageError] = useState<string | null>(null)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -63,6 +64,7 @@ export default function CustomersPage() {
   }, [sessions])
 
   async function deleteCustomer(customerKey: string, sessionIds: string[]) {
+    setPageError(null)
     setDeletingCustomer(customerKey)
     const response = await fetch('/api/briefs/delete', {
       method: 'POST',
@@ -72,7 +74,7 @@ export default function CustomersPage() {
     const payload = await response.json().catch(() => null)
 
     if (!response.ok) {
-      alert(`Kunde inte radera kunden: ${payload?.error || 'Okänt fel.'}`)
+      setPageError(`Kunde inte radera kunden: ${payload?.error || 'Okänt fel.'}`)
       setDeletingCustomer(null)
       setConfirmingCustomer(null)
       return
@@ -86,6 +88,7 @@ export default function CustomersPage() {
   }
 
   async function deleteSelectedCustomers() {
+    setPageError(null)
     const selectedSessionIds = dispatchGroups
       .filter(group => {
         const customerKey = `customer:${group.label.trim().toLowerCase()}`
@@ -104,7 +107,7 @@ export default function CustomersPage() {
     const payload = await response.json().catch(() => null)
 
     if (!response.ok) {
-      alert(`Kunde inte radera valda kunder: ${payload?.error || 'Okänt fel.'}`)
+      setPageError(`Kunde inte radera valda kunder: ${payload?.error || 'Okänt fel.'}`)
       setBulkDeleting(false)
       return
     }
@@ -142,6 +145,20 @@ export default function CustomersPage() {
           Nytt utskick
         </Link>
       </div>
+
+      {pageError && (
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 14px',
+          borderRadius: 10,
+          border: '1px solid rgba(185, 28, 28, 0.18)',
+          background: '#fef2f2',
+          color: '#b91c1c',
+          fontSize: 13,
+        }}>
+          {pageError}
+        </div>
+      )}
 
       {customers.length > 0 && (
         <div style={{

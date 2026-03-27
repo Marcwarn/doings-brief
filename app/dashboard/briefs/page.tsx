@@ -20,6 +20,7 @@ export default function BriefsPage() {
   const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [pageError, setPageError] = useState<string | null>(null)
   const groups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
 
   async function load() {
@@ -59,6 +60,7 @@ export default function BriefsPage() {
   }, [sessions])
 
   async function deleteSession(id: string) {
+    setPageError(null)
     setDeleting(id)
     const response = await fetch('/api/briefs/delete', {
       method: 'POST',
@@ -67,7 +69,7 @@ export default function BriefsPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      alert(`Kunde inte radera: ${payload?.error || 'Okänt fel.'}`)
+      setPageError(`Kunde inte radera: ${payload?.error || 'Okänt fel.'}`)
       setDeleting(null); setConfirming(null); return
     }
     setSessions(prev => prev.filter(s => s.id !== id))
@@ -76,6 +78,7 @@ export default function BriefsPage() {
   }
 
   async function deleteGroup(groupKey: string, sessionIds: string[]) {
+    setPageError(null)
     setDeletingGroup(groupKey)
     const response = await fetch('/api/briefs/delete', {
       method: 'POST',
@@ -84,7 +87,7 @@ export default function BriefsPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      alert(`Kunde inte radera utskicket: ${payload?.error || 'Okänt fel.'}`)
+      setPageError(`Kunde inte radera utskicket: ${payload?.error || 'Okänt fel.'}`)
       setDeletingGroup(null)
       setConfirmingGroup(null)
       return
@@ -99,6 +102,7 @@ export default function BriefsPage() {
   }
 
   async function deleteSelectedGroups() {
+    setPageError(null)
     const selectedSessionIds = groups
       .filter(group => selectedGroups.includes(group.key))
       .flatMap(group => group.sessions.map(session => session.id))
@@ -113,7 +117,7 @@ export default function BriefsPage() {
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      alert(`Kunde inte radera valda utskick: ${payload?.error || 'Okänt fel.'}`)
+      setPageError(`Kunde inte radera valda utskick: ${payload?.error || 'Okänt fel.'}`)
       setBulkDeleting(false)
       return
     }
@@ -178,6 +182,20 @@ export default function BriefsPage() {
           Skicka ny
         </Link>
       </div>
+
+      {pageError && (
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 14px',
+          borderRadius: 10,
+          border: '1px solid rgba(185, 28, 28, 0.18)',
+          background: '#fef2f2',
+          color: '#b91c1c',
+          fontSize: 13,
+        }}>
+          {pageError}
+        </div>
+      )}
 
       {groups.length > 0 && (
         <div style={{
