@@ -208,7 +208,7 @@ export default function CustomersPage() {
       {customers.length === 0 ? (
         <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '60px 28px', border: '1px solid var(--border)' }}>
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-3)' }}>
-            Inga kunder eller utskick ännu. Börja med att välja frågor och skicka första utskicket.
+            Inga kunder eller utskick ännu. Skapa en kund genom att börja med ett nytt utskick och välja vilka frågor som ska skickas.
           </p>
         </div>
       ) : (

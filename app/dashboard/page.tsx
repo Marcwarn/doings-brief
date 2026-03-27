@@ -82,7 +82,7 @@ export default function DashboardPage() {
           <div style={{ padding: '18px 0 2px' }}>
             <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                'Börja med företaget du har dialog med.',
+                'Skapa en kund du vill skicka frågor till.',
                 'Välj eller skapa frågorna du behöver svar på.',
                 'Bestäm vem eller vilka som ska svara.',
                 'Skicka utskicket och följ svarsläget.',
@@ -136,7 +136,7 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 20 }}>
         <Panel title="Kunder att jobba vidare med" href="/dashboard/customers" linkText="Alla kunder">
           {customers.length === 0
-            ? <Empty text="Inga kunder ännu. Börja med ett första utskick." />
+            ? <Empty text="Inga kunder ännu. Skapa en kund genom att börja med ett nytt utskick." />
             : customers.slice(0, 5).map(customer => (
               <div key={customer.key} style={rowStyle}>
                 <div style={{ minWidth: 0 }}>
