@@ -613,7 +613,7 @@ function SendBriefInner() {
           Nytt utskick
         </h1>
         <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8 }}>
-          Börja med företaget, välj frågorna, bestäm vilka som ska svara och skicka sedan ut briefen.
+          Välj företag, frågor och mottagare. Skicka sedan briefen och följ svaren i utskicket.
         </p>
       </div>
 
@@ -621,9 +621,9 @@ function SendBriefInner() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
         {[
-          ['1', 'Kunddialog', 'Vilket företag och vilka personer gäller detta?'],
-          ['2', 'Frågor', 'Vilket frågebatteri ska användas för den här dialogen?'],
-          ['3', 'Skicka', 'Skicka länkarna och följ sedan svaren i utskicket.'],
+          ['1', 'Företag och mottagare', 'Välj företag och ange vilka som ska svara.'],
+          ['2', 'Frågor', 'Skriv egna frågor eller utgå från ett befintligt batteri.'],
+          ['3', 'Skicka', 'Skicka briefen och följ svarsläget i utskicket.'],
         ].map(([step, title, text]) => (
           <div key={step} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 16px 14px' }}>
             <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
@@ -719,7 +719,7 @@ function SendBriefInner() {
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
                 <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
-                  Klistra in flera rader eller importera en fil med namn och e-post.
+                  Klistra in flera rader eller importera en fil med mottagare.
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Link
@@ -766,7 +766,7 @@ function SendBriefInner() {
                 onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
               />
               <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
-                En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
+                En person per rad. Du kan skriva <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
               </p>
               {importMessage && (
                 <p style={{ fontSize: 12, color: '#166534', margin: '8px 0 0', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 7 }}>
@@ -786,7 +786,7 @@ function SendBriefInner() {
           </div>
           <div style={{ marginBottom: 14 }}>
             <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
-              Börja med egna frågor. Om du redan har ett frågebatteri kan du hämta det som utgångspunkt och justera här.
+              Börja med egna frågor. Om du redan har ett frågebatteri kan du hämta in det och justera här.
             </p>
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 14 }}>
@@ -803,7 +803,7 @@ function SendBriefInner() {
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                    Välj ett befintligt batteri om du vill utgå från det och justera frågorna här.
+                    Välj ett befintligt batteri om du vill använda det som startpunkt.
                   </div>
                 </div>
                 <button
@@ -833,7 +833,7 @@ function SendBriefInner() {
                     )}
                   </div>
                   <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    Vald källa
+                    Aktiv källa
                   </div>
                 </div>
               )}
@@ -905,7 +905,7 @@ function SendBriefInner() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {selectedSetRecord && (
                   <button type="button" onClick={importSelectedSetIntoCustomQuestions} style={ghostActionStyle}>
-                    Importera vald källa igen
+                    Hämta in källan igen
                   </button>
                 )}
                 <button type="button" onClick={addCustomQuestion} style={ghostActionStyle}>
@@ -968,7 +968,7 @@ function SendBriefInner() {
           }}
           onMouseEnter={e => { if (!sending && sets.length > 0) { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.background = 'var(--accent-dim)' } }}
           onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.background = (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)' }}>
-            {sending ? 'Skickar…' : 'Skicka utskick →'}
+            {sending ? 'Skickar…' : 'Skicka brief →'}
           </button>
         </div>
       </form>
