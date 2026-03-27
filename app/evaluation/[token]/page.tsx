@@ -106,25 +106,14 @@ export default function EvaluationPublicPage() {
       <Shell>
         <Card
           title={payload.evaluation.label}
-          description={`Det här är en utvärdering för ${payload.evaluation.customer}. Ange din e-post för att börja svara.`}
+          description={`Det här är en utvärdering för ${payload.evaluation.customer}. Svara först på frågorna och lämna sedan din e-post i slutet.`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={noticeStyle}>
-              Din e-post sparas tillsammans med svaret, men visas inte öppet för gruppen.
+              Din e-post samlas in i slutet tillsammans med svaret, men visas inte öppet för gruppen.
             </div>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="namn@bolag.se"
-              style={inputStyle}
-            />
             <button
               onClick={() => {
-                if (!email.trim()) {
-                  setError('Ange din e-post för att börja.')
-                  return
-                }
                 setError('')
                 setStep('questions')
               }}
@@ -153,6 +142,20 @@ export default function EvaluationPublicPage() {
             placeholder="Skriv ditt svar här…"
             style={{ ...inputStyle, minHeight: 180, resize: 'vertical' }}
           />
+          {isLast && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={noticeStyle}>
+                Ange din e-post innan du skickar. Den sparas tillsammans med svaret men visas inte öppet för gruppen.
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="namn@bolag.se"
+                style={inputStyle}
+              />
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10 }}>
             {current > 0 && (
               <button onClick={() => setCurrent(current - 1)} style={secondaryButtonStyle}>
@@ -178,6 +181,10 @@ export default function EvaluationPublicPage() {
                 onClick={() => {
                   if (!(answers[current] || '').trim()) {
                     setError('Svara på frågan innan du skickar.')
+                    return
+                  }
+                  if (!email.trim()) {
+                    setError('Ange din e-post innan du skickar.')
                     return
                   }
                   void submit()
