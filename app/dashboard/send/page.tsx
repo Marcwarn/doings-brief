@@ -216,6 +216,8 @@ function SendBriefInner() {
   const [sets, setSets]               = useState<QuestionSet[]>([])
   const [questionMode, setQuestionMode] = useState<'set' | 'custom'>('set')
   const [selectedSet, setSelectedSet] = useState<string>(searchParams.get('set') || '')
+  const [questionSetQuery, setQuestionSetQuery] = useState('')
+  const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(!searchParams.get('set'))
   const [questions, setQuestions]     = useState<Question[]>([])
   const [customSetName, setCustomSetName] = useState('')
   const [customQuestions, setCustomQuestions] = useState<QuestionDraft[]>([{ text: '' }, { text: '' }])
@@ -263,6 +265,14 @@ function SendBriefInner() {
       return slugifyCustomer(customer.label).includes(slugifyCustomer(clientOrg))
     })
     .slice(0, 6)
+
+  const selectedSetRecord = sets.find(set => set.id === selectedSet) || null
+  const filteredSets = sets.filter(set => {
+    if (!questionSetQuery.trim()) return true
+    const query = questionSetQuery.trim().toLowerCase()
+    return `${set.name} ${set.description || ''}`.toLowerCase().includes(query)
+  })
+  const visibleSets = filteredSets.slice(0, questionSetQuery.trim() ? 12 : 8)
 
   function updateCustomQuestion(index: number, value: string) {
     setCustomQuestions(prev => prev.map((question, questionIndex) => (
@@ -770,6 +780,9 @@ function SendBriefInner() {
                 onClick={() => {
                   setQuestionMode(option.key as 'set' | 'custom')
                   setError('')
+                  if (option.key === 'set') {
+                    setShowQuestionSetPicker(!selectedSet)
+                  }
                 }}
                 style={{
                   padding: '7px 12px',
@@ -796,31 +809,99 @@ function SendBriefInner() {
             </p>
           ) : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
                 <button type="button" onClick={importSelectedSetIntoCustomQuestions} style={ghostActionStyle}>
                   Importera till egna frågor
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionSetPicker(prev => !prev)}
+                  style={ghostActionStyle}
+                >
+                  {selectedSetRecord ? 'Byt frågebatteri' : 'Välj frågebatteri'}
+                </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {sets.map(s => (
-                  <label key={s.id} style={{
-                    display: 'flex', alignItems: 'flex-start', gap: 12,
-                    padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
-                    border: `1.5px solid ${selectedSet === s.id ? 'var(--accent)' : 'var(--border)'}`,
-                    background: selectedSet === s.id ? 'var(--accent-dim)' : 'var(--bg)',
-                    transition: 'border-color 0.15s, background 0.15s',
-                  }}>
-                    <input type="radio" name="qs" value={s.id}
-                           checked={selectedSet === s.id}
-                           onChange={() => setSelectedSet(s.id)}
-                           style={{ marginTop: 3, accentColor: 'var(--accent)' }} />
-                    <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
-                      {s.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.description}</div>}
-                    </div>
-                  </label>
-                ))}
-              </div>
+              {selectedSetRecord && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: '1.5px solid var(--accent)',
+                  background: 'var(--accent-dim)',
+                  marginBottom: showQuestionSetPicker ? 12 : 0,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedSetRecord.name}</div>
+                    {selectedSetRecord.description && (
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{selectedSetRecord.description}</div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    Vald
+                  </div>
+                </div>
+              )}
+              {showQuestionSetPicker && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    value={questionSetQuery}
+                    onChange={e => setQuestionSetQuery(e.target.value)}
+                    placeholder="Sök frågebatteri"
+                    style={F}
+                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto', paddingRight: 2 }}>
+                    {visibleSets.map(s => (
+                      <label key={s.id} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 12,
+                        padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
+                        border: `1.5px solid ${selectedSet === s.id ? 'var(--accent)' : 'var(--border)'}`,
+                        background: selectedSet === s.id ? 'var(--accent-dim)' : 'var(--bg)',
+                        transition: 'border-color 0.15s, background 0.15s',
+                      }}>
+                        <input type="radio" name="qs" value={s.id}
+                               checked={selectedSet === s.id}
+                               onChange={() => {
+                                 setSelectedSet(s.id)
+                                 setShowQuestionSetPicker(false)
+                                 setQuestionSetQuery('')
+                               }}
+                               style={{ marginTop: 3, accentColor: 'var(--accent)' }} />
+                        <div>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
+                          {s.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.description}</div>}
+                        </div>
+                      </label>
+                    ))}
+                    {visibleSets.length === 0 && (
+                      <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--bg)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
+                        Inga frågebatterier matchar din sökning.
+                      </div>
+                    )}
+                  </div>
+                  {filteredSets.length > visibleSets.length && (
+                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>
+                      Visar {visibleSets.length} av {filteredSets.length} träffar. Skriv fler tecken för att smalna av listan.
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowQuestionSetPicker(false)
+                        setQuestionSetQuery('')
+                      }}
+                      style={ghostActionStyle}
+                    >
+                      Stäng
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
