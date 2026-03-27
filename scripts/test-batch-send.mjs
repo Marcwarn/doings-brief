@@ -15,9 +15,10 @@ async function main() {
   const timestamp = Date.now()
   const organisation = `Smoke Batch ${timestamp}`
   const recipients = [
-    `smoke-batch-${timestamp}-1@example.com`,
-    `smoke-batch-${timestamp}-2@example.com`,
+    `Anna Test, smoke-batch-${timestamp}-1@example.com, VD`,
+    `Johan Test, smoke-batch-${timestamp}-2@example.com, Marknad`,
   ]
+  const recipientEmails = recipients.map(line => line.split(',')[1].trim())
 
   try {
     await login(page)
@@ -28,15 +29,15 @@ async function main() {
     await chooseFirstQuestionSet(page)
     await fillBatchForm(page, organisation, recipients)
     await submitBatch(page, recipients.length)
-    await verifyDashboardGrouping(page, organisation, recipients)
+    await verifyDashboardGrouping(page, organisation, recipientEmails)
     const dispatchUrl = await openDispatchPage(page, organisation)
-    await verifyDispatchPage(page, organisation, recipients)
+    await verifyDispatchPage(page, organisation, recipientEmails)
 
     console.log(JSON.stringify({
       ok: true,
       baseUrl: BASE_URL,
       organisation,
-      recipients,
+      recipients: recipientEmails,
       dispatchUrl,
     }, null, 2))
   } finally {
@@ -78,7 +79,7 @@ async function submitBatch(page, recipientCount) {
   ])
 }
 
-async function verifyDashboardGrouping(page, organisation, recipients) {
+async function verifyDashboardGrouping(page, organisation, recipientEmails) {
   await page.getByRole('link', { name: /se alla utskick/i }).click()
   await page.waitForURL('**/dashboard/briefs', { timeout: 15000 })
   await page.getByText(organisation, { exact: false }).waitFor({ timeout: 15000 })
@@ -89,8 +90,8 @@ async function verifyDashboardGrouping(page, organisation, recipients) {
 
   await page.getByRole('button', { name: /visa personer/i }).first().click()
 
-  for (const recipient of recipients) {
-    await page.getByText(recipient, { exact: false }).waitFor({ timeout: 15000 })
+  for (const recipientEmail of recipientEmails) {
+    await page.getByText(recipientEmail, { exact: false }).waitFor({ timeout: 15000 })
   }
 }
 
@@ -109,7 +110,7 @@ async function openDispatchPage(page, organisation) {
   return page.url()
 }
 
-async function verifyDispatchPage(page, organisation, recipients) {
+async function verifyDispatchPage(page, organisation, recipientEmails) {
   const main = page.locator('main')
   await page.getByRole('heading', { name: new RegExp(organisation, 'i') }).waitFor({ timeout: 15000 })
   await main.getByText('Översikt', { exact: true }).waitFor({ timeout: 15000 })
@@ -121,9 +122,11 @@ async function verifyDispatchPage(page, organisation, recipients) {
   assertIncludes(bodyText || '', 'Svar: 0', 'dispatch submitted count')
   assertIncludes(bodyText || '', 'Väntar: 2', 'dispatch pending count')
   assertIncludes(bodyText || '', 'Utskicket skapades', 'dispatch history')
+  assertIncludes(bodyText || '', 'Roll: VD', 'first recipient role')
+  assertIncludes(bodyText || '', 'Roll: Marknad', 'second recipient role')
 
-  for (const recipient of recipients) {
-    await page.getByText(recipient, { exact: false }).waitFor({ timeout: 15000 })
+  for (const recipientEmail of recipientEmails) {
+    await page.getByText(recipientEmail, { exact: false }).waitFor({ timeout: 15000 })
   }
 }
 

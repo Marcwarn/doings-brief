@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { dispatchId, batchId, label, organisation, questionSetId, sessionIds } = await req.json()
+    const { dispatchId, batchId, label, organisation, questionSetId, sessionIds, contacts } = await req.json()
     const resolvedDispatchId = typeof dispatchId === 'string' && dispatchId
       ? dispatchId
       : (typeof batchId === 'string' ? batchId : '')
@@ -46,6 +46,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Alla sessioner kunde inte verifieras' }, { status: 403 })
     }
 
+    const normalizedContacts = Array.isArray(contacts)
+      ? contacts
+          .map(item => {
+            if (!item || typeof item !== 'object') return null
+            const candidate = item as Record<string, unknown>
+            const sessionId = typeof candidate.sessionId === 'string' ? candidate.sessionId.trim() : ''
+            const name = typeof candidate.name === 'string' ? candidate.name.trim() : ''
+            const email = typeof candidate.email === 'string' ? candidate.email.trim().toLowerCase() : ''
+            const role = typeof candidate.role === 'string' && candidate.role.trim() ? candidate.role.trim() : null
+
+            if (!sessionId || !email) return null
+
+            return {
+              sessionId,
+              name: name || email,
+              email,
+              role,
+            }
+          })
+          .filter((value): value is NonNullable<typeof value> => Boolean(value))
+      : []
+
     const metadata: BriefDispatchMetadata = {
       dispatchId: resolvedDispatchId,
       label: typeof label === 'string' && label.trim() ? label.trim() : 'Utskick',
@@ -53,6 +75,7 @@ export async function POST(req: NextRequest) {
       consultantId: user.id,
       questionSetId: typeof questionSetId === 'string' && questionSetId ? questionSetId : null,
       sessionIds: uniqueSessionIds,
+      contacts: normalizedContacts,
       createdAt: new Date().toISOString(),
     }
 

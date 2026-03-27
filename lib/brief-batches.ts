@@ -13,7 +13,15 @@ export type BriefDispatchMetadata = {
   consultantId: string | null
   questionSetId: string | null
   sessionIds: string[]
+  contacts: BriefDispatchContact[]
   createdAt: string
+}
+
+export type BriefDispatchContact = {
+  sessionId: string
+  name: string
+  email: string
+  role: string | null
 }
 
 export type BriefBatchMetadata = BriefDispatchMetadata
@@ -56,6 +64,30 @@ export type CustomerSummary = {
   latestDispatchId: string | null
 }
 
+function normalizeDispatchContacts(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map(item => {
+      if (!item || typeof item !== 'object') return null
+      const candidate = item as Record<string, unknown>
+      const sessionId = typeof candidate.sessionId === 'string' ? candidate.sessionId.trim() : ''
+      const name = typeof candidate.name === 'string' ? candidate.name.trim() : ''
+      const email = typeof candidate.email === 'string' ? candidate.email.trim().toLowerCase() : ''
+      const role = typeof candidate.role === 'string' && candidate.role.trim() ? candidate.role.trim() : null
+
+      if (!sessionId || !email) return null
+
+      return {
+        sessionId,
+        name: name || email,
+        email,
+        role,
+      } satisfies BriefDispatchContact
+    })
+    .filter((value): value is BriefDispatchContact => Boolean(value))
+}
+
 export function getBatchSettingKey(batchId: string) {
   return `${BRIEF_BATCH_KEY_PREFIX}${batchId}`
 }
@@ -96,6 +128,7 @@ export function parseDispatchMetadata(raw: string | null | undefined) {
       consultantId: parsed.consultantId || null,
       questionSetId: parsed.questionSetId || null,
       sessionIds: parsed.sessionIds,
+      contacts: normalizeDispatchContacts(parsed.contacts),
       createdAt: parsed.createdAt || new Date().toISOString(),
     }
   } catch {

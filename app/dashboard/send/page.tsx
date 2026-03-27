@@ -15,6 +15,7 @@ const F: React.CSSProperties = {
 type Recipient = {
   name: string
   email: string
+  role: string | null
 }
 
 type SentSession = Recipient & {
@@ -49,15 +50,30 @@ function parseRecipients(input: string) {
     const line = lines[index]
     let name = ''
     let email = ''
+    let role = ''
 
-    const angleMatch = line.match(/^(.*?)<([^>]+)>$/)
+    const angleMatch = line.match(/^(.*?)<([^>]+)>(?:\s*[,|-]\s*(.+))?$/)
     if (angleMatch) {
       name = angleMatch[1].trim().replace(/,$/, '')
       email = angleMatch[2].trim()
+      role = angleMatch[3]?.trim() || ''
     } else if (line.includes(',')) {
-      const [rawName, ...rest] = line.split(',')
-      name = rawName.trim()
-      email = rest.join(',').trim()
+      const parts = line.split(',').map(part => part.trim()).filter(Boolean)
+      if (parts.length >= 3 && emailPattern.test(parts[1])) {
+        name = parts[0]
+        email = parts[1]
+        role = parts.slice(2).join(', ')
+      } else if (parts.length === 2 && emailPattern.test(parts[1])) {
+        name = parts[0]
+        email = parts[1]
+      } else if (parts.length === 2 && emailPattern.test(parts[0])) {
+        email = parts[0]
+        role = parts[1]
+      } else {
+        const [rawName, ...rest] = parts
+        name = rawName.trim()
+        email = rest.join(',').trim()
+      }
     } else if (emailPattern.test(line)) {
       email = line
     }
@@ -81,6 +97,7 @@ function parseRecipients(input: string) {
     recipients.push({
       name: name || titleCaseFromEmail(normalizedEmail),
       email: normalizedEmail,
+      role: role || null,
     })
   }
 
@@ -134,6 +151,9 @@ function SendBriefInner() {
     setSending(true); setError('')
     const { data: { user } } = await sb.auth.getUser()
     const dispatchId = crypto.randomUUID()
+    const recipientByEmail = Object.fromEntries(
+      recipients.map(recipient => [recipient.email, recipient])
+    )
     const payload = recipients.map(recipient => ({
       consultant_id: user?.id,
       client_name: recipient.name,
@@ -175,6 +195,7 @@ function SendBriefInner() {
         return {
           name: session.client_name,
           email: session.client_email,
+          role: recipientByEmail[session.client_email]?.role || null,
           token: session.token,
         }
       })
@@ -197,6 +218,12 @@ function SendBriefInner() {
         organisation: clientOrg.trim() || null,
         questionSetId: selectedSet,
         sessionIds: sessions.map(session => session.id),
+        contacts: sessions.map(session => ({
+          sessionId: session.id,
+          name: session.client_name,
+          email: session.client_email,
+          role: recipientByEmail[session.client_email]?.role || null,
+        })),
       }),
     }).then(async response => {
       if (!response.ok) {
@@ -243,7 +270,10 @@ function SendBriefInner() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {sent.map(recipient => (
                   <div key={recipient.token} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-                    <span style={{ color: 'var(--text)' }}>{recipient.name}</span>
+                    <span style={{ color: 'var(--text)' }}>
+                      {recipient.name}
+                      {recipient.role && <span style={{ color: 'var(--text-3)' }}> · {recipient.role}</span>}
+                    </span>
                     <span style={{ color: 'var(--text-3)' }}>{recipient.email}</span>
                   </div>
                 ))}
@@ -344,7 +374,7 @@ function SendBriefInner() {
                 onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
               />
               <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
-                En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
+                En person per rad. Använd <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
               </p>
             </div>
           </div>

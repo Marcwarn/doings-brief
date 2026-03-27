@@ -12,6 +12,12 @@ type BriefDispatch = {
   consultantId: string | null
   questionSetId: string | null
   sessionIds: string[]
+  contacts: Array<{
+    sessionId: string
+    name: string
+    email: string
+    role: string | null
+  }>
   createdAt: string
 }
 
@@ -98,6 +104,9 @@ export default function DispatchPage() {
   }
 
   const { dispatch } = payload
+  const contactBySessionId = Object.fromEntries(
+    dispatch.contacts.map(contact => [contact.sessionId, contact])
+  )
 
   return (
     <div style={{ padding: '40px 44px', maxWidth: 940, animation: 'fadeUp 0.35s ease both' }}>
@@ -180,6 +189,11 @@ export default function DispatchPage() {
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{session.client_name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{session.client_email}</div>
+                  {contactBySessionId[session.id]?.role && (
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
+                      Roll: {contactBySessionId[session.id].role}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Pill ok={session.status === 'submitted'} />
