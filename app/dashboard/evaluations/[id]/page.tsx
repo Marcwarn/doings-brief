@@ -174,13 +174,6 @@ export default function EvaluationDetailPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-        <SummaryCard label="Svar" value={`${responses.length}`} detail="inkomna hittills" tone="ok" />
-        <SummaryCard label="Frågor" value={`${questions.length}`} detail="i utvärderingen" />
-        <SummaryCard label="Svarsläge" value={evaluation.collectEmail ? 'Med e-post' : 'Anonymt'} detail="visas i resultaten" />
-        <SummaryCard label="Senaste svar" value={latestResponseAt ? formatDateTime(latestResponseAt) : 'Inga ännu'} detail="senast uppdaterad" />
-      </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, marginBottom: 20 }}>
         <SectionCard title="Utvärderingslänk">
           <div style={{ display: 'grid', gap: 12 }}>
@@ -340,33 +333,6 @@ function MetricPill({ label, value, tone = 'muted' }: { label: string; value: nu
       fontWeight: 600,
     }}>
       {label}: {value}
-    </div>
-  )
-}
-
-function SummaryCard({
-  label,
-  value,
-  detail,
-  tone = 'default',
-}: {
-  label: string
-  value: string
-  detail: string
-  tone?: 'default' | 'ok'
-}) {
-  return (
-    <div style={{
-      background: 'var(--surface)',
-      borderRadius: 10,
-      border: '1px solid var(--border)',
-      padding: '16px 18px',
-    }}>
-      <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: tone === 'ok' ? '#166534' : 'var(--text)' }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 5 }}>{detail}</div>
     </div>
   )
 }
