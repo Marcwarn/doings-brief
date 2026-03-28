@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:ai-summary)",
+      "Bash(npm run test:word-export)",
+      "Bash(npm run test:batch-send)",
+      "Bash(npx playwright install*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(*supabase* delete*)",
+      "Bash(*supabase* drop*)",
+      "Bash(curl*SUPABASE_SERVICE_ROLE*)",
+      "Bash(npx supabase db reset*)"
+    ]
+  }
+}
