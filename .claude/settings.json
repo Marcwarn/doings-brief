@@ -21,5 +21,42 @@
       "Bash(curl*SUPABASE_SERVICE_ROLE*)",
       "Bash(npx supabase db reset*)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"VIKTIGT: Innan du foreslar vad som ska byggas eller antar att nagot saknas — las app/CLAUDE.md for att se vad som redan ar byggt. Gissa aldrig.\"}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; [ -n \"$f\" ] && echo \"$f\" | grep -qE '\\.(ts|tsx)$' && cd /home/user/doings-brief && ./node_modules/.bin/tsc --noEmit 2>&1 | head -30; } 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Typkontrollerar TypeScript..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Kom ihag att uppdatera docs/project_notes/ om du lost en bugg (bugs.md), tagit ett arkitekturbeslut (decisions.md), eller hittat ett nytt tekniskt problem (issues.md).\"}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }
