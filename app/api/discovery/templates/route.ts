@@ -34,8 +34,14 @@ type DiscoveryTemplatePayload = {
   name?: unknown
   introTitle?: unknown
   introText?: unknown
+  audienceMode?: unknown
   status?: unknown
   sections?: unknown
+}
+
+function normalizeAudienceMode(value: unknown): 'shared' | 'leaders' | 'mixed' {
+  if (value === 'leaders' || value === 'mixed') return value
+  return 'shared'
 }
 
 type NormalizedChoiceOption = {
@@ -213,7 +219,7 @@ export async function GET() {
 
     const { data, error } = await admin
       .from('discovery_templates')
-      .select('id, name, status, updated_at')
+      .select('id, name, audience_mode, status, updated_at')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
 
@@ -226,6 +232,7 @@ export async function GET() {
       templates: (data || []).map(item => ({
         id: item.id,
         name: item.name,
+        audienceMode: item.audience_mode,
         status: item.status,
         updatedAt: item.updated_at,
       })),
@@ -249,6 +256,7 @@ export async function POST(req: NextRequest) {
     const name = asTrimmedString(payload.name)
     const introTitle = asTrimmedString(payload.introTitle)
     const introText = asTrimmedString(payload.introText)
+    const audienceMode = normalizeAudienceMode(payload.audienceMode)
     const status = payload.status === 'active' ? 'active' : 'draft'
 
     if (!name) {
@@ -291,6 +299,7 @@ export async function POST(req: NextRequest) {
           name,
           intro_title: introTitle,
           intro_text: introText,
+          audience_mode: audienceMode,
           status,
           updated_at: new Date().toISOString(),
         })
@@ -318,6 +327,7 @@ export async function POST(req: NextRequest) {
           name,
           intro_title: introTitle,
           intro_text: introText,
+          audience_mode: audienceMode,
           status,
         })
         .select('id')

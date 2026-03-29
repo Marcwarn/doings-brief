@@ -19,6 +19,7 @@ type DiscoveryCategory = {
 type DiscoveryTemplateSummary = {
   id: string
   name: string
+  audienceMode: 'shared' | 'leaders' | 'mixed'
   status: 'draft' | 'active'
   updatedAt: string
 }
@@ -38,6 +39,7 @@ type DiscoveryTemplateDetail = {
     name: string
     introTitle: string
     introText: string
+    audienceMode: 'shared' | 'leaders' | 'mixed'
     status: 'draft' | 'active'
     createdAt: string
     updatedAt: string
@@ -150,6 +152,7 @@ const categories: DiscoveryCategory[] = [
 
 const defaultIntroTitle = 'Fördjupa underlaget inför nästa steg'
 const defaultIntroText = 'Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.'
+const defaultAudienceMode: 'shared' | 'leaders' | 'mixed' = 'shared'
 
 type CategoryState = Record<number, string | string[]>
 
@@ -171,6 +174,7 @@ export default function DiscoveryPage() {
   const [templateName, setTemplateName] = useState('Fördjupat underlag')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
   const [introText, setIntroText] = useState(defaultIntroText)
+  const [audienceMode, setAudienceMode] = useState<'shared' | 'leaders' | 'mixed'>(defaultAudienceMode)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle')
@@ -236,6 +240,7 @@ export default function DiscoveryPage() {
     setTemplateName('Fördjupat underlag')
     setIntroTitle(defaultIntroTitle)
     setIntroText(defaultIntroText)
+    setAudienceMode(defaultAudienceMode)
     setBuilderCategories(categories)
     setActiveId(categories[0].id)
     setAnswers(Object.fromEntries(categories.map(category => [category.id, {}])))
@@ -354,6 +359,7 @@ export default function DiscoveryPage() {
       setTemplateName(template.name)
       setIntroTitle(template.introTitle)
       setIntroText(template.introText)
+      setAudienceMode(template.audienceMode || defaultAudienceMode)
       setBuilderCategories(nextCategories.length > 0 ? nextCategories : categories)
       setActiveId(nextCategories[0]?.id || categories[0].id)
       setAnswers(Object.fromEntries((nextCategories.length > 0 ? nextCategories : categories).map(category => [category.id, {}])))
@@ -385,6 +391,7 @@ export default function DiscoveryPage() {
           name: templateName,
           introTitle,
           introText,
+          audienceMode,
           status,
           sections: builderCategories.map((category, categoryIndex) => ({
             label: category.label,
@@ -744,6 +751,18 @@ export default function DiscoveryPage() {
                     rows={3}
                     style={{ ...editorInputStyle, minHeight: 88, resize: 'vertical' }}
                   />
+                </Field>
+
+                <Field label="Målgrupp">
+                  <select
+                    value={audienceMode}
+                    onChange={event => setAudienceMode(event.target.value as 'shared' | 'leaders' | 'mixed')}
+                    style={editorInputStyle}
+                  >
+                    <option value="shared">Blandad eller oklar målgrupp</option>
+                    <option value="leaders">Främst ledare</option>
+                    <option value="mixed">Blandad grupp med ledare och medarbetare</option>
+                  </select>
                 </Field>
 
                 <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>

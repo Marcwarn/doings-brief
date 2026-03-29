@@ -158,6 +158,16 @@ The public Discovery experience should:
 
 ## Functional Requirements
 
+### FR-0 Audience mode
+
+Each Discovery template must store an `audience_mode` that describes who the wording is primarily intended for:
+
+- `shared`
+- `leaders`
+- `mixed`
+
+In the first implementation this is editorial metadata on the template. It does not yet generate separate question variants automatically, but it establishes the model for future audience-specific versions.
+
 ### FR-1 Template management
 
 Consultants must be able to:
@@ -246,6 +256,7 @@ Discovery gets its own normalized table family.
 | `name` | `text` | internal template name |
 | `intro_title` | `text` | hero/title shown publicly |
 | `intro_text` | `text` | public explanatory copy |
+| `audience_mode` | `text` | `shared`, `leaders`, or `mixed` |
 | `status` | `text` | `draft` or `active` |
 | `created_at` | `timestamptz` | default now |
 | `updated_at` | `timestamptz` | default now |

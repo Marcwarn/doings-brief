@@ -230,11 +230,13 @@ Do not create multiple variants for every theme immediately.
 Instead:
 
 1. Keep the current broad versions as the default.
-2. Add an internal metadata field later for each theme:
+2. Store `audience_mode` on the template in v1:
    - `shared`
-   - `leader_variant_recommended`
-   - `optional_variant_later`
-3. Build v2 variant support only for the four themes that clearly benefit from it:
+   - `leaders`
+   - `mixed`
+3. Use that template-level signal as editorial guidance first, not as a full variant engine.
+4. Keep theme-level recommendations in docs until product usage justifies a richer model.
+5. Build v2 variant support only for the four themes that clearly benefit from it:
    - `Ledarskap`
    - `Change management`
    - `AI readiness`
@@ -242,14 +244,14 @@ Instead:
 
 ## Suggested Future Data Shape
 
-If theme variants are added later, prefer a lightweight model:
+The first implementation should keep `audience_mode` on `discovery_templates`.
 
-- `audience_mode` on template or section
-  - `shared`
-  - `leaders`
-  - `mixed`
+If theme variants are added later, prefer one of these evolutions:
 
-Do not duplicate the entire `Discovery` model unless variants become a core feature.
+- keep `audience_mode` on template level and choose a different template per audience
+- or add a more granular audience field to sections only if mixed templates become a real need
+
+Do not duplicate the entire `Discovery` model unless audience variants become a core feature.
 
 ## Editorial Rule
 

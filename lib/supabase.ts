@@ -89,6 +89,7 @@ export type DiscoveryTemplate = {
   name: string
   intro_title: string
   intro_text: string
+  audience_mode: 'shared' | 'leaders' | 'mixed'
   status: 'draft' | 'active'
   created_at: string
   updated_at: string

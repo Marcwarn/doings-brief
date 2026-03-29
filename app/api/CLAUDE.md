@@ -58,3 +58,13 @@ Token is a UUID stored in `brief_sessions.token`. Validated by querying the DB d
 - `getSupabaseAdminClient()` from `lib/server-clients.ts` → any privileged DB operation (bypasses RLS)
 
 Never use `createClient()` (the browser client from `lib/supabase.ts`) in API routes.
+
+## Discovery Template Contract Notes
+
+`discovery_templates` now stores `audience_mode` on the template:
+
+- `shared`
+- `leaders`
+- `mixed`
+
+In v1 this is editorial metadata used by the builder and future template branching. It does not yet generate alternate question sets automatically.

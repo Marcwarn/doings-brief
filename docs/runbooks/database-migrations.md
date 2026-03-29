@@ -22,8 +22,19 @@ Current application-level table types:
 - `Question` → `questions` table
 - `BriefSession` → `brief_sessions` table
 - `BriefResponse` → `brief_responses` table
+- `DiscoveryTemplate` → `discovery_templates` table
+- `DiscoverySection` → `discovery_sections` table
+- `DiscoveryQuestion` → `discovery_questions` table
+- `DiscoveryQuestionOption` → `discovery_question_options` table
+- `DiscoverySession` → `discovery_sessions` table
+- `DiscoveryResponse` → `discovery_responses` table
+- `DiscoveryResponseOption` → `discovery_response_options` table
 
 The `settings` table is a key-value store (`key TEXT, value TEXT`) — it has no TypeScript type because it's schemaless by design.
+
+Recent Discovery column additions:
+
+- `discovery_templates.audience_mode` with allowed values `shared`, `leaders`, `mixed`
 
 ## Adding a New Column
 

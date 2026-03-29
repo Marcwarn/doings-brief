@@ -16,6 +16,7 @@ type PublicDiscoveryPayload = {
     name: string
     introTitle: string
     introText: string
+    audienceMode: 'shared' | 'leaders' | 'mixed'
     status: 'draft' | 'active'
     sections: Array<{
       id: string

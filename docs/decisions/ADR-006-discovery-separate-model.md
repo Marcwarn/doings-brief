@@ -80,3 +80,15 @@ The intended first route family is:
 - `/api/discovery/*`
 
 The detailed shape is defined in `docs/specs/discovery.md`.
+
+## Follow-up Decision
+
+`Discovery` also stores `audience_mode` on the template as lightweight editorial metadata.
+
+The first supported values are:
+
+- `shared`
+- `leaders`
+- `mixed`
+
+This is intentionally lighter than a full audience-variant engine. It allows the product to distinguish between templates meant for leaders and templates meant for broader groups without prematurely adding section-level branching.

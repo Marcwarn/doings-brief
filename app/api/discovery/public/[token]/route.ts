@@ -24,7 +24,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     const { data: template, error: templateError } = await admin
       .from('discovery_templates')
-      .select('id, name, intro_title, intro_text, status')
+      .select('id, name, intro_title, intro_text, audience_mode, status')
       .eq('id', session.template_id)
       .single()
 
@@ -134,6 +134,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
         name: template.name,
         introTitle: template.intro_title,
         introText: template.intro_text,
+        audienceMode: template.audience_mode,
         status: template.status,
         sections: (sections || []).map(section => ({
           id: section.id,
