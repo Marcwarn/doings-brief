@@ -40,6 +40,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Teman och frågor ligger exakt enligt discovery-referensen
 - Split-view med redigering till vänster och kundförhandsvisning till höger
 - Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
+- Discovery har nu dokumenterad spec, ADR och initial SQL-schema-grund i repo:t
 
 **Saknas**: Persistens, verklig submit-koppling och separat publik kundroute
 
