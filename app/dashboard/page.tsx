@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
   const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [loading, setLoading] = useState(true)
-  const [remindedGroups, setRemindedGroups] = useState<Set<string>>(new Set())
+  const [remindedGroups, setRemindedGroups] = useState<Record<string, boolean>>({})
   const [remindLoading, setRemindLoading] = useState<string | null>(null)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
@@ -64,7 +64,7 @@ export default function DashboardPage() {
         body: JSON.stringify({ sessionIds: pendingSessions.map(s => s.id) }),
       })
       if (res.ok) {
-        setRemindedGroups(prev => new Set(prev).add(group.key))
+        setRemindedGroups(prev => ({ ...prev, [group.key]: true }))
       }
     } finally {
       setRemindLoading(null)
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             {activeDispatches.length === 0
               ? <BriefEmptyCard title="Inga pågående utskick" text="Det finns inga aktiva utskick som väntar på svar just nu." />
               : activeDispatches.map(group => {
-                const reminded = remindedGroups.has(group.key)
+                const reminded = !!remindedGroups[group.key]
                 const isLoading = remindLoading === group.key
                 const dispatchHref = batchLookup[group.sessions[0]?.id || '']?.dispatchId
                   ? `/dashboard/dispatches/${batchLookup[group.sessions[0]?.id || '']?.dispatchId}`
