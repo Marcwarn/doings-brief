@@ -761,6 +761,7 @@ export default function DiscoveryPage() {
       .toLowerCase()
       .includes(query)
   })
+  const enabledCount = enabledCategories.length
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
@@ -769,6 +770,53 @@ export default function DiscoveryPage() {
           <aside style={{ position: 'sticky', top: 22 }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 18px 20px' }}>
               {(error || sendError) && <div style={{ marginBottom: 14 }}><InlineError text={error || sendError || ''} /></div>}
+
+              <div style={{ ...pickerPanelStyle, marginBottom: 16 }}>
+                <div style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Aktiva teman
+                  </div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
+                    {enabledCount} av {builderCategories.length} områden med i discoveryt
+                  </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                    Klicka på ett tema för att slå av eller på det. Nedtonade teman följer inte med i previewn eller i utskicket.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {builderCategories.map(category => {
+                    const isActive = category.id === activeId
+                    const isEnabled = !!category.enabled
+
+                    return (
+                      <button
+                        key={`${category.id}-chip`}
+                        type="button"
+                        onClick={() => {
+                          if (!isEnabled && enabledCount <= 1) return
+                          toggleCategoryEnabled(category.id)
+                          if (isEnabled && activeId === category.id) return
+                          if (category.enabled) setActiveId(category.id)
+                        }}
+                        style={{
+                          borderRadius: 999,
+                          border: `1px solid ${isEnabled ? (isActive ? 'var(--accent)' : 'rgba(198,35,104,0.22)') : 'rgba(14,14,12,0.08)'}`,
+                          background: isEnabled ? (isActive ? 'rgba(198,35,104,0.12)' : 'rgba(198,35,104,0.06)') : 'rgba(14,14,12,0.04)',
+                          color: isEnabled ? (isActive ? 'var(--accent)' : 'var(--text)') : 'var(--text-3)',
+                          padding: '9px 13px',
+                          fontSize: 12.5,
+                          fontWeight: isActive ? 700 : 600,
+                          cursor: 'pointer',
+                          opacity: isEnabled ? 1 : 0.55,
+                          transition: 'opacity 0.18s, border-color 0.18s, background 0.18s',
+                        }}
+                      >
+                        {category.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
               <div style={{ marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
