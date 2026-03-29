@@ -719,94 +719,8 @@ export default function DiscoveryPage() {
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
-      <header style={{ background: 'var(--text)', color: '#fff' }}>
-        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <div style={{ padding: '24px 34px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            <img src="/doings-logo-white.svg" alt="Doings" style={{ width: 28, height: 28 }} />
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1, color: '#fff' }}>Discovery</div>
-          </div>
-          <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
-            Behovsanalys
-          </div>
-        </div>
-
-        <div style={{ padding: '42px 34px 76px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{
-            position: 'absolute',
-            inset: 'auto auto -18px 0',
-            width: '100%',
-            height: 38,
-            background: 'var(--bg)',
-            borderTopLeftRadius: '50% 100%',
-            borderTopRightRadius: '50% 100%',
-          }} />
-          <h1 style={{
-            margin: '0 0 12px',
-            maxWidth: 640,
-            fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(2.2rem, 4vw, 3.2rem)',
-            lineHeight: 1.1,
-            letterSpacing: '-0.03em',
-            position: 'relative',
-            zIndex: 1,
-          }}>
-            {introTitle.split('behöver').length > 1
-              ? <>{introTitle.replace('behöver', '')}<span style={{ color: 'var(--accent)' }}>behöver</span></>
-              : <>{introTitle}</>
-            }
-          </h1>
-          <p style={{
-            margin: 0,
-            maxWidth: 610,
-            fontSize: 15.5,
-            lineHeight: 1.75,
-            color: 'rgba(255,255,255,0.74)',
-            position: 'relative',
-            zIndex: 1,
-          }}>
-            {introText}
-          </p>
-        </div>
-        </div>
-      </header>
-
-      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-      <div style={{ padding: '30px 34px 0', overflowX: 'auto', scrollbarWidth: 'none' as const }}>
-        <div style={{ display: 'flex', gap: 8, minWidth: 'max-content', paddingBottom: 2 }}>
-          {builderCategories.map(category => {
-            const active = category.id === activeId
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => {
-                  setActiveId(category.id)
-                  setSuccessId(null)
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                style={{
-                  borderRadius: 999,
-                  border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-                  background: active ? 'var(--accent)' : 'var(--surface)',
-                  color: active ? '#fff' : 'var(--text-2)',
-                  padding: '8px 16px',
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxShadow: active ? '0 8px 20px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                {category.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <main style={{ padding: '22px 34px 72px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.88fr) minmax(0, 1.42fr)', gap: 22, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 72px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 420px) minmax(0, 1fr)', gap: 24, alignItems: 'start' }}>
           <aside style={{ position: 'sticky', top: 22 }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 18px 20px' }}>
               {(error || sendError) && <div style={{ marginBottom: 14 }}><InlineError text={error || sendError || ''} /></div>}
@@ -1032,7 +946,92 @@ export default function DiscoveryPage() {
             </div>
           </aside>
 
-          <section>
+          <section style={{ minWidth: 0 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, overflow: 'hidden', boxShadow: '0 18px 48px rgba(16,24,40,0.06)' }}>
+              <header style={{ background: 'var(--text)', color: '#fff' }}>
+                <div style={{ padding: '24px 28px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                    <img src="/doings-logo-white.svg" alt="Doings" style={{ width: 28, height: 28 }} />
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1, color: '#fff' }}>Discovery</div>
+                  </div>
+                  <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
+                    Behovsanalys
+                  </div>
+                </div>
+
+                <div style={{ padding: '42px 28px 76px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{
+                    position: 'absolute',
+                    inset: 'auto auto -18px 0',
+                    width: '100%',
+                    height: 38,
+                    background: 'var(--bg)',
+                    borderTopLeftRadius: '50% 100%',
+                    borderTopRightRadius: '50% 100%',
+                  }} />
+                  <h1 style={{
+                    margin: '0 0 12px',
+                    maxWidth: 640,
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'clamp(2.2rem, 4vw, 3.2rem)',
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.03em',
+                    position: 'relative',
+                    zIndex: 1,
+                  }}>
+                    {introTitle.split('behöver').length > 1
+                      ? <>{introTitle.replace('behöver', '')}<span style={{ color: 'var(--accent)' }}>behöver</span></>
+                      : <>{introTitle}</>
+                    }
+                  </h1>
+                  <p style={{
+                    margin: 0,
+                    maxWidth: 610,
+                    fontSize: 15.5,
+                    lineHeight: 1.75,
+                    color: 'rgba(255,255,255,0.74)',
+                    position: 'relative',
+                    zIndex: 1,
+                  }}>
+                    {introText}
+                  </p>
+                </div>
+              </header>
+
+              <div style={{ padding: '30px 28px 0', overflowX: 'auto', scrollbarWidth: 'none' as const }}>
+                <div style={{ display: 'flex', gap: 8, minWidth: 'max-content', paddingBottom: 2 }}>
+                  {builderCategories.map(category => {
+                    const active = category.id === activeId
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveId(category.id)
+                          setSuccessId(null)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        style={{
+                          borderRadius: 999,
+                          border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                          background: active ? 'var(--accent)' : 'var(--surface)',
+                          color: active ? '#fff' : 'var(--text-2)',
+                          padding: '8px 16px',
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          boxShadow: active ? '0 8px 20px rgba(0,0,0,0.08)' : 'none',
+                        }}
+                      >
+                        {category.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={{ padding: '22px 28px 32px' }}>
             <section style={{ marginBottom: 28, paddingBottom: 18, borderBottom: '1px solid var(--border)' }}>
               <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '-0.03em', color: 'var(--text)' }}>
                 {activeCategory.label}
@@ -1214,9 +1213,10 @@ export default function DiscoveryPage() {
                 Tack. Vi har tagit emot era svar och återkommer med nästa steg.
               </div>
             )}
+              </div>
+            </div>
           </section>
         </div>
-      </main>
       </div>
     </div>
   )
