@@ -45,6 +45,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/api/discovery/templates/[id]` kan nu hämta ett fullständigt sparat Discovery-upplägg
 - Buildern i `/dashboard/discovery` kan nu spara nya upplägg och ladda sparade upplägg från databasen
 - Discovery-upplägg har nu `audience_mode` på template-nivå: `shared`, `leaders`, `mixed`
+- Buildern kan nu ladda rekommenderade standardfrågor utifrån vald målgrupp, främst för Ledarskap, Change management, AI readiness och Vision & mål
 - Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 - `/api/discovery/send` kan nu skapa sessions och skicka Discovery-mejl, och buildern kan trigga utskicket
 - `/dashboard/discovery/responses` och `/api/discovery/sessions*` finns nu för att följa Discovery-sessions och öppna enskilda svar

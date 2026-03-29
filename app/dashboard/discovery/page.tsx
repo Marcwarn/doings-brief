@@ -16,10 +16,12 @@ type DiscoveryCategory = {
   questions: DiscoveryQuestion[]
 }
 
+type AudienceMode = 'shared' | 'leaders' | 'mixed'
+
 type DiscoveryTemplateSummary = {
   id: string
   name: string
-  audienceMode: 'shared' | 'leaders' | 'mixed'
+  audienceMode: AudienceMode
   status: 'draft' | 'active'
   updatedAt: string
 }
@@ -39,7 +41,7 @@ type DiscoveryTemplateDetail = {
     name: string
     introTitle: string
     introText: string
-    audienceMode: 'shared' | 'leaders' | 'mixed'
+    audienceMode: AudienceMode
     status: 'draft' | 'active'
     createdAt: string
     updatedAt: string
@@ -68,7 +70,7 @@ type DiscoveryTemplateDetail = {
   }
 }
 
-const categories: DiscoveryCategory[] = [
+const sharedCategories: DiscoveryCategory[] = [
   { id: 'team', label: 'Teamutveckling', desc: 'Utforska hur samarbetet fungerar i teamet och vad som skulle hjälpa er framåt.', questions: [
     { type: 'open', text: 'Vad fungerar riktigt bra i teamet idag, och var märks det att ni fortfarande har något att lösa?' },
     { type: 'scale', text: 'Hur väl fungerar samarbetet och kommunikationen i teamet i vardagen?' },
@@ -152,7 +154,127 @@ const categories: DiscoveryCategory[] = [
 
 const defaultIntroTitle = 'Fördjupa underlaget inför nästa steg'
 const defaultIntroText = 'Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.'
-const defaultAudienceMode: 'shared' | 'leaders' | 'mixed' = 'shared'
+const defaultAudienceMode: AudienceMode = 'shared'
+
+const audienceCategoryOverrides: Partial<Record<AudienceMode, Partial<Record<string, Partial<DiscoveryCategory>>>>> = {
+  leaders: {
+    ledar: {
+      desc: 'För ledargrupper och chefer som vill förstå vilka ledarbeteenden, förmågor och prioriteringar som behöver stärkas framåt.',
+      questions: [
+        { type: 'open', text: 'Vilken ledarskapsutmaning är mest avgörande att få grepp om just nu?' },
+        { type: 'scale', text: 'Hur väl tycker ni att ledarskapet idag stödjer den riktning ni vill ta som organisation?' },
+        { type: 'choice', text: 'Vilka ledarnivåer behöver framför allt utvecklas eller samspela bättre? (välj alla som stämmer)', max: 5, options: ['Förstalinjens chefer', 'Mellanchefer', 'VP/Direktörer', 'Ledningsgrupp', 'Blivande ledare'] },
+        { type: 'open', text: 'Var ser ni störst glapp mellan vad som förväntas av ledare och vad som faktiskt händer i vardagen?' },
+        { type: 'scale', text: 'Hur tydligt följer ni idag upp ledarbeteenden och faktisk ledareffekt?' },
+        { type: 'open', text: 'Vad behöver era ledare i högre grad kunna, bära eller driva det närmaste året?' },
+      ],
+    },
+    change: {
+      desc: 'För ledare som behöver skapa mandat, förankring och uthållighet i en förändring.',
+      questions: [
+        { type: 'open', text: 'Vilken förändring behöver ni få att hända, och varför är den viktig nu?' },
+        { type: 'scale', text: 'Hur starkt upplever ni att mandat, ägarskap och uthållighet finns i ledningen?' },
+        { type: 'choice', text: 'Var ligger den största ledningsutmaningen i förändringen? (välj max 2)', max: 2, options: ['Motstånd i organisationen', 'Otydlig kommunikation', 'Brist på tid och resurser', 'Ledare som inte är med', 'Gamla strukturer och vanor', 'Osäkerhet om riktningen'] },
+        { type: 'scale', text: 'Hur tydlig är er plan för hur förändringen ska översättas till vardagligt beteende?' },
+        { type: 'open', text: 'Vad blir konsekvensen om förändringen inte får fäste på lednings- eller chefsnivå?' },
+      ],
+    },
+    ai: {
+      desc: 'För ledare som behöver förstå nuläge, förmåga och prioriteringar i AI-arbetet.',
+      questions: [
+        { type: 'scale', text: 'Hur integrerat är AI i era prioriterade processer och affärskritiska arbetssätt idag?' },
+        { type: 'scale', text: 'Hur trygga är ni i ledningen med riktning, prioriteringar och ansvar kring AI?' },
+        { type: 'choice', text: 'Vilket läge beskriver er organisation bäst just nu? (välj en)', max: 1, options: ['Vi utforskar – ingen tydlig riktning', 'Vi testar – några pilotprojekt', 'Vi skalar – AI används brett', 'Vi leder – AI är inbyggt i verksamheten'] },
+        { type: 'open', text: 'Vilka delar av verksamheten ser ni som mest strategiskt påverkade av AI de närmaste 12–24 månaderna?' },
+        { type: 'open', text: 'Vad behöver ni förstå eller få på plats för att kunna ta nästa steg med större trygghet?' },
+      ],
+    },
+    vision: {
+      desc: 'För ledare som vill stärka samsyn, riktning och faktisk förflyttning kring mål och prioriteringar.',
+      questions: [
+        { type: 'scale', text: 'Hur tydlig och handlingsbar upplever ni att er riktning är för chefer och nyckelpersoner?' },
+        { type: 'scale', text: 'Hur väl hänger mål, prioriteringar och uppföljning ihop genom organisationen?' },
+        { type: 'choice', text: 'Var ligger den största ledningsutmaningen kring vision och mål? (välj max 2)', max: 2, options: ['Visionen känns otydlig eller abstrakt', 'Mål och OKR:er är inte förankrade', 'Saknas koppling mellan strategi och vardag', 'Cheferna driver inte frågan', 'Medarbetarna saknar ägarskap', 'Målen förändras för ofta'] },
+        { type: 'open', text: 'Var upplever ni att riktningen tappar kraft eller blir för abstrakt i organisationen?' },
+        { type: 'scale', text: 'Hur starkt driver chefer och ledare målen som verkliga prioriteringar i vardagen?' },
+        { type: 'open', text: 'Vad behöver bli tydligare för att fler ska kunna omsätta vision och mål i handling?' },
+      ],
+    },
+  },
+  mixed: {
+    ledar: {
+      desc: 'För blandade grupper där ledarskap både ska förstås som ansvar och som något människor upplever i vardagen.',
+      questions: [
+        { type: 'open', text: 'När ledarskapet fungerar som bäst hos er, vad märks då i vardagen?' },
+        { type: 'scale', text: 'Hur väl upplever ni att ledarskapet skapar tydlighet, trygghet och riktning?' },
+        { type: 'choice', text: 'Var märks behovet av utveckling tydligast? (välj alla som stämmer)', max: 5, options: ['Förstalinjens chefer', 'Mellanchefer', 'VP/Direktörer', 'Ledningsgrupp', 'Blivande ledare'] },
+        { type: 'open', text: 'Vad i ledarskapet skapar idag mest energi eller frustration för gruppen?' },
+        { type: 'scale', text: 'Hur tydligt upplever ni att ledarskapet utvecklas utifrån det som faktiskt behövs?' },
+        { type: 'open', text: 'Vad skulle ni vilja se mer av från ledare framåt?' },
+      ],
+    },
+    change: {
+      desc: 'För blandade grupper där både ledningens intention och människors vardagliga upplevelse av förändring spelar roll.',
+      questions: [
+        { type: 'open', text: 'Vilken förändring står ni i, och vad upplever ni är viktigast att få rätt?' },
+        { type: 'scale', text: 'Hur tydlig känns riktningen i förändringen för dem som berörs?' },
+        { type: 'choice', text: 'Var uppstår den största friktionen i förändringen? (välj max 2)', max: 2, options: ['Motstånd i organisationen', 'Otydlig kommunikation', 'Brist på tid och resurser', 'Ledare som inte är med', 'Gamla strukturer och vanor', 'Osäkerhet om riktningen'] },
+        { type: 'scale', text: 'Hur väl förstår människor vad förändringen betyder för deras arbete i praktiken?' },
+        { type: 'open', text: 'Vad skulle behöva hända för att förändringen ska kännas mer begriplig, möjlig och relevant?' },
+      ],
+    },
+    ai: {
+      desc: 'För blandade grupper som behöver en gemensam bild av hur AI påverkar arbetssätt, kompetens och riktning.',
+      questions: [
+        { type: 'scale', text: 'Hur integrerat är AI i era arbetssätt och processer idag, ur både ledar- och medarbetarperspektiv?' },
+        { type: 'scale', text: 'Hur trygga upplever ni att människor är i att använda AI på ett klokt och relevant sätt?' },
+        { type: 'choice', text: 'Vilket läge beskriver er bäst just nu? (välj en)', max: 1, options: ['Vi utforskar – ingen tydlig riktning', 'Vi testar – några pilotprojekt', 'Vi skalar – AI används brett', 'Vi leder – AI är inbyggt i verksamheten'] },
+        { type: 'open', text: 'Var märker ni att AI redan påverkar roller, arbetssätt eller förväntningar?' },
+        { type: 'open', text: 'Vad väcker mest nyfikenhet respektive mest osäkerhet hos er just nu?' },
+      ],
+    },
+    vision: {
+      desc: 'För blandade grupper som behöver samsyn kring riktning, mening och ansvar i vardagen.',
+      questions: [
+        { type: 'scale', text: 'Hur tydlig och meningsfull känns riktningen för dem som ska omsätta den i vardagen?' },
+        { type: 'scale', text: 'Hur lätt är det att förstå hur den egna rollen hänger ihop med mål och prioriteringar?' },
+        { type: 'choice', text: 'Var uppstår störst glapp mellan riktning och vardag? (välj max 2)', max: 2, options: ['Visionen känns otydlig eller abstrakt', 'Mål och OKR:er är inte förankrade', 'Saknas koppling mellan strategi och vardag', 'Cheferna driver inte frågan', 'Medarbetarna saknar ägarskap', 'Målen förändras för ofta'] },
+        { type: 'open', text: 'När blir riktningen tydlig för människor hos er, och när blir den svår att omsätta?' },
+        { type: 'scale', text: 'Hur starkt upplever ni att människor arbetar mot målen snarare än bara rapporterar på dem?' },
+        { type: 'open', text: 'Vad skulle göra störst skillnad för att skapa mer ägarskap och rörelse kring målen?' },
+      ],
+    },
+  },
+}
+
+function cloneQuestion(question: DiscoveryQuestion): DiscoveryQuestion {
+  if (question.type === 'choice') {
+    return { ...question, options: [...question.options] }
+  }
+  return { ...question }
+}
+
+function cloneCategory(category: DiscoveryCategory): DiscoveryCategory {
+  return {
+    ...category,
+    questions: category.questions.map(cloneQuestion),
+  }
+}
+
+function buildDefaultCategories(mode: AudienceMode): DiscoveryCategory[] {
+  return sharedCategories.map(category => {
+    const base = cloneCategory(category)
+    const override = audienceCategoryOverrides[mode]?.[category.id]
+
+    if (!override) return base
+
+    return {
+      ...base,
+      ...override,
+      questions: override.questions ? override.questions.map(cloneQuestion) : base.questions,
+    }
+  })
+}
 
 type CategoryState = Record<number, string | string[]>
 
@@ -183,10 +305,10 @@ export default function DiscoveryPage() {
   const [clientOrganisation, setClientOrganisation] = useState('')
   const [recipientsInput, setRecipientsInput] = useState('')
   const [sendResults, setSendResults] = useState<DiscoverySendResult[] | null>(null)
-  const [builderCategories, setBuilderCategories] = useState(categories)
-  const [activeId, setActiveId] = useState(categories[0].id)
+  const [builderCategories, setBuilderCategories] = useState(() => buildDefaultCategories(defaultAudienceMode))
+  const [activeId, setActiveId] = useState(() => buildDefaultCategories(defaultAudienceMode)[0].id)
   const [answers, setAnswers] = useState<Record<string, CategoryState>>(() =>
-    Object.fromEntries(categories.map(category => [category.id, {}]))
+    Object.fromEntries(buildDefaultCategories(defaultAudienceMode).map(category => [category.id, {}]))
   )
   const [successId, setSuccessId] = useState<string | null>(null)
 
@@ -241,9 +363,10 @@ export default function DiscoveryPage() {
     setIntroTitle(defaultIntroTitle)
     setIntroText(defaultIntroText)
     setAudienceMode(defaultAudienceMode)
-    setBuilderCategories(categories)
-    setActiveId(categories[0].id)
-    setAnswers(Object.fromEntries(categories.map(category => [category.id, {}])))
+    const nextCategories = buildDefaultCategories(defaultAudienceMode)
+    setBuilderCategories(nextCategories)
+    setActiveId(nextCategories[0].id)
+    setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
     setSuccessId(null)
     setSaveState('idle')
   }
@@ -360,9 +483,11 @@ export default function DiscoveryPage() {
       setIntroTitle(template.introTitle)
       setIntroText(template.introText)
       setAudienceMode(template.audienceMode || defaultAudienceMode)
-      setBuilderCategories(nextCategories.length > 0 ? nextCategories : categories)
-      setActiveId(nextCategories[0]?.id || categories[0].id)
-      setAnswers(Object.fromEntries((nextCategories.length > 0 ? nextCategories : categories).map(category => [category.id, {}])))
+      const fallbackCategories = buildDefaultCategories(template.audienceMode || defaultAudienceMode)
+      const loadedCategories = nextCategories.length > 0 ? nextCategories : fallbackCategories
+      setBuilderCategories(loadedCategories)
+      setActiveId(loadedCategories[0]?.id || fallbackCategories[0].id)
+      setAnswers(Object.fromEntries(loadedCategories.map(category => [category.id, {}])))
       setSuccessId(null)
       setSaveState('idle')
 
@@ -527,6 +652,15 @@ export default function DiscoveryPage() {
     }, 6000)
   }
 
+  function applyAudienceDefaults(nextMode: AudienceMode) {
+    const nextCategories = buildDefaultCategories(nextMode)
+    setBuilderCategories(nextCategories)
+    setActiveId(currentActiveId => nextCategories.some(category => category.id === currentActiveId) ? currentActiveId : nextCategories[0].id)
+    setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
+    setSuccessId(null)
+    setSaveState('idle')
+  }
+
   function updateCategoryField(categoryId: string, field: 'label' | 'desc', value: string) {
     setBuilderCategories(prev => prev.map(category => (
       category.id === categoryId ? { ...category, [field]: value } : category
@@ -640,7 +774,7 @@ export default function DiscoveryPage() {
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
       <div style={{ padding: '30px 34px 0', overflowX: 'auto', scrollbarWidth: 'none' as const }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 'max-content', paddingBottom: 2 }}>
-          {categories.map(category => {
+          {builderCategories.map(category => {
             const active = category.id === activeId
             return (
               <button
@@ -756,7 +890,7 @@ export default function DiscoveryPage() {
                 <Field label="Målgrupp">
                   <select
                     value={audienceMode}
-                    onChange={event => setAudienceMode(event.target.value as 'shared' | 'leaders' | 'mixed')}
+                    onChange={event => setAudienceMode(event.target.value as AudienceMode)}
                     style={editorInputStyle}
                   >
                     <option value="shared">Blandad eller oklar målgrupp</option>
@@ -764,6 +898,24 @@ export default function DiscoveryPage() {
                     <option value="mixed">Blandad grupp med ledare och medarbetare</option>
                   </select>
                 </Field>
+
+                <div style={{ marginTop: -6, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                    Målgruppen sparas på upplägget. Du kan också ladda rekommenderade standardfrågor för den valda målgruppen utan att bygga om allt för hand.
+                  </div>
+                  <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => applyAudienceDefaults(audienceMode)}
+                      style={secondaryButtonStyle}
+                    >
+                      Ladda rekommenderade frågor
+                    </button>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', alignSelf: 'center' }}>
+                      Påverkar främst Ledarskap, Change management, AI readiness och Vision & mål.
+                    </div>
+                  </div>
+                </div>
 
                 <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
