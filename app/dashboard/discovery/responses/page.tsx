@@ -20,6 +20,9 @@ export default function DiscoveryResponsesPage() {
   const [sessions, setSessions] = useState<DiscoverySessionListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [remindedSessions, setRemindedSessions] = useState<Record<string, boolean>>({})
+  const [remindLoading, setRemindLoading] = useState<string | null>(null)
+  const [remindFeedback, setRemindFeedback] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/api/discovery/sessions')
@@ -34,6 +37,34 @@ export default function DiscoveryResponsesPage() {
         setLoading(false)
       })
   }, [])
+
+  async function handleRemind(session: DiscoverySessionListItem) {
+    if (session.status !== 'pending') return
+    setRemindFeedback(prev => ({ ...prev, [session.id]: '' }))
+    setRemindLoading(session.id)
+
+    try {
+      const response = await fetch('/api/discovery/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionIds: [session.id] }),
+      })
+      const payload = await response.json().catch(() => null)
+      const sent = typeof payload?.sent === 'number' ? payload.sent : 0
+
+      if (response.ok && sent === 1) {
+        setRemindedSessions(prev => ({ ...prev, [session.id]: true }))
+        setRemindFeedback(prev => ({ ...prev, [session.id]: 'Påminnelse skickad.' }))
+      } else {
+        setRemindFeedback(prev => ({
+          ...prev,
+          [session.id]: payload?.error || 'Kunde inte skicka påminnelse.',
+        }))
+      }
+    } finally {
+      setRemindLoading(null)
+    }
+  }
 
   if (loading) return <PageLoader />
 
@@ -77,11 +108,26 @@ export default function DiscoveryResponsesPage() {
                 <StatusPill status={session.status} />
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{formatDate(session.createdAt)}</div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, alignItems: 'center' }}>
+                {session.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRemind(session)}
+                    disabled={remindLoading === session.id || remindedSessions[session.id]}
+                    style={remindButtonStyle(remindLoading === session.id || remindedSessions[session.id])}
+                  >
+                    {remindLoading === session.id ? '...' : remindedSessions[session.id] ? 'Skickat' : 'Påminn'}
+                  </button>
+                )}
                 <Link href={`/dashboard/discovery/responses/${session.id}`} style={secondaryLinkStyle}>
                   Öppna
                 </Link>
               </div>
+              {remindFeedback[session.id] && (
+                <div style={{ gridColumn: '1 / -1', paddingTop: 8, fontSize: 11.5, color: remindedSessions[session.id] ? '#15803d' : '#92400e' }}>
+                  {remindFeedback[session.id]}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -182,4 +228,17 @@ const tableRowStyle: React.CSSProperties = {
   padding: '14px 18px',
   background: 'var(--surface)',
   borderBottom: '1px solid var(--border-sub)',
+}
+
+function remindButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '6px 10px',
+    borderRadius: 6,
+    border: '1px solid var(--border)',
+    background: disabled ? 'var(--bg)' : 'var(--surface)',
+    color: disabled ? 'var(--text-3)' : 'var(--text-2)',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: disabled ? 'default' : 'pointer',
+  }
 }

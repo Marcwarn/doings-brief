@@ -47,8 +47,9 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 - `/api/discovery/send` kan nu skapa sessions och skicka Discovery-mejl, och buildern kan trigga utskicket
 - `/dashboard/discovery/responses` och `/api/discovery/sessions*` finns nu för att följa Discovery-sessions och öppna enskilda svar
+- `/api/discovery/remind` och knappar i responses-vyn kan nu skicka manuella påminnelser till väntande Discovery-mottagare
 
-**Saknas**: Påminnelseflöde för Discovery och eventuell mer avancerad översikt/filtering
+**Saknas**: Eventuell mer avancerad översikt/filtering och dispatch-gruppering för Discovery
 
 ---
 
