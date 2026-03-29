@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       <table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 14px 36px rgba(30,14,46,.10);">
         <tr>
           <td style="background:radial-gradient(circle at top left,#7a3ea1 0%,#3a1a54 46%,#1e0e2e 100%);padding:36px 32px 34px;">
-            <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,.68);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Discovery från ${escHtml(senderName)}</p>
+            <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,.68);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Fördjupande underlag från ${escHtml(senderName)}</p>
             <h1 style="margin:0;font-size:26px;font-weight:700;color:#fff;line-height:1.15;">Hej ${escHtml(session.client_name)}!</h1>
             <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:rgba(255,255,255,.78);max-width:430px;">
               Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv inför nästa steg.
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
               <tr>
                 <td align="center" style="background:#6b2d82;border-radius:12px;">
                   <a href="${discoveryUrl}" style="display:inline-block;background:#6b2d82;color:#ffffff !important;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;border:1px solid #6b2d82;">
-                    Öppna discovery →
+                    Öppna era frågor →
                   </a>
                 </td>
               </tr>
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
         <tr>
           <td style="padding:20px 32px;background:#f7f1fb;border-top:1px solid #e8d9f0;">
             <p style="margin:0;font-size:12px;color:#746d86;text-align:center;line-height:1.65;">
-              Skickat via <strong>Doings Discovery</strong> · ${footerContactHtml}
+              Skickat via <strong>Doings</strong> · ${footerContactHtml}
             </p>
           </td>
         </tr>
@@ -189,9 +189,9 @@ export async function POST(req: NextRequest) {
           from: `${senderName} via Doings <${fromEmail}>`,
           reply_to: user.email || undefined,
           to: session.client_email,
-          subject: `${template.intro_title} – nästa steg med ${senderName}`,
+          subject: `${template.intro_title} – underlag inför nästa steg med ${senderName}`,
           html,
-          text: `Hej ${session.client_name}!\n\nTack för dialogen hittills. Här vill ${senderName} på Doings samla in några fördjupande perspektiv för att förstå nuläge, behov och riktning bättre.\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\nÖppna din personliga länk här:\n${discoveryUrl}\n\n${footerContactText}\n\n– Doings Discovery`,
+          text: `Hej ${session.client_name}!\n\nTack för dialogen hittills. Här vill ${senderName} på Doings samla in några fördjupande perspektiv för att förstå nuläge, behov och riktning bättre.\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\nÖppna din personliga länk här:\n${discoveryUrl}\n\n${footerContactText}\n\n– Doings`,
         })
 
         if (emailError) {

@@ -51,7 +51,7 @@ export default function DiscoveryResponseDetailPage() {
     fetch(`/api/discovery/sessions/${id}`)
       .then(async response => {
         const nextPayload = await response.json().catch(() => null)
-        if (!response.ok) throw new Error(nextPayload?.error || 'Kunde inte läsa discovery-svaret.')
+        if (!response.ok) throw new Error(nextPayload?.error || 'Kunde inte läsa svaret.')
         setPayload(nextPayload)
         setLoading(false)
       })
@@ -67,10 +67,10 @@ export default function DiscoveryResponseDetailPage() {
     return (
       <div style={{ padding: '40px 44px', maxWidth: 920 }}>
         <Link href="/dashboard/discovery/responses" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 12.5 }}>
-          Tillbaka till discovery-svar
+          Tillbaka till inkomna svar
         </Link>
         <div style={{ marginTop: 20 }}>
-          <InlineError text={error || 'Discovery-svaret kunde inte laddas.'} />
+          <InlineError text={error || 'Svaret kunde inte laddas.'} />
         </div>
       </div>
     )
@@ -81,7 +81,7 @@ export default function DiscoveryResponseDetailPage() {
   return (
     <div style={{ padding: '40px 44px', maxWidth: 900, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, fontSize: 12.5 }}>
-        <Link href="/dashboard/discovery/responses" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Discovery-svar</Link>
+        <Link href="/dashboard/discovery/responses" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Inkomna svar</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
         <span style={{ color: 'var(--text)', fontWeight: 500 }}>{session.clientName}</span>
       </div>
@@ -101,7 +101,7 @@ export default function DiscoveryResponseDetailPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 22 }}>
-        <MetaCard title="Discovery">
+        <MetaCard title="Underlag">
           <MetaRow label="Upplägg" value={session.templateName} />
           <MetaRow label="Rubrik" value={session.introTitle} />
           <MetaRow label="Skickad" value={formatDateTime(session.createdAt)} />

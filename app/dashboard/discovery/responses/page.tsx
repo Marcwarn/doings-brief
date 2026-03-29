@@ -28,7 +28,7 @@ export default function DiscoveryResponsesPage() {
     fetch('/api/discovery/sessions')
       .then(async response => {
         const payload = await response.json().catch(() => null)
-        if (!response.ok) throw new Error(payload?.error || 'Kunde inte läsa discovery-utskicken.')
+        if (!response.ok) throw new Error(payload?.error || 'Kunde inte läsa utskicken.')
         setSessions(payload?.sessions || [])
         setLoading(false)
       })
@@ -72,13 +72,13 @@ export default function DiscoveryResponsesPage() {
     <div style={{ padding: '40px 44px', maxWidth: 1020, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
         <div>
-          <h1 style={titleStyle}>Discovery-svar</h1>
+          <h1 style={titleStyle}>Inkomna svar</h1>
           <p style={leadStyle}>
-            Följ utskickade discovery-länkar, se svarsläge och öppna inkomna svar per mottagare.
+            Följ utskicken, se svarsläge och öppna inkomna svar per mottagare.
           </p>
         </div>
         <Link href="/dashboard/discovery" style={primaryLinkStyle}>
-          Till buildern
+          Till redigeringen
         </Link>
       </div>
 
@@ -86,8 +86,8 @@ export default function DiscoveryResponsesPage() {
 
       {sessions.length === 0 ? (
         <EmptyCard
-          title="Inga discovery-utskick ännu"
-          text="Skicka ett discovery-upplägg från buildern för att börja samla in svar."
+          title="Inga utskick ännu"
+          text="Skicka ett discovery-upplägg från redigeringen för att börja samla in svar."
         />
       ) : (
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>

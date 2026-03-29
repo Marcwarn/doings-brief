@@ -169,7 +169,7 @@ export default function DiscoveryPublicPage() {
 
     const nextPayload = await response.json().catch(() => null)
     if (!response.ok) {
-      setError(nextPayload?.error || 'Kunde inte skicka discovery-svaret.')
+      setError(nextPayload?.error || 'Kunde inte skicka era svar just nu.')
       setSubmitting(false)
       return
     }
@@ -198,7 +198,7 @@ export default function DiscoveryPublicPage() {
       <Shell>
         <SimpleCard
           title="Tack för era svar"
-          description="Vi har tagit emot er discovery och återkommer med nästa steg."
+          description="Vi har tagit emot era perspektiv och återkommer med nästa steg."
         />
       </Shell>
     )
@@ -216,7 +216,7 @@ export default function DiscoveryPublicPage() {
             onClick={() => setStatus('ready')}
             style={primaryButtonStyle}
           >
-            Börja discovery
+            Börja svara
           </button>
         </SimpleCard>
       </Shell>
@@ -457,7 +457,7 @@ export default function DiscoveryPublicPage() {
                 opacity: submitting ? 0.7 : 1,
               }}
             >
-              {submitting ? 'Skickar…' : 'Skicka svar till Doings'}
+              {submitting ? 'Skickar…' : 'Skicka era svar'}
             </button>
           </div>
           {error && (

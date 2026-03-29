@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
               <tr>
                 <td align="center" style="background:#6b2d82;border-radius:12px;">
                   <a href="${discoveryUrl}" style="display:inline-block;background:#6b2d82;color:#ffffff !important;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;">
-                    Öppna discovery →
+                    Öppna era frågor →
                   </a>
                 </td>
               </tr>
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         <tr>
           <td style="padding:20px 32px;background:#f7f1fb;border-top:1px solid #e8d9f0;">
             <p style="margin:0;font-size:12px;color:#746d86;text-align:center;">
-              Skickat via <strong>Doings Discovery</strong>
+              Skickat via <strong>Doings</strong>
             </p>
           </td>
         </tr>
@@ -100,9 +100,9 @@ export async function POST(req: NextRequest) {
         from: `${senderName} via Doings <${fromEmail}>`,
         reply_to: user.email || undefined,
         to: session.client_email,
-        subject: `Påminnelse: ${template?.intro_title || 'Discovery'} – nästa steg med ${senderName}`,
+        subject: `Påminnelse: ${template?.intro_title || 'Underlag'} – nästa steg med ${senderName}`,
         html,
-        text: `Hej ${session.client_name}!\n\nVi vill påminna om att vi fortfarande gärna vill få in era fördjupande perspektiv inför nästa steg.\n\nDin personliga länk är fortfarande aktiv:\n${discoveryUrl}\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\n– ${senderName}`,
+        text: `Hej ${session.client_name}!\n\nVi vill påminna om att vi fortfarande gärna vill få in era fördjupande perspektiv inför nästa steg.\n\nDin personliga länk är fortfarande aktiv:\n${discoveryUrl}\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\n– ${senderName} via Doings`,
       })
 
       if (emailError) {

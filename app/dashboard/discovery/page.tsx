@@ -168,7 +168,7 @@ export default function DiscoveryPage() {
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
-  const [templateName, setTemplateName] = useState('Discovery-upplägg')
+  const [templateName, setTemplateName] = useState('Fördjupat underlag')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
   const [introText, setIntroText] = useState(defaultIntroText)
   const [saving, setSaving] = useState(false)
@@ -233,7 +233,7 @@ export default function DiscoveryPage() {
 
   function resetBuilder() {
     setCurrentTemplateId(null)
-    setTemplateName('Discovery-upplägg')
+    setTemplateName('Fördjupat underlag')
     setIntroTitle(defaultIntroTitle)
     setIntroText(defaultIntroText)
     setBuilderCategories(categories)
@@ -682,7 +682,7 @@ export default function DiscoveryPage() {
                 </p>
                 <div style={{ marginTop: 12 }}>
                   <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
-                    Öppna discovery-svar
+                    Öppna inkomna svar
                   </Link>
                 </div>
               </div>
@@ -703,7 +703,7 @@ export default function DiscoveryPage() {
                       disabled={Boolean(loadingTemplateId) || saving}
                       style={editorInputStyle}
                     >
-                      <option value="">Nytt discovery-upplägg</option>
+                      <option value="">Nytt upplägg</option>
                       {templates.map(template => (
                         <option key={template.id} value={template.id}>
                           {template.name}
@@ -748,7 +748,7 @@ export default function DiscoveryPage() {
 
                 <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    Skicka discovery
+                    Skicka underlag
                   </div>
 
                   <Field label="Organisation">
@@ -776,7 +776,7 @@ export default function DiscoveryPage() {
                     disabled={sending}
                     style={primaryButtonStyle(sending)}
                   >
-                    {sending ? 'Skickar…' : 'Skicka discovery'}
+                    {sending ? 'Skickar…' : 'Skicka underlag'}
                   </button>
 
                   {sendResults && sendResults.length > 0 && (
@@ -1023,7 +1023,7 @@ export default function DiscoveryPage() {
                       boxShadow: '0 10px 24px rgba(0,0,0,0.08)',
                     }}
                   >
-                    Skicka svar till Doings →
+                    Skicka in svar →
                   </button>
                 </div>
               </div>
@@ -1040,7 +1040,7 @@ export default function DiscoveryPage() {
                 lineHeight: 1.6,
                 color: '#43611b',
               }}>
-                Tack! Vi har tagit emot era svar och återkommer med ett skräddarsytt förslag.
+                Tack. Vi har tagit emot era svar och återkommer med nästa steg.
               </div>
             )}
           </section>
