@@ -25,7 +25,7 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "",
+        "matcher": "startup|resume",
         "hooks": [
           {
             "type": "command",
@@ -50,7 +50,7 @@
     ],
     "Stop": [
       {
-        "matcher": "",
+        "matcher": "stop",
         "hooks": [
           {
             "type": "command",
