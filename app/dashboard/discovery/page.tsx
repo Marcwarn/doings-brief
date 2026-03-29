@@ -959,54 +959,6 @@ export default function DiscoveryPage() {
 
                 <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    Teman i upplägget
-                  </div>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                    Här kan du smalna av ett bredare discovery. Avstängda teman försvinner från previewn och sparas inte i upplägget.
-                  </div>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {builderCategories.map(category => (
-                      <button
-                        key={`${category.id}-toggle`}
-                        type="button"
-                        onClick={() => toggleCategoryEnabled(category.id)}
-                        disabled={category.enabled && enabledCategories.length <= 1}
-                        style={{
-                          ...themeToggleStyle,
-                          opacity: category.enabled || enabledCategories.length > 1 ? 1 : 0.55,
-                        }}
-                      >
-                        <div style={{ display: 'grid', gap: 4, textAlign: 'left' }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{category.label}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.45 }}>
-                            {category.enabled ? 'Med i discoveryt' : 'Dolt från preview och utskick'}
-                          </div>
-                        </div>
-                        <div style={{
-                          width: 44,
-                          height: 26,
-                          borderRadius: 999,
-                          background: category.enabled ? 'rgba(198,35,104,0.18)' : 'rgba(14,14,12,0.09)',
-                          padding: 3,
-                          display: 'flex',
-                          justifyContent: category.enabled ? 'flex-end' : 'flex-start',
-                          transition: 'background 0.18s ease',
-                        }}>
-                          <div style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: '50%',
-                            background: category.enabled ? 'var(--accent)' : '#fff',
-                            boxShadow: '0 1px 4px rgba(14,14,12,0.15)',
-                          }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                     Skicka underlag
                   </div>
 
