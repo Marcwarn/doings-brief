@@ -14,6 +14,7 @@ This directory contains 14 API route groups. All routes are Next.js 14 App Route
 | `briefs/batches/` | Supabase session | CRUD for batch dispatches |
 | `briefs/delete/` | Supabase session | Delete a brief session |
 | `briefs/dispatches/` | Supabase session | CRUD for dispatch records |
+| `discovery/templates/` | Supabase session | Create, update, and list Discovery templates |
 | `briefs/recipients-template/` | Supabase session | Download recipients CSV template |
 | `briefs/send-invite/` | Supabase session | Send invite email via Resend |
 | `briefs/submit/` | Token (no session) | Client submits brief answers |
