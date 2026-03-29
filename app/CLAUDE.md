@@ -57,6 +57,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/dashboard/discovery/responses` och `/api/discovery/sessions*` finns nu för att följa Discovery-sessions och öppna enskilda svar
 - `/api/discovery/remind` och knappar i responses-vyn kan nu skicka manuella påminnelser till väntande Discovery-mottagare
 - `Discovery` har nu dokumenterad riktlinje för målgruppsanpassning: vissa teman ska vara gemensamma, medan andra senare bör få varianter för ledare kontra blandade grupper
+- `Discovery` har nu en dokumenterad spec för en framtida `Data`-flik med visualiseringar, råsvar och fasta AI-analyslinser
 
 **Saknas**: Eventuell mer avancerad översikt/filtering och dispatch-gruppering för Discovery
 

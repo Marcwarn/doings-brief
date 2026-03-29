@@ -105,6 +105,7 @@ See `docs/specs/discovery-audience-guidance.md` for theme-by-theme recommendatio
 | Route | Purpose |
 |---|---|
 | `/dashboard/discovery` | Builder and preview workspace |
+| `/dashboard/discovery` with `Data` tab | Response interpretation, summaries, and analysis lenses |
 | `/dashboard/discovery/templates` | List of saved discovery templates |
 | `/dashboard/discovery/templates/[id]` | Edit a saved template |
 | `/dashboard/discovery/send/[id]` | Recipient selection and send flow for a template |
@@ -147,6 +148,13 @@ The builder must support:
 - options for choice questions
 - scale configuration where needed
 
+The internal workspace is intended to expose four editor tabs:
+
+- `Frågor`
+- `Upplägg`
+- `Skicka`
+- `Data`
+
 ### Public customer experience
 
 The public Discovery experience should:
@@ -157,6 +165,18 @@ The public Discovery experience should:
 - avoid exposing internal editing concepts
 
 ## Functional Requirements
+
+### FR-0.5 Data interpretation layer
+
+`Discovery` should evolve beyond collection into interpretation.
+
+The internal workspace should therefore include a `Data` tab that:
+
+- visualizes response status and theme-level signal
+- gives consultants direct access to raw answers
+- supports AI-generated summaries from predefined analytical lenses
+
+See `docs/specs/discovery-data.md` for the dedicated specification of this surface.
 
 ### FR-0 Audience mode
 

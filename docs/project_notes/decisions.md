@@ -17,6 +17,14 @@ Running log of significant decisions made during development. For formal archite
 - only themes with clear hierarchy-sensitive perspective shifts should later get dedicated variants
 - first candidates for variants are `Ledarskap`, `Change management`, `AI readiness`, and `Vision & mål`
 
+## 2026-03-30 — Discovery Should Get a Dedicated Data Tab
+
+- `Discovery` should not stop at collecting responses; it should support interpretation inside the same workspace
+- the editor flow is intended to become `Frågor`, `Upplägg`, `Skicka`, `Data`
+- `Data` should be a consultant-facing interpretation layer, not a raw export screen
+- the first version should combine response overview, theme summaries, raw-answer drill-down, and a small set of fixed AI analysis lenses
+- arbitrary prompt writing is intentionally out of scope for the first implementation; analysis should start from named, opinionated lenses
+
 ## 2024 — Initial Architecture
 
 - **Chose Next.js 14 App Router** over Pages Router for better server/client component control and co-located API routes
