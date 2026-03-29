@@ -43,6 +43,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Discovery har nu dokumenterad spec, ADR och initial SQL-schema-grund i repo:t
 - `/api/discovery/templates` kan nu spara och lista Discovery-upplägg för inloggad konsult
 - `/api/discovery/templates/[id]` kan nu hämta ett fullständigt sparat Discovery-upplägg
+- Buildern i `/dashboard/discovery` kan nu spara nya upplägg och ladda sparade upplägg från databasen
 
 **Saknas**: Persistens, verklig submit-koppling och separat publik kundroute
 

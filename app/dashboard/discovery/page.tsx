@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 
 type DiscoveryQuestion =
   | { type: 'open'; text: string }
@@ -12,6 +13,47 @@ type DiscoveryCategory = {
   label: string
   desc: string
   questions: DiscoveryQuestion[]
+}
+
+type DiscoveryTemplateSummary = {
+  id: string
+  name: string
+  status: 'draft' | 'active'
+  updatedAt: string
+}
+
+type DiscoveryTemplateDetail = {
+  template: {
+    id: string
+    name: string
+    introTitle: string
+    introText: string
+    status: 'draft' | 'active'
+    createdAt: string
+    updatedAt: string
+    sections: Array<{
+      id: string
+      label: string
+      description: string
+      orderIndex: number
+      questions: Array<{
+        id: string
+        type: 'open' | 'choice' | 'scale'
+        text: string
+        orderIndex: number
+        maxChoices: number | null
+        scaleMin: number | null
+        scaleMax: number | null
+        scaleMinLabel: string | null
+        scaleMaxLabel: string | null
+        options: Array<{
+          id: string
+          label: string
+          orderIndex: number
+        }>
+      }>
+    }>
+  }
 }
 
 const categories: DiscoveryCategory[] = [
@@ -96,6 +138,9 @@ const categories: DiscoveryCategory[] = [
   ] },
 ]
 
+const defaultIntroTitle = 'Berätta vad ni behöver'
+const defaultIntroText = 'Välj det område som känns mest relevant och svara på frågorna. Vi återkommer med ett skräddarsytt förslag.'
+
 type CategoryState = Record<number, string | string[]>
 
 function answeredCount(category: DiscoveryCategory, answers: CategoryState) {
@@ -109,6 +154,16 @@ function answeredCount(category: DiscoveryCategory, answers: CategoryState) {
 }
 
 export default function DiscoveryPage() {
+  const [loading, setLoading] = useState(true)
+  const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
+  const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
+  const [templateName, setTemplateName] = useState('Discovery-upplägg')
+  const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
+  const [introText, setIntroText] = useState(defaultIntroText)
+  const [saving, setSaving] = useState(false)
+  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle')
+  const [error, setError] = useState<string | null>(null)
   const [builderCategories, setBuilderCategories] = useState(categories)
   const [activeId, setActiveId] = useState(categories[0].id)
   const [answers, setAnswers] = useState<Record<string, CategoryState>>(() =>
@@ -125,6 +180,175 @@ export default function DiscoveryPage() {
       percent: Math.round((count / activeCategory.questions.length) * 100),
     }
   }, [activeCategory, answers])
+
+  useEffect(() => {
+    void loadTemplateList()
+  }, [])
+
+  async function loadTemplateList(preferredTemplateId?: string) {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/discovery/templates', { cache: 'no-store' })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Kunde inte hämta discovery-uppläggen.')
+      }
+
+      const nextTemplates = Array.isArray(payload?.templates) ? payload.templates as DiscoveryTemplateSummary[] : []
+      setTemplates(nextTemplates)
+
+      const templateIdToLoad = preferredTemplateId
+        || currentTemplateId
+        || nextTemplates[0]?.id
+
+      if (templateIdToLoad) {
+        await loadTemplate(templateIdToLoad, nextTemplates)
+      } else {
+        resetBuilder()
+        setLoading(false)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Kunde inte hämta discovery-uppläggen.')
+      setLoading(false)
+    }
+  }
+
+  function resetBuilder() {
+    setCurrentTemplateId(null)
+    setTemplateName('Discovery-upplägg')
+    setIntroTitle(defaultIntroTitle)
+    setIntroText(defaultIntroText)
+    setBuilderCategories(categories)
+    setActiveId(categories[0].id)
+    setAnswers(Object.fromEntries(categories.map(category => [category.id, {}])))
+    setSuccessId(null)
+    setSaveState('idle')
+  }
+
+  function mapTemplateToCategories(payload: DiscoveryTemplateDetail['template']): DiscoveryCategory[] {
+    return payload.sections
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((section, sectionIndex) => ({
+        id: section.id || `section-${sectionIndex + 1}`,
+        label: section.label,
+        desc: section.description,
+        questions: [...section.questions]
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map(question => {
+            if (question.type === 'choice') {
+              return {
+                type: 'choice' as const,
+                text: question.text,
+                max: question.maxChoices || 1,
+                options: [...question.options]
+                  .sort((a, b) => a.orderIndex - b.orderIndex)
+                  .map(option => option.label),
+              }
+            }
+
+            if (question.type === 'scale') {
+              return { type: 'scale' as const, text: question.text }
+            }
+
+            return { type: 'open' as const, text: question.text }
+          }),
+      }))
+  }
+
+  async function loadTemplate(templateId: string, knownTemplates?: DiscoveryTemplateSummary[]) {
+    setLoadingTemplateId(templateId)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/discovery/templates/${templateId}`, { cache: 'no-store' })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Kunde inte läsa discovery-upplägget.')
+      }
+
+      const template = (payload as DiscoveryTemplateDetail).template
+      const nextCategories = mapTemplateToCategories(template)
+
+      setCurrentTemplateId(template.id)
+      setTemplateName(template.name)
+      setIntroTitle(template.introTitle)
+      setIntroText(template.introText)
+      setBuilderCategories(nextCategories.length > 0 ? nextCategories : categories)
+      setActiveId(nextCategories[0]?.id || categories[0].id)
+      setAnswers(Object.fromEntries((nextCategories.length > 0 ? nextCategories : categories).map(category => [category.id, {}])))
+      setSuccessId(null)
+      setSaveState('idle')
+
+      if (knownTemplates) {
+        setTemplates(knownTemplates)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Kunde inte läsa discovery-upplägget.')
+    } finally {
+      setLoadingTemplateId(null)
+      setLoading(false)
+    }
+  }
+
+  async function saveTemplate(status: 'draft' | 'active' = 'draft') {
+    setSaving(true)
+    setSaveState('idle')
+    setError(null)
+
+    try {
+      const response = await fetch('/api/discovery/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentTemplateId,
+          name: templateName,
+          introTitle,
+          introText,
+          status,
+          sections: builderCategories.map((category, categoryIndex) => ({
+            label: category.label,
+            description: category.desc,
+            orderIndex: categoryIndex,
+            questions: category.questions.map((question, questionIndex) => ({
+              type: question.type,
+              text: question.text,
+              orderIndex: questionIndex,
+              maxChoices: question.type === 'choice' ? question.max : null,
+              scaleMin: question.type === 'scale' ? 1 : null,
+              scaleMax: question.type === 'scale' ? 5 : null,
+              scaleMinLabel: question.type === 'scale' ? 'Håller inte alls' : null,
+              scaleMaxLabel: question.type === 'scale' ? 'Håller helt' : null,
+              options: question.type === 'choice'
+                ? question.options.map(option => ({ label: option }))
+                : [],
+            })),
+          })),
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Kunde inte spara discovery-upplägget.')
+      }
+
+      const savedTemplateId = typeof payload?.templateId === 'string' ? payload.templateId : currentTemplateId
+      setCurrentTemplateId(savedTemplateId || null)
+      setSaveState('saved')
+      await loadTemplateList(savedTemplateId || undefined)
+
+      window.setTimeout(() => {
+        setSaveState(current => current === 'saved' ? 'idle' : current)
+      }, 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Kunde inte spara discovery-upplägget.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   function setScale(categoryId: string, questionIndex: number, value: string) {
     setAnswers(prev => ({
@@ -222,6 +446,8 @@ export default function DiscoveryPage() {
     }))
   }
 
+  if (loading) return <PageLoader />
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <header style={{ background: 'var(--text)', color: '#fff' }}>
@@ -256,7 +482,10 @@ export default function DiscoveryPage() {
             position: 'relative',
             zIndex: 1,
           }}>
-            Berätta vad ni <span style={{ color: 'var(--accent)' }}>behöver</span>
+            {introTitle.split('behöver').length > 1
+              ? <>{introTitle.replace('behöver', '')}<span style={{ color: 'var(--accent)' }}>behöver</span></>
+              : <>{introTitle}</>
+            }
           </h1>
           <p style={{
             margin: 0,
@@ -267,7 +496,7 @@ export default function DiscoveryPage() {
             position: 'relative',
             zIndex: 1,
           }}>
-            Välj det område som känns mest relevant och svara på frågorna. Vi återkommer med ett skräddarsytt förslag.
+            {introText}
           </p>
         </div>
         </div>
@@ -311,6 +540,8 @@ export default function DiscoveryPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.88fr) minmax(0, 1.42fr)', gap: 22, alignItems: 'start' }}>
           <aside style={{ position: 'sticky', top: 22 }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 18px 20px' }}>
+              {error && <div style={{ marginBottom: 14 }}><InlineError text={error} /></div>}
+
               <div style={{ marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
                   Redigering
@@ -324,6 +555,64 @@ export default function DiscoveryPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <Field label="Sparat upplägg">
+                    <select
+                      value={currentTemplateId || ''}
+                      onChange={event => {
+                        const nextId = event.target.value
+                        if (nextId) {
+                          void loadTemplate(nextId)
+                        } else {
+                          resetBuilder()
+                        }
+                      }}
+                      disabled={Boolean(loadingTemplateId) || saving}
+                      style={editorInputStyle}
+                    >
+                      <option value="">Nytt discovery-upplägg</option>
+                      {templates.map(template => (
+                        <option key={template.id} value={template.id}>
+                          {template.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>
+                      Nytt
+                    </button>
+                    <button type="button" onClick={() => void saveTemplate('draft')} disabled={saving || Boolean(loadingTemplateId)} style={primaryButtonStyle(saving || Boolean(loadingTemplateId))}>
+                      {saving ? 'Sparar…' : saveState === 'saved' ? 'Sparat' : 'Spara upplägg'}
+                    </button>
+                  </div>
+                </div>
+
+                <Field label="Internt namn">
+                  <input
+                    value={templateName}
+                    onChange={event => setTemplateName(event.target.value)}
+                    style={editorInputStyle}
+                  />
+                </Field>
+
+                <Field label="Rubrik">
+                  <input
+                    value={introTitle}
+                    onChange={event => setIntroTitle(event.target.value)}
+                    style={editorInputStyle}
+                  />
+                </Field>
+
+                <Field label="Ingress">
+                  <textarea
+                    value={introText}
+                    onChange={event => setIntroText(event.target.value)}
+                    rows={3}
+                    style={{ ...editorInputStyle, minHeight: 88, resize: 'vertical' }}
+                  />
+                </Field>
+
                 <Field label="Temanamn">
                   <input
                     value={activeCategory.label}
@@ -534,7 +823,7 @@ export default function DiscoveryPage() {
                       cursor: 'pointer',
                     }}
                   >
-                    Rensa
+                  Rensa
                   </button>
                   <button
                     type="button"
@@ -602,4 +891,28 @@ const editorInputStyle: React.CSSProperties = {
   fontFamily: 'var(--font-sans)',
   outline: 'none',
   resize: 'none',
+}
+
+function primaryButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    border: 'none',
+    borderRadius: 10,
+    background: disabled ? 'var(--border)' : 'var(--accent)',
+    color: '#fff',
+    padding: '11px 16px',
+    fontSize: 13.5,
+    fontWeight: 700,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  }
+}
+
+const secondaryButtonStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 10,
+  background: 'transparent',
+  color: 'var(--text-2)',
+  padding: '11px 16px',
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: 'pointer',
 }
