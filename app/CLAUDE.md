@@ -38,6 +38,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Egen meny i dashboarden
 - Speglar discovery-landningssidan visuellt med nuvarande `doings-brief`-färger och typografi
 - Teman och frågor ligger exakt enligt discovery-referensen
+- Split-view med redigering till vänster och kundförhandsvisning till höger
 - Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
 
 **Saknas**: Persistens, verklig submit-koppling och separat publik kundroute

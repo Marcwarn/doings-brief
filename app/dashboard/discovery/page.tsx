@@ -109,13 +109,14 @@ function answeredCount(category: DiscoveryCategory, answers: CategoryState) {
 }
 
 export default function DiscoveryPage() {
+  const [builderCategories, setBuilderCategories] = useState(categories)
   const [activeId, setActiveId] = useState(categories[0].id)
   const [answers, setAnswers] = useState<Record<string, CategoryState>>(() =>
     Object.fromEntries(categories.map(category => [category.id, {}]))
   )
   const [successId, setSuccessId] = useState<string | null>(null)
 
-  const activeCategory = categories.find(category => category.id === activeId) || categories[0]
+  const activeCategory = builderCategories.find(category => category.id === activeId) || builderCategories[0]
 
   const activeProgress = useMemo(() => {
     const count = answeredCount(activeCategory, answers[activeCategory.id] || {})
@@ -165,6 +166,60 @@ export default function DiscoveryPage() {
     window.setTimeout(() => {
       setSuccessId(current => current === categoryId ? null : current)
     }, 6000)
+  }
+
+  function updateCategoryField(categoryId: string, field: 'label' | 'desc', value: string) {
+    setBuilderCategories(prev => prev.map(category => (
+      category.id === categoryId ? { ...category, [field]: value } : category
+    )))
+  }
+
+  function updateQuestionText(categoryId: string, questionIndex: number, value: string) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: category.questions.map((question, index) => (
+          index === questionIndex ? { ...question, text: value } : question
+        )),
+      }
+    }))
+  }
+
+  function updateChoiceOptions(categoryId: string, questionIndex: number, value: string) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: category.questions.map((question, index) => {
+          if (index !== questionIndex || question.type !== 'choice') return question
+          const options = value
+            .split('\n')
+            .map(option => option.trim())
+            .filter(Boolean)
+          return {
+            ...question,
+            options,
+          }
+        }),
+      }
+    }))
+  }
+
+  function updateChoiceMax(categoryId: string, questionIndex: number, value: number) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: category.questions.map((question, index) => {
+          if (index !== questionIndex || question.type !== 'choice') return question
+          return {
+            ...question,
+            max: Math.max(1, Math.min(value || 1, question.options.length || 1)),
+          }
+        }),
+      }
+    }))
   }
 
   return (
@@ -253,191 +308,298 @@ export default function DiscoveryPage() {
       </div>
 
       <main style={{ padding: '22px 34px 72px' }}>
-        <div style={{ maxWidth: 940 }}>
-        <section style={{ marginBottom: 28, paddingBottom: 18, borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-            {activeCategory.label}
-          </h2>
-          <p style={{ margin: 0, maxWidth: 620, fontSize: 14.5, color: 'var(--text-3)', lineHeight: 1.7 }}>
-            {activeCategory.desc}
-          </p>
-        </section>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {activeCategory.questions.map((question, questionIndex) => {
-            const value = answers[activeCategory.id]?.[questionIndex]
-            return (
-              <article
-                key={`${activeCategory.id}-${questionIndex}`}
-                style={{
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 16,
-                  padding: '22px 24px 20px',
-                  boxShadow: '0 1px 0 rgba(0,0,0,0.02)',
-                }}
-              >
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-                  Fråga {questionIndex + 1}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.88fr) minmax(0, 1.42fr)', gap: 22, alignItems: 'start' }}>
+          <aside style={{ position: 'sticky', top: 22 }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 18px 20px' }}>
+              <div style={{ marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Redigering
                 </div>
-                <div style={{ fontSize: 15.5, fontWeight: 600, lineHeight: 1.58, color: 'var(--text)', marginBottom: 18, maxWidth: 720 }}>
-                  {question.text}
-                </div>
+                <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+                  {activeCategory.label}
+                </h2>
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                  Redigera innehållet till vänster. Kundens vy uppdateras direkt till höger.
+                </p>
+              </div>
 
-                {question.type === 'scale' && (
-                  <>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                      {[1, 2, 3, 4, 5].map(option => {
-                        const selected = value === `${option}`
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => setScale(activeCategory.id, questionIndex, `${option}`)}
-                            style={{
-                              width: 42,
-                              height: 42,
-                              borderRadius: 12,
-                              border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
-                              background: selected ? 'var(--accent)' : 'transparent',
-                              color: selected ? '#fff' : 'var(--text-2)',
-                              fontSize: 14,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {option}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11, color: 'var(--text-3)', maxWidth: 250 }}>
-                      <span>Håller inte alls</span>
-                      <span>Håller helt</span>
-                    </div>
-                  </>
-                )}
-
-                {question.type === 'open' && (
-                  <textarea
-                    value={typeof value === 'string' ? value : ''}
-                    onChange={event => setOpen(activeCategory.id, questionIndex, event.target.value)}
-                    placeholder="Skriv ditt svar här…"
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      minHeight: 104,
-                      resize: 'vertical',
-                      borderRadius: 12,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg)',
-                      color: 'var(--text)',
-                      padding: '14px 16px',
-                      fontSize: 14,
-                      lineHeight: 1.6,
-                      fontFamily: 'var(--font-sans)',
-                      outline: 'none',
-                    }}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <Field label="Temanamn">
+                  <input
+                    value={activeCategory.label}
+                    onChange={event => updateCategoryField(activeCategory.id, 'label', event.target.value)}
+                    style={editorInputStyle}
                   />
-                )}
+                </Field>
 
-                {question.type === 'choice' && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
-                    {question.options.map(option => {
-                      const checked = Array.isArray(value) && value.includes(option)
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => toggleChoice(activeCategory.id, questionIndex, option, question.max)}
-                          style={{
-                            borderRadius: 999,
-                            border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
-                            background: checked ? 'var(--accent-dim)' : 'var(--bg)',
-                            color: checked ? 'var(--accent)' : 'var(--text-2)',
-                            padding: '9px 15px',
-                            fontSize: 13,
-                            lineHeight: 1.4,
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
-                        >
-                          {option}
-                        </button>
-                      )
-                    })}
+                <Field label="Introduktion">
+                  <textarea
+                    value={activeCategory.desc}
+                    onChange={event => updateCategoryField(activeCategory.id, 'desc', event.target.value)}
+                    rows={3}
+                    style={{ ...editorInputStyle, minHeight: 88, resize: 'vertical' }}
+                  />
+                </Field>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {activeCategory.questions.map((question, questionIndex) => (
+                    <div key={`${activeCategory.id}-editor-${questionIndex}`} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                          Fråga {questionIndex + 1}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                          {question.type === 'open' ? 'Öppen' : question.type === 'scale' ? 'Skala' : 'Val'}
+                        </div>
+                      </div>
+
+                      <textarea
+                        value={question.text}
+                        onChange={event => updateQuestionText(activeCategory.id, questionIndex, event.target.value)}
+                        rows={question.type === 'open' ? 3 : 2}
+                        style={{ ...editorInputStyle, minHeight: question.type === 'open' ? 92 : 72, resize: 'vertical' }}
+                      />
+
+                      {question.type === 'choice' && (
+                        <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                          <Field label="Alternativ, ett per rad">
+                            <textarea
+                              value={question.options.join('\n')}
+                              onChange={event => updateChoiceOptions(activeCategory.id, questionIndex, event.target.value)}
+                              rows={Math.max(4, question.options.length)}
+                              style={{ ...editorInputStyle, minHeight: 120, resize: 'vertical' }}
+                            />
+                          </Field>
+                          <Field label="Max antal val">
+                            <input
+                              type="number"
+                              min={1}
+                              max={Math.max(1, question.options.length)}
+                              value={question.max}
+                              onChange={event => updateChoiceMax(activeCategory.id, questionIndex, Number(event.target.value))}
+                              style={editorInputStyle}
+                            />
+                          </Field>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <section>
+            <section style={{ marginBottom: 28, paddingBottom: 18, borderBottom: '1px solid var(--border)' }}>
+              <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+                {activeCategory.label}
+              </h2>
+              <p style={{ margin: 0, maxWidth: 620, fontSize: 14.5, color: 'var(--text-3)', lineHeight: 1.7 }}>
+                {activeCategory.desc}
+              </p>
+            </section>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {activeCategory.questions.map((question, questionIndex) => {
+                const value = answers[activeCategory.id]?.[questionIndex]
+                return (
+                  <article
+                    key={`${activeCategory.id}-${questionIndex}`}
+                    style={{
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 16,
+                      padding: '22px 24px 20px',
+                      boxShadow: '0 1px 0 rgba(0,0,0,0.02)',
+                    }}
+                  >
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+                      Fråga {questionIndex + 1}
+                    </div>
+                    <div style={{ fontSize: 15.5, fontWeight: 600, lineHeight: 1.58, color: 'var(--text)', marginBottom: 18, maxWidth: 720 }}>
+                      {question.text}
+                    </div>
+
+                    {question.type === 'scale' && (
+                      <>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                          {[1, 2, 3, 4, 5].map(option => {
+                            const selected = value === `${option}`
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => setScale(activeCategory.id, questionIndex, `${option}`)}
+                                style={{
+                                  width: 42,
+                                  height: 42,
+                                  borderRadius: 12,
+                                  border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                                  background: selected ? 'var(--accent)' : 'transparent',
+                                  color: selected ? '#fff' : 'var(--text-2)',
+                                  fontSize: 14,
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {option}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11, color: 'var(--text-3)', maxWidth: 250 }}>
+                          <span>Håller inte alls</span>
+                          <span>Håller helt</span>
+                        </div>
+                      </>
+                    )}
+
+                    {question.type === 'open' && (
+                      <textarea
+                        value={typeof value === 'string' ? value : ''}
+                        onChange={event => setOpen(activeCategory.id, questionIndex, event.target.value)}
+                        placeholder="Skriv ditt svar här…"
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          minHeight: 104,
+                          resize: 'vertical',
+                          borderRadius: 12,
+                          border: '1px solid var(--border)',
+                          background: 'var(--bg)',
+                          color: 'var(--text)',
+                          padding: '14px 16px',
+                          fontSize: 14,
+                          lineHeight: 1.6,
+                          fontFamily: 'var(--font-sans)',
+                          outline: 'none',
+                        }}
+                      />
+                    )}
+
+                    {question.type === 'choice' && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
+                        {question.options.map(option => {
+                          const checked = Array.isArray(value) && value.includes(option)
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => toggleChoice(activeCategory.id, questionIndex, option, question.max)}
+                              style={{
+                                borderRadius: 999,
+                                border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
+                                background: checked ? 'var(--accent-dim)' : 'var(--bg)',
+                                color: checked ? 'var(--accent)' : 'var(--text-2)',
+                                padding: '9px 15px',
+                                fontSize: 13,
+                                lineHeight: 1.4,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                              }}
+                            >
+                              {option}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+
+            <div style={{ marginTop: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 20px' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 240, flex: 1 }}>
+                  <div style={{ height: 4, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
+                    <div style={{ width: `${activeProgress.percent}%`, height: '100%', borderRadius: 999, background: 'var(--accent)', transition: 'width 0.25s ease' }} />
                   </div>
-                )}
-              </article>
-            )
-          })}
-        </div>
-
-        <div style={{ marginTop: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 20px' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 240, flex: 1 }}>
-              <div style={{ height: 4, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
-                <div style={{ width: `${activeProgress.percent}%`, height: '100%', borderRadius: 999, background: 'var(--accent)', transition: 'width 0.25s ease' }} />
-              </div>
-              <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-3)' }}>
-                {activeProgress.count} av {activeCategory.questions.length} besvarade
+                  <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-3)' }}>
+                    {activeProgress.count} av {activeCategory.questions.length} besvarade
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => clearCategory(activeCategory.id)}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 10,
+                      background: 'transparent',
+                      color: 'var(--text-2)',
+                      padding: '11px 18px',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Rensa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => submitCategory(activeCategory.id)}
+                    style={{
+                      border: 'none',
+                      borderRadius: 10,
+                      background: 'var(--accent)',
+                      color: '#fff',
+                      padding: '11px 24px',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 10px 24px rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    Skicka svar till Doings →
+                  </button>
+                </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => clearCategory(activeCategory.id)}
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 10,
-                  background: 'transparent',
-                  color: 'var(--text-2)',
-                  padding: '11px 18px',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Rensa
-              </button>
-              <button
-                type="button"
-                onClick={() => submitCategory(activeCategory.id)}
-                style={{
-                  border: 'none',
-                  borderRadius: 10,
-                  background: 'var(--accent)',
-                  color: '#fff',
-                  padding: '11px 24px',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 10px 24px rgba(0,0,0,0.08)',
-                }}
-              >
-                Skicka svar till Doings →
-              </button>
-            </div>
-          </div>
-        </div>
 
-        {successId === activeCategory.id && (
-          <div style={{
-            marginTop: 18,
-            background: '#f1f7ea',
-            border: '1px solid #d7e7c4',
-            borderRadius: 12,
-            padding: '16px 18px',
-            fontSize: 14,
-            lineHeight: 1.6,
-            color: '#43611b',
-          }}>
-            Tack! Vi har tagit emot era svar och återkommer med ett skräddarsytt förslag.
-          </div>
-        )}
+            {successId === activeCategory.id && (
+              <div style={{
+                marginTop: 18,
+                background: '#f1f7ea',
+                border: '1px solid #d7e7c4',
+                borderRadius: 12,
+                padding: '16px 18px',
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: '#43611b',
+              }}>
+                Tack! Vi har tagit emot era svar och återkommer med ett skräddarsytt förslag.
+              </div>
+            )}
+          </section>
         </div>
       </main>
       </div>
     </div>
   )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: 'grid', gap: 6 }}>
+      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        {label}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+const editorInputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 10,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  padding: '12px 14px',
+  fontSize: 13.5,
+  lineHeight: 1.55,
+  fontFamily: 'var(--font-sans)',
+  outline: 'none',
+  resize: 'none',
 }
