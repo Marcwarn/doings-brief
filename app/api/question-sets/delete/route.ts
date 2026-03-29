@@ -23,6 +23,17 @@ export async function DELETE(req: NextRequest) {
     if (!qs) return NextResponse.json({ error: 'Hittades inte' }, { status: 404 })
     if (qs.user_id !== user.id) return NextResponse.json({ error: 'Obehörig' }, { status: 403 })
 
+    // brief_responses.question_id → questions with NO ACTION — must delete responses first
+    const { data: questions } = await admin
+      .from('questions')
+      .select('id')
+      .eq('question_set_id', id)
+
+    if (questions && questions.length > 0) {
+      const questionIds = questions.map(q => q.id)
+      await admin.from('brief_responses').delete().in('question_id', questionIds)
+    }
+
     const { error } = await admin.from('question_sets').delete().eq('id', id)
     if (error) {
       console.error('delete question_set error:', error)
