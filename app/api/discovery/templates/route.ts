@@ -228,6 +228,34 @@ export async function GET() {
       return NextResponse.json({ error: 'Kunde inte hämta uppläggen.' }, { status: 500 })
     }
 
+    const templateIds = (data || []).map(item => item.id)
+
+    const { data: sessions, error: sessionsError } = templateIds.length > 0
+      ? await admin
+          .from('discovery_sessions')
+          .select('template_id, client_organisation, created_at')
+          .eq('consultant_id', user.id)
+          .in('template_id', templateIds)
+          .order('created_at', { ascending: false })
+      : { data: [], error: null }
+
+    if (sessionsError) {
+      console.error('discovery templates sessions summary error:', sessionsError)
+      return NextResponse.json({ error: 'Kunde inte hämta uppläggen.' }, { status: 500 })
+    }
+
+    const sessionCountByTemplateId = new Map<string, number>()
+    const latestOrganisationByTemplateId = new Map<string, string | null>()
+
+    for (const session of sessions || []) {
+      const count = sessionCountByTemplateId.get(session.template_id) || 0
+      sessionCountByTemplateId.set(session.template_id, count + 1)
+
+      if (!latestOrganisationByTemplateId.has(session.template_id)) {
+        latestOrganisationByTemplateId.set(session.template_id, session.client_organisation?.trim() || null)
+      }
+    }
+
     return NextResponse.json({
       templates: (data || []).map(item => ({
         id: item.id,
@@ -235,6 +263,8 @@ export async function GET() {
         audienceMode: item.audience_mode,
         status: item.status,
         updatedAt: item.updated_at,
+        latestOrganisation: latestOrganisationByTemplateId.get(item.id) || null,
+        sessionCount: sessionCountByTemplateId.get(item.id) || 0,
       })),
     })
   } catch (error) {

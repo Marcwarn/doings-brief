@@ -41,6 +41,8 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Teman och frågor ligger exakt enligt discovery-referensen
 - Split-view med redigering till vänster och kundförhandsvisning till höger
 - Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
+- Buildern kan nu öppna tidigare Discovery-upplägg i en tydligare lista med kund, målgrupp och senaste aktivitet
+- Buildern kan nu slå av hela teman för att smalna av ett bredare Discovery innan det sparas eller skickas
 - Discovery har nu dokumenterad spec, ADR och initial SQL-schema-grund i repo:t
 - `/api/discovery/templates` kan nu spara och lista Discovery-upplägg för inloggad konsult
 - `/api/discovery/templates/[id]` kan nu hämta ett fullständigt sparat Discovery-upplägg

@@ -14,6 +14,7 @@ type DiscoveryCategory = {
   label: string
   desc: string
   questions: DiscoveryQuestion[]
+  enabled?: boolean
 }
 
 type AudienceMode = 'shared' | 'leaders' | 'mixed'
@@ -24,6 +25,8 @@ type DiscoveryTemplateSummary = {
   audienceMode: AudienceMode
   status: 'draft' | 'active'
   updatedAt: string
+  latestOrganisation: string | null
+  sessionCount: number
 }
 
 type DiscoverySendResult = {
@@ -257,6 +260,7 @@ function cloneQuestion(question: DiscoveryQuestion): DiscoveryQuestion {
 function cloneCategory(category: DiscoveryCategory): DiscoveryCategory {
   return {
     ...category,
+    enabled: typeof category.enabled === 'boolean' ? category.enabled : true,
     questions: category.questions.map(cloneQuestion),
   }
 }
@@ -292,6 +296,8 @@ export default function DiscoveryPage() {
   const [loading, setLoading] = useState(true)
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [templateQuery, setTemplateQuery] = useState('')
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('Fördjupat underlag')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
@@ -312,7 +318,8 @@ export default function DiscoveryPage() {
   )
   const [successId, setSuccessId] = useState<string | null>(null)
 
-  const activeCategory = builderCategories.find(category => category.id === activeId) || builderCategories[0]
+  const enabledCategories = builderCategories.filter(category => category.enabled)
+  const activeCategory = enabledCategories.find(category => category.id === activeId) || enabledCategories[0] || builderCategories[0]
 
   const activeProgress = useMemo(() => {
     const count = answeredCount(activeCategory, answers[activeCategory.id] || {})
@@ -369,6 +376,8 @@ export default function DiscoveryPage() {
     setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
     setSuccessId(null)
     setSaveState('idle')
+    setShowTemplatePicker(false)
+    setTemplateQuery('')
   }
 
   function parseRecipients(input: string) {
@@ -440,6 +449,7 @@ export default function DiscoveryPage() {
         id: section.id || `section-${sectionIndex + 1}`,
         label: section.label,
         desc: section.description,
+        enabled: true,
         questions: [...section.questions]
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map(question => {
@@ -490,6 +500,8 @@ export default function DiscoveryPage() {
       setAnswers(Object.fromEntries(loadedCategories.map(category => [category.id, {}])))
       setSuccessId(null)
       setSaveState('idle')
+      setShowTemplatePicker(false)
+      setTemplateQuery('')
 
       if (knownTemplates) {
         setTemplates(knownTemplates)
@@ -518,7 +530,7 @@ export default function DiscoveryPage() {
           introText,
           audienceMode,
           status,
-          sections: builderCategories.map((category, categoryIndex) => ({
+          sections: builderCategories.filter(category => category.enabled).map((category, categoryIndex) => ({
             label: category.label,
             description: category.desc,
             orderIndex: categoryIndex,
@@ -667,6 +679,30 @@ export default function DiscoveryPage() {
     )))
   }
 
+  function toggleCategoryEnabled(categoryId: string) {
+    const enabledCount = builderCategories.filter(category => category.enabled).length
+
+    setBuilderCategories(prev => {
+      const target = prev.find(category => category.id === categoryId)
+      if (!target) return prev
+      if (target.enabled && enabledCount <= 1) return prev
+
+      const next = prev.map(category => (
+        category.id === categoryId ? { ...category, enabled: !category.enabled } : category
+      ))
+
+      const nextEnabled = next.filter(category => category.enabled)
+      if (!nextEnabled.some(category => category.id === activeId)) {
+        setActiveId(nextEnabled[0]?.id || next[0].id)
+      }
+
+      return next
+    })
+
+    setSuccessId(null)
+    setSaveState('idle')
+  }
+
   function updateQuestionText(categoryId: string, questionIndex: number, value: string) {
     setBuilderCategories(prev => prev.map(category => {
       if (category.id !== categoryId) return category
@@ -717,6 +753,15 @@ export default function DiscoveryPage() {
 
   if (loading) return <PageLoader />
 
+  const filteredTemplates = templates.filter(template => {
+    if (!templateQuery.trim()) return true
+    const query = templateQuery.trim().toLowerCase()
+    return [template.name, template.latestOrganisation || '', audienceLabel(template.audienceMode)]
+      .join(' ')
+      .toLowerCase()
+      .includes(query)
+  })
+
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px 72px' }}>
@@ -744,36 +789,78 @@ export default function DiscoveryPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'grid', gap: 10 }}>
-                  <Field label="Välj upplägg">
-                    <select
-                      value={currentTemplateId || ''}
-                      onChange={event => {
-                        const nextId = event.target.value
-                        if (nextId) {
-                          void loadTemplate(nextId)
-                        } else {
-                          resetBuilder()
-                        }
-                      }}
-                      disabled={Boolean(loadingTemplateId) || saving}
-                      style={editorInputStyle}
-                    >
-                      <option value="">Nytt upplägg</option>
-                      {templates.map(template => (
-                        <option key={template.id} value={template.id}>
-                          {template.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>
-                      Nytt
+                      Skapa nytt
+                    </button>
+                    <button type="button" onClick={() => setShowTemplatePicker(current => !current)} style={secondaryButtonStyle}>
+                      {showTemplatePicker ? 'Stäng tidigare' : 'Öppna tidigare'}
                     </button>
                     <button type="button" onClick={() => void saveTemplate('draft')} disabled={saving || Boolean(loadingTemplateId)} style={primaryButtonStyle(saving || Boolean(loadingTemplateId))}>
                       {saving ? 'Sparar…' : saveState === 'saved' ? 'Sparat' : 'Spara upplägg'}
                     </button>
                   </div>
+
+                  {currentTemplateId && !showTemplatePicker && (
+                    <div style={pickerPanelStyle}>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
+                        Öppet nu
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                        {templates.find(template => template.id === currentTemplateId)?.name || templateName}
+                      </div>
+                    </div>
+                  )}
+
+                  {showTemplatePicker && (
+                    <div style={pickerPanelStyle}>
+                      <div style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Tidigare discovery</div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                          Fortsätt i ett upplägg du redan har börjat arbeta med. Kund, målgrupp och senaste aktivitet hjälper dig hitta rätt.
+                        </div>
+                      </div>
+
+                      <input
+                        value={templateQuery}
+                        onChange={event => setTemplateQuery(event.target.value)}
+                        placeholder="Sök på namn, kund eller målgrupp"
+                        style={editorInputStyle}
+                      />
+
+                      <div style={{ display: 'grid', gap: 8, marginTop: 12, maxHeight: 320, overflowY: 'auto' }}>
+                        {filteredTemplates.map(template => (
+                          <button
+                            key={template.id}
+                            type="button"
+                            onClick={() => void loadTemplate(template.id)}
+                            style={{
+                              ...templateRowStyle,
+                              borderColor: template.id === currentTemplateId ? 'rgba(198,35,104,0.35)' : 'rgba(14,14,12,0.08)',
+                              background: template.id === currentTemplateId ? 'rgba(198,35,104,0.06)' : 'rgba(255,255,255,0.88)',
+                            }}
+                          >
+                            <div style={{ display: 'grid', gap: 4, textAlign: 'left' }}>
+                              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                                {(template.latestOrganisation?.trim() || 'Utan kund kopplad') + ' · ' + template.name}
+                              </div>
+                              <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                                {formatRelativeDate(template.updatedAt)} · {audienceLabel(template.audienceMode)} · {template.sessionCount === 0 ? 'Inte skickat ännu' : `${template.sessionCount} utskick`}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>
+                              {loadingTemplateId === template.id ? 'Öppnar…' : 'Öppna'}
+                            </div>
+                          </button>
+                        ))}
+                        {filteredTemplates.length === 0 && (
+                          <div style={{ fontSize: 12.5, color: 'var(--text-3)', padding: '10px 2px' }}>
+                            Inga tidigare discovery matchar din sökning.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Field label="Namn internt">
@@ -828,6 +915,54 @@ export default function DiscoveryPage() {
                     <div style={{ fontSize: 11.5, color: 'var(--text-3)', alignSelf: 'center' }}>
                       Påverkar främst Ledarskap, Change management, AI readiness och Vision & mål.
                     </div>
+                  </div>
+                </div>
+
+                <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Teman i upplägget
+                  </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                    Här kan du smalna av ett bredare discovery. Avstängda teman försvinner från previewn och sparas inte i upplägget.
+                  </div>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {builderCategories.map(category => (
+                      <button
+                        key={`${category.id}-toggle`}
+                        type="button"
+                        onClick={() => toggleCategoryEnabled(category.id)}
+                        disabled={category.enabled && enabledCategories.length <= 1}
+                        style={{
+                          ...themeToggleStyle,
+                          opacity: category.enabled || enabledCategories.length > 1 ? 1 : 0.55,
+                        }}
+                      >
+                        <div style={{ display: 'grid', gap: 4, textAlign: 'left' }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{category.label}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.45 }}>
+                            {category.enabled ? 'Med i discoveryt' : 'Dolt från preview och utskick'}
+                          </div>
+                        </div>
+                        <div style={{
+                          width: 44,
+                          height: 26,
+                          borderRadius: 999,
+                          background: category.enabled ? 'rgba(198,35,104,0.18)' : 'rgba(14,14,12,0.09)',
+                          padding: 3,
+                          display: 'flex',
+                          justifyContent: category.enabled ? 'flex-end' : 'flex-start',
+                          transition: 'background 0.18s ease',
+                        }}>
+                          <div style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: category.enabled ? 'var(--accent)' : '#fff',
+                            boxShadow: '0 1px 4px rgba(14,14,12,0.15)',
+                          }} />
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -1000,7 +1135,7 @@ export default function DiscoveryPage() {
 
               <div style={{ padding: '30px 28px 0', overflowX: 'auto', scrollbarWidth: 'none' as const }}>
                 <div style={{ display: 'flex', gap: 8, minWidth: 'max-content', paddingBottom: 2 }}>
-                  {builderCategories.map(category => {
+                  {enabledCategories.map(category => {
                     const active = category.id === activeId
                     return (
                       <button
@@ -1233,6 +1368,32 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+function audienceLabel(mode: AudienceMode) {
+  switch (mode) {
+    case 'leaders':
+      return 'Främst ledare'
+    case 'mixed':
+      return 'Blandad grupp'
+    default:
+      return 'Bred målgrupp'
+  }
+}
+
+function formatRelativeDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Uppdaterad nyligen'
+
+  const now = new Date()
+  const sameDay = now.toDateString() === date.toDateString()
+  if (sameDay) return 'Uppdaterad idag'
+
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (yesterday.toDateString() === date.toDateString()) return 'Uppdaterad igår'
+
+  return `Uppdaterad ${date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`
+}
+
 const editorInputStyle: React.CSSProperties = {
   width: '100%',
   borderRadius: 10,
@@ -1282,4 +1443,36 @@ const responsesLinkStyle: React.CSSProperties = {
   textDecoration: 'none',
   fontSize: 12.5,
   fontWeight: 600,
+}
+
+const pickerPanelStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 14,
+  background: 'var(--bg)',
+  padding: '14px',
+}
+
+const templateRowStyle: React.CSSProperties = {
+  width: '100%',
+  border: '1px solid rgba(14,14,12,0.08)',
+  borderRadius: 12,
+  padding: '12px 14px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  cursor: 'pointer',
+}
+
+const themeToggleStyle: React.CSSProperties = {
+  width: '100%',
+  border: '1px solid rgba(14,14,12,0.08)',
+  borderRadius: 14,
+  padding: '12px 14px',
+  background: 'var(--bg)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 14,
+  cursor: 'pointer',
 }
