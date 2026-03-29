@@ -380,6 +380,8 @@ Recommended v1 lenses:
 
 Each lens should use a fixed prompt template behind the scenes and make the framing visible in the UI.
 
+See `docs/specs/discovery-ai-analysis.md` for the dedicated AI contract, including output format, prompt rules, sparse-data handling, and caching strategy.
+
 ## AI Summary Rules
 
 AI analysis in `Data` must:

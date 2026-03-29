@@ -32,6 +32,14 @@ Running log of significant decisions made during development. For formal archite
 - a flat list of all responses should not be the default entry point
 - theme detail views and drill-down should carry more weight than generic tables
 
+## 2026-03-30 — Discovery AI Analysis Must Be Opinionated and Structured
+
+- AI analysis in `Discovery` should start from fixed named lenses, not free-form prompting
+- every analysis must distinguish between observations, differences, uncertainties, and next-step questions
+- AI output should be returned as structured JSON rather than free text
+- sparse datasets must produce visibly cautious analysis rather than generic overconfidence
+- the UI must keep AI interpretation close to raw-answer evidence
+
 ## 2026-03-30 — Next.js Was Upgraded to a Patched 14.2.x Release
 
 - the app was upgraded from `next@14.2.5` to `next@14.2.35`
