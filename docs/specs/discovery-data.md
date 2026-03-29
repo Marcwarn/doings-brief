@@ -114,6 +114,234 @@ The `Data` tab should be divided into four sections:
 - raw responses panel
   - searchable, grouped by respondent and theme
 
+## High-Volume UX Model
+
+When `Discovery` starts receiving tens or hundreds of responses, the UI must shift from "reading answers" to "finding signal".
+
+The default view should therefore follow this hierarchy:
+
+1. filter first
+2. aggregate second
+3. interpret third
+4. raw answers last
+
+The product should avoid opening on a flat list of all responses.
+
+## Recommended Screen Structure
+
+### 1. Filter bar
+
+A sticky filter bar should sit at the top of the `Data` tab.
+
+The first version should support:
+
+- customer or organisation
+- send-out or dispatch
+- audience mode
+- team or unit when such metadata exists
+- date range
+- response status
+
+Optional later additions:
+
+- save current view
+- compare two segments side by side
+
+### 2. KPI row
+
+Directly below the filter bar, the consultant should see a compact row of summary cards:
+
+- `Inbjudna`
+- `Svar inkomna`
+- `Svarsfrekvens`
+- `Senaste svar`
+- `Teman med stark signal`
+- `Teman med tydlig splittring`
+
+These cards are not the analysis. They are orientation.
+
+### 3. Main analysis canvas
+
+The main body of the `Data` tab should be structured into three functional zones.
+
+#### Zone A: Themes
+
+This is the primary entry point for understanding the response set.
+
+Each theme card should show:
+
+- theme name
+- number of respondents who answered that theme
+- signal strength indicator
+- one-line synthesis
+- split marker where disagreement is strong
+- click target for deeper view
+
+The theme grid should help a consultant answer:
+
+- where is there strongest alignment?
+- where is there tension?
+- which themes are still fuzzy?
+
+#### Zone B: Analysis
+
+This is where AI-supported interpretation sits.
+
+The first version should show one selected lens at a time, not many competing blocks.
+
+Each analysis block should include:
+
+- lens name
+- generation timestamp
+- scope summary, for example "23 svar, 3 team, målgrupp: blandad"
+- concise analysis broken into short sections
+- a clear tag that the content is AI-generated
+
+#### Zone C: Raw data
+
+This is the evidence layer.
+
+The raw answers area should:
+
+- inherit the active filters
+- inherit the selected theme where relevant
+- be searchable
+- default to short excerpts or collapsed cards
+- allow expansion to full answers
+
+The raw data area should never overwhelm the overview and analysis sections.
+
+## Theme Detail View
+
+Clicking a theme card should open a deeper theme-specific view.
+
+This can be a drawer, modal, or dedicated internal subview, but it should always contain:
+
+- theme summary
+- response coverage
+- common patterns
+- key differences
+- representative excerpts
+- filtered raw answers
+
+For large volumes, the theme detail view is more important than a generic "all responses" page.
+
+## Component Specification
+
+### FilterBar
+
+Purpose:
+
+- define the slice of data currently being interpreted
+
+Should include:
+
+- primary filters visible at all times
+- "Rensa filter"
+- visible result scope text such as "Visar 48 svar från 2 utskick"
+
+### KpiCard
+
+Purpose:
+
+- orient quickly without scrolling
+
+Should include:
+
+- short label
+- value
+- optional secondary note
+
+### ThemeSignalCard
+
+Purpose:
+
+- represent one Discovery theme as an analytical unit
+
+Should include:
+
+- title
+- response count
+- signal strength
+- synthesis
+- markers for `samsyn`, `splittring`, or `otydligt`
+
+### AnalysisLensPanel
+
+Purpose:
+
+- run and present AI-supported interpretation from one named perspective
+
+Should include:
+
+- lens selector
+- refresh button
+- generated timestamp
+- analysis sections in short readable blocks
+
+### RawAnswerList
+
+Purpose:
+
+- expose the underlying answers for trust and drill-down
+
+Should include:
+
+- respondent label
+- section or theme
+- excerpt
+- expand interaction
+- search within current scope
+
+## Large-Volume Design Rules
+
+For 100+ responses, the product should follow these rules:
+
+1. Never lead with a giant table.
+2. Never mix summary, interpretation, and raw data without visible separation.
+3. Always make disagreement visible, not just consensus.
+4. Always preserve drill-down from AI summary to raw evidence.
+5. Keep one analytical question in focus at a time.
+
+## Visual Priority
+
+The order of emphasis should be:
+
+1. filters and scope
+2. high-level signal
+3. chosen interpretation
+4. supporting evidence
+
+This prevents the screen from feeling like analytics clutter.
+
+## Empty and Sparse States
+
+### No sends yet
+
+Show:
+
+- calm explanation
+- CTA to `Skicka`
+- note that responses and analysis appear here after send-out
+
+### Sent but no responses yet
+
+Show:
+
+- invite count
+- waiting state
+- optional prompt to send reminders
+
+### Only a few responses
+
+The UI should pivot slightly toward narrative interpretation instead of pretending to have statistical weight.
+
+This means:
+
+- fewer charts
+- more emphasis on excerpts
+- more careful wording in AI outputs
+
 ## Data Sources
 
 The first version should rely on existing Discovery entities:

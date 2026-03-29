@@ -25,6 +25,13 @@ Running log of significant decisions made during development. For formal archite
 - the first version should combine response overview, theme summaries, raw-answer drill-down, and a small set of fixed AI analysis lenses
 - arbitrary prompt writing is intentionally out of scope for the first implementation; analysis should start from named, opinionated lenses
 
+## 2026-03-30 — Discovery Data Must Handle High Response Volume
+
+- `Data` should be designed to work for tens or hundreds of responses, not only for a handful
+- the interface should lead with filters, aggregation, and theme-level signal before raw answers
+- a flat list of all responses should not be the default entry point
+- theme detail views and drill-down should carry more weight than generic tables
+
 ## 2024 — Initial Architecture
 
 - **Chose Next.js 14 App Router** over Pages Router for better server/client component control and co-located API routes
