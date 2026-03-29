@@ -762,6 +762,8 @@ export default function DiscoveryPage() {
       .includes(query)
   })
   const enabledCount = enabledCategories.length
+  const sendSuccessCount = sendResults?.filter(result => result.ok).length || 0
+  const sendFailureCount = sendResults?.filter(result => !result.ok).length || 0
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
@@ -1046,6 +1048,28 @@ export default function DiscoveryPage() {
                   >
                     {sending ? 'Skickar…' : 'Skicka underlag'}
                   </button>
+
+                  {sendResults && sendResults.length > 0 && sendSuccessCount > 0 && (
+                    <div style={{
+                      background: sendFailureCount > 0 ? '#fff7ed' : '#f4fbf6',
+                      border: `1px solid ${sendFailureCount > 0 ? '#fed7aa' : '#ccefd5'}`,
+                      borderRadius: 12,
+                      padding: '12px 14px',
+                      display: 'grid',
+                      gap: 4,
+                    }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: sendFailureCount > 0 ? '#9a3412' : '#166534' }}>
+                        {sendFailureCount > 0
+                          ? `${sendSuccessCount} skickades, ${sendFailureCount} gick inte fram`
+                          : `${sendSuccessCount} mottagare fick utskicket`}
+                      </div>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: sendFailureCount > 0 ? '#9a3412' : '#166534' }}>
+                        {sendFailureCount > 0
+                          ? 'Se status per mottagare nedan och försök igen för dem som inte fick mejlet.'
+                          : 'Discovery-länkarna är nu utskickade och du kan följa svaren under inkomna svar.'}
+                      </div>
+                    </div>
+                  )}
 
                   {sendResults && sendResults.length > 0 && (
                     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'grid', gap: 8 }}>
