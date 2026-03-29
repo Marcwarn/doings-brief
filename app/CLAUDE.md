@@ -52,6 +52,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Buildern kan nu ladda rekommenderade standardfrågor utifrån vald målgrupp, främst för Ledarskap, Change management, AI readiness och Vision & mål
 - Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 - `/api/discovery/send` kan nu skapa sessions och skicka Discovery-mejl, och buildern kan trigga utskicket
+- `/api/discovery/submit` skickar nu notismail till konsulten när ett Discovery-svar kommer in
 - `/dashboard/discovery/responses` och `/api/discovery/sessions*` finns nu för att följa Discovery-sessions och öppna enskilda svar
 - `/api/discovery/remind` och knappar i responses-vyn kan nu skicka manuella påminnelser till väntande Discovery-mottagare
 - `Discovery` har nu dokumenterad riktlinje för målgruppsanpassning: vissa teman ska vara gemensamma, medan andra senare bör få varianter för ledare kontra blandade grupper

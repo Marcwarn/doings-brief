@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdminClient } from '@/lib/server-clients'
+import { getResendClient, getSupabaseAdminClient } from '@/lib/server-clients'
 
 type DiscoverySubmitPayload = {
   token?: unknown
@@ -25,6 +25,13 @@ function asIntegerOrNull(value: unknown) {
     if (Number.isInteger(parsed)) return parsed
   }
   return null
+}
+
+function escHtml(value: string) {
+  return (value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 function normalizeSubmittedResponses(value: unknown) {
@@ -80,6 +87,7 @@ function normalizeSubmittedResponses(value: unknown) {
 export async function POST(req: NextRequest) {
   try {
     const admin = getSupabaseAdminClient()
+    const resend = getResendClient()
     const payload = await req.json() as DiscoverySubmitPayload
     const token = asTrimmedString(payload.token)
 
@@ -94,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     const { data: session, error: sessionError } = await admin
       .from('discovery_sessions')
-      .select('id, template_id, status')
+      .select('id, template_id, consultant_email, client_name, client_email, client_organisation, status')
       .eq('token', token)
       .single()
 
@@ -106,10 +114,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Det här formuläret har redan skickats in.' }, { status: 409 })
     }
 
-    const { data: sections, error: sectionsError } = await admin
-      .from('discovery_sections')
-      .select('id')
-      .eq('template_id', session.template_id)
+    const [
+      { data: template, error: templateError },
+      { data: sections, error: sectionsError },
+      { data: profile },
+    ] = await Promise.all([
+      admin
+        .from('discovery_templates')
+        .select('id, intro_title')
+        .eq('id', session.template_id)
+        .single(),
+      admin
+        .from('discovery_sections')
+        .select('id')
+        .eq('template_id', session.template_id),
+      session.consultant_email
+        ? admin
+            .from('profiles')
+            .select('full_name, sender_email')
+            .eq('email', session.consultant_email)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+
+    if (templateError || !template) {
+      console.error('discovery submit template error:', templateError)
+      return NextResponse.json({ error: 'Kunde inte verifiera upplägget.' }, { status: 500 })
+    }
 
     if (sectionsError) {
       console.error('discovery submit sections error:', sectionsError)
@@ -239,6 +270,61 @@ export async function POST(req: NextRequest) {
     if (sessionUpdateError) {
       console.error('discovery submit session update error:', sessionUpdateError)
       return NextResponse.json({ error: 'Kunde inte avsluta formuläret.' }, { status: 500 })
+    }
+
+    const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://doings-brief.vercel.app'}/dashboard/discovery/responses/${session.id}`
+    const senderName = profile?.full_name || 'Doings'
+    const senderEmail = profile?.sender_email || process.env.FROM_EMAIL || 'brief@doingsclients.se'
+
+    if (session.consultant_email) {
+      const organisationLine = session.client_organisation
+        ? `<p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.58);">${escHtml(session.client_organisation)}</p>`
+        : ''
+
+      const { error: emailError } = await resend.emails.send({
+        from: `${senderName} <${senderEmail}>`,
+        to: session.consultant_email,
+        subject: `Discovery besvarad – ${session.client_name}`,
+        html: `<!DOCTYPE html>
+<html lang="sv"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f5f4f8;font-family:'DM Sans',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(107,45,130,.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#1e0e2e,#6b2d82);padding:28px 32px;">
+            <p style="margin:0 0 4px;font-size:12px;color:rgba(255,255,255,.62);letter-spacing:.01em;">Discovery besvarad</p>
+            <h1 style="margin:0;font-size:22px;font-weight:700;color:#fff;">${escHtml(session.client_name)}</h1>
+            <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,.58);">${escHtml(session.client_email)}</p>
+            ${organisationLine}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 24px;">
+            <p style="margin:0 0 12px;font-size:14px;color:#5e5873;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">Upplägg</p>
+            <p style="margin:0 0 18px;font-size:18px;color:#1a1a2e;font-weight:700;">${escHtml(template.intro_title || 'Perspektiv')}</p>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#4a4458;">
+              Ett nytt Discovery-svar har kommit in. Öppna svaret i dashboarden för att läsa alla teman och svar i sin helhet.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px;text-align:center;background:#f5f4f8;border-top:1px solid #e8d9f0;">
+            <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#6b2d82,#C62368);color:#fff;font-size:14px;font-weight:700;padding:12px 28px;border-radius:10px;text-decoration:none;">
+              Öppna svaret →
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+        text: `Discovery besvarad av ${session.client_name}\n\nUpplägg: ${template.intro_title || 'Perspektiv'}\nE-post: ${session.client_email}${session.client_organisation ? `\nOrganisation: ${session.client_organisation}` : ''}\n\nÖppna svaret i dashboarden:\n${dashboardUrl}`,
+      })
+
+      if (emailError) {
+        console.error('discovery submit notify email error:', JSON.stringify(emailError))
+      }
     }
 
     return NextResponse.json({ ok: true })

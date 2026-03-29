@@ -19,7 +19,7 @@ This directory contains 14 API route groups. All routes are Next.js 14 App Route
 | `discovery/sessions/` | Supabase session | List Discovery sessions owned by the consultant |
 | `discovery/sessions/[id]/` | Supabase session | Read one Discovery session with grouped answers |
 | `discovery/public/[token]/` | Token (no session) | Fetch public Discovery payload for one recipient |
-| `discovery/submit/` | Token (no session) | Save Discovery answers and mark the session submitted |
+| `discovery/submit/` | Token (no session) | Save Discovery answers, mark the session submitted, and notify the consultant by email |
 | `discovery/templates/` | Supabase session | Create, update, and list Discovery templates |
 | `discovery/templates/[id]/` | Supabase session | Fetch one full Discovery template with sections and questions |
 | `briefs/recipients-template/` | Supabase session | Download recipients CSV template |
