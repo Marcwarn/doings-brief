@@ -135,6 +135,26 @@ function normalizeHeader(value: string) {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
+function parseDelimitedLine(line: string) {
+  const parts: string[] = []
+  let current = ''
+  let inQuotes = false
+
+  for (const char of line) {
+    if (char === '"') {
+      inQuotes = !inQuotes
+    } else if (char === ',' && !inQuotes) {
+      parts.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+
+  parts.push(current.trim())
+  return parts
+}
+
 function parseSpreadsheetRows(rows: string[][]) {
   const normalizedRows = rows
     .map(row => row.map(cell => cell.trim()))
@@ -341,20 +361,19 @@ function SendBriefInner() {
     try {
       let importedLines: string[] = []
 
-      if (file.name.toLowerCase().endsWith('.txt')) {
-        const text = await file.text()
+      const lowerName = file.name.toLowerCase()
+      const text = await file.text()
+
+      if (lowerName.endsWith('.txt')) {
         importedLines = text
           .split(/\r?\n/)
           .map(line => line.trim())
           .filter(Boolean)
       } else {
-        const XLSX = await import('xlsx')
-        const buffer = await file.arrayBuffer()
-        const workbook = XLSX.read(buffer, { type: 'array' })
-        const firstSheetName = workbook.SheetNames[0]
-        const firstSheet = workbook.Sheets[firstSheetName]
-        const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(firstSheet, { header: 1, defval: '' })
-          .map(row => row.map(cell => `${cell ?? ''}`))
+        const rows = text
+          .split(/\r?\n/)
+          .filter(line => line.trim())
+          .map(parseDelimitedLine)
         const { lines, error: importError } = parseSpreadsheetRows(rows)
         if (importError) {
           setError(importError)
@@ -375,7 +394,7 @@ function SendBriefInner() {
       setRecipientsInput(recipients.map(recipient => buildRecipientLine(recipient.name, recipient.email, recipient.role || '')).join('\n'))
       setImportMessage(`${importedLines.length} mottagare importerade.`)
     } catch {
-      setError('Kunde inte läsa filen. Använd .csv, .xlsx, .xls eller .txt.')
+      setError('Kunde inte läsa filen. Använd .csv eller .txt.')
     } finally {
       e.target.value = ''
     }
@@ -706,7 +725,7 @@ function SendBriefInner() {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".csv,.xlsx,.xls,.txt"
+                accept=".csv,.txt"
                 onChange={importRecipientsFile}
                 style={{ display: 'none' }}
               />
@@ -726,7 +745,7 @@ function SendBriefInner() {
                     onClick={() => fileRef.current?.click()}
                     style={secondaryButtonStyle}
                   >
-                    Importera CSV/XLSX
+                    Importera CSV/TXT
                   </button>
                 </div>
               </div>
