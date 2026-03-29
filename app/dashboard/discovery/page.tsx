@@ -22,6 +22,15 @@ type DiscoveryTemplateSummary = {
   updatedAt: string
 }
 
+type DiscoverySendResult = {
+  sessionId: string
+  email: string
+  ok: boolean
+  token?: string
+  url?: string
+  reason?: string
+}
+
 type DiscoveryTemplateDetail = {
   template: {
     id: string
@@ -162,8 +171,13 @@ export default function DiscoveryPage() {
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
   const [introText, setIntroText] = useState(defaultIntroText)
   const [saving, setSaving] = useState(false)
+  const [sending, setSending] = useState(false)
   const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [clientOrganisation, setClientOrganisation] = useState('')
+  const [recipientsInput, setRecipientsInput] = useState('')
+  const [sendResults, setSendResults] = useState<DiscoverySendResult[] | null>(null)
   const [builderCategories, setBuilderCategories] = useState(categories)
   const [activeId, setActiveId] = useState(categories[0].id)
   const [answers, setAnswers] = useState<Record<string, CategoryState>>(() =>
@@ -226,6 +240,68 @@ export default function DiscoveryPage() {
     setAnswers(Object.fromEntries(categories.map(category => [category.id, {}])))
     setSuccessId(null)
     setSaveState('idle')
+  }
+
+  function parseRecipients(input: string) {
+    const lines = input
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean)
+
+    if (lines.length === 0) {
+      return { recipients: [] as Array<{ name: string; email: string; role: string | null }>, error: 'Lägg till minst en mottagare.' }
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i
+    const seen = new Set<string>()
+    const recipients: Array<{ name: string; email: string; role: string | null }> = []
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index]
+      let name = ''
+      let email = ''
+      let role = ''
+
+      const angleMatch = line.match(/^(.*?)<([^>]+)>(?:\s*[,|-]\s*(.+))?$/)
+      if (angleMatch) {
+        name = angleMatch[1].trim().replace(/,$/, '')
+        email = angleMatch[2].trim()
+        role = angleMatch[3]?.trim() || ''
+      } else if (line.includes(',')) {
+        const parts = line.split(',').map(part => part.trim()).filter(Boolean)
+        if (parts.length >= 3 && emailPattern.test(parts[1])) {
+          name = parts[0]
+          email = parts[1]
+          role = parts.slice(2).join(', ')
+        } else if (parts.length === 2 && emailPattern.test(parts[1])) {
+          name = parts[0]
+          email = parts[1]
+        } else if (parts.length === 2 && emailPattern.test(parts[0])) {
+          email = parts[0]
+          role = parts[1]
+        }
+      } else if (emailPattern.test(line)) {
+        email = line
+      }
+
+      if (!emailPattern.test(email)) {
+        return { recipients: [] as Array<{ name: string; email: string; role: string | null }>, error: `Rad ${index + 1} har fel format. Använd "Namn, e-post" eller "Namn <e-post>".` }
+      }
+
+      const normalizedEmail = email.toLowerCase()
+      if (seen.has(normalizedEmail)) {
+        return { recipients: [] as Array<{ name: string; email: string; role: string | null }>, error: `E-postadressen ${normalizedEmail} finns flera gånger i listan.` }
+      }
+
+      seen.add(normalizedEmail)
+      recipients.push({
+        name: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        role: role || null,
+      })
+    }
+
+    return { recipients, error: null }
   }
 
   function mapTemplateToCategories(payload: DiscoveryTemplateDetail['template']): DiscoveryCategory[] {
@@ -347,6 +423,57 @@ export default function DiscoveryPage() {
       setError(err instanceof Error ? err.message : 'Kunde inte spara discovery-upplägget.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function sendTemplate() {
+    setSendError(null)
+    setSendResults(null)
+
+    if (!currentTemplateId) {
+      setSendError('Spara discovery-upplägget innan du skickar det.')
+      return
+    }
+
+    const { recipients, error: recipientError } = parseRecipients(recipientsInput)
+    if (recipientError) {
+      setSendError(recipientError)
+      return
+    }
+
+    setSending(true)
+
+    try {
+      const response = await fetch('/api/discovery/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: currentTemplateId,
+          organisation: clientOrganisation,
+          recipients,
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok && !payload?.results) {
+        throw new Error(payload?.error || 'Kunde inte skicka discovery-utskicket.')
+      }
+
+      const nextResults = Array.isArray(payload?.results) ? payload.results as DiscoverySendResult[] : []
+      setSendResults(nextResults)
+
+      if (!response.ok) {
+        setSendError('Inga discovery-mejl kunde skickas. Kontrollera mottagarna och försök igen.')
+      } else if (payload?.failed > 0) {
+        setSendError(`${payload.failed} mottagare kunde inte få mejlet. Övriga skickades.`)
+      } else {
+        setRecipientsInput('')
+        setClientOrganisation('')
+      }
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'Kunde inte skicka discovery-utskicket.')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -540,7 +667,7 @@ export default function DiscoveryPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.88fr) minmax(0, 1.42fr)', gap: 22, alignItems: 'start' }}>
           <aside style={{ position: 'sticky', top: 22 }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 18px 20px' }}>
-              {error && <div style={{ marginBottom: 14 }}><InlineError text={error} /></div>}
+              {(error || sendError) && <div style={{ marginBottom: 14 }}><InlineError text={error || sendError || ''} /></div>}
 
               <div style={{ marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
@@ -612,6 +739,56 @@ export default function DiscoveryPage() {
                     style={{ ...editorInputStyle, minHeight: 88, resize: 'vertical' }}
                   />
                 </Field>
+
+                <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Skicka discovery
+                  </div>
+
+                  <Field label="Organisation">
+                    <input
+                      value={clientOrganisation}
+                      onChange={event => setClientOrganisation(event.target.value)}
+                      placeholder="Till exempel Acme AB"
+                      style={editorInputStyle}
+                    />
+                  </Field>
+
+                  <Field label="Mottagare">
+                    <textarea
+                      value={recipientsInput}
+                      onChange={event => setRecipientsInput(event.target.value)}
+                      rows={6}
+                      placeholder={'Anna Andersson, anna@bolag.se\nErik Eriksson <erik@bolag.se>'}
+                      style={{ ...editorInputStyle, minHeight: 128, resize: 'vertical' }}
+                    />
+                  </Field>
+
+                  <button
+                    type="button"
+                    onClick={() => void sendTemplate()}
+                    disabled={sending}
+                    style={primaryButtonStyle(sending)}
+                  >
+                    {sending ? 'Skickar…' : 'Skicka discovery'}
+                  </button>
+
+                  {sendResults && sendResults.length > 0 && (
+                    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'grid', gap: 8 }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Skickstatus
+                      </div>
+                      {sendResults.map(result => (
+                        <div key={result.sessionId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
+                          <span style={{ color: 'var(--text)' }}>{result.email}</span>
+                          <span style={{ color: result.ok ? '#166534' : '#8e244c' }}>
+                            {result.ok ? 'Skickat' : (result.reason || 'Misslyckades')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <Field label="Temanamn">
                   <input

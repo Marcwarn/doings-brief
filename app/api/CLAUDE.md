@@ -14,6 +14,7 @@ This directory contains 14 API route groups. All routes are Next.js 14 App Route
 | `briefs/batches/` | Supabase session | CRUD for batch dispatches |
 | `briefs/delete/` | Supabase session | Delete a brief session |
 | `briefs/dispatches/` | Supabase session | CRUD for dispatch records |
+| `discovery/send/` | Supabase session | Create Discovery sessions and send token-based invite emails |
 | `discovery/public/[token]/` | Token (no session) | Fetch public Discovery payload for one recipient |
 | `discovery/submit/` | Token (no session) | Save Discovery answers and mark the session submitted |
 | `discovery/templates/` | Supabase session | Create, update, and list Discovery templates |
