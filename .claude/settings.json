@@ -50,7 +50,6 @@
     ],
     "Stop": [
       {
-        "matcher": "stop",
         "hooks": [
           {
             "type": "command",
