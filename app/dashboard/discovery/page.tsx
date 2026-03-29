@@ -155,7 +155,7 @@ const sharedCategories: DiscoveryCategory[] = [
   ] },
 ]
 
-const defaultIntroTitle = 'Fördjupa underlaget inför nästa steg'
+const defaultIntroTitle = 'Perspektiv'
 const defaultIntroText = 'Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.'
 const defaultAudienceMode: AudienceMode = 'shared'
 
@@ -299,7 +299,7 @@ export default function DiscoveryPage() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [templateQuery, setTemplateQuery] = useState('')
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
-  const [templateName, setTemplateName] = useState('Fördjupat underlag')
+  const [templateName, setTemplateName] = useState('Perspektiv')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
   const [introText, setIntroText] = useState(defaultIntroText)
   const [audienceMode, setAudienceMode] = useState<'shared' | 'leaders' | 'mixed'>(defaultAudienceMode)
@@ -366,7 +366,7 @@ export default function DiscoveryPage() {
 
   function resetBuilder() {
     setCurrentTemplateId(null)
-    setTemplateName('Fördjupat underlag')
+    setTemplateName('Perspektiv')
     setIntroTitle(defaultIntroTitle)
     setIntroText(defaultIntroText)
     setAudienceMode(defaultAudienceMode)

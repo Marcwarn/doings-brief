@@ -45,7 +45,7 @@ export async function GET() {
       sessions: (sessions || []).map(session => ({
         id: session.id,
         templateId: session.template_id,
-        templateName: templateNameById.get(session.template_id) || 'Fördjupat underlag',
+        templateName: templateNameById.get(session.template_id) || 'Perspektiv',
         clientName: session.client_name,
         clientEmail: session.client_email,
         clientOrganisation: session.client_organisation,
