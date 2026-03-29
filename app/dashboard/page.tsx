@@ -8,6 +8,7 @@ import {
   groupBriefSessions,
   groupCustomers,
   type BriefBatchLookupMap,
+  type GroupedBriefSessions,
 } from '@/lib/brief-batches'
 
 export default function DashboardPage() {
@@ -16,6 +17,8 @@ export default function DashboardPage() {
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
   const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [loading, setLoading] = useState(true)
+  const [remindedGroups, setRemindedGroups] = useState<Set<string>>(new Set())
+  const [remindLoading, setRemindLoading] = useState<string | null>(null)
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -50,6 +53,25 @@ export default function DashboardPage() {
       })
       .catch(() => setBatchLookup({}))
   }, [sessions])
+
+  async function handleRemind(group: GroupedBriefSessions) {
+    const pendingIds = group.sessions
+      .filter(s => s.status === 'pending')
+      .map(s => s.id)
+    if (pendingIds.length === 0) return
+
+    setRemindLoading(group.key)
+    try {
+      await fetch('/api/briefs/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionIds: pendingIds }),
+      })
+      setRemindedGroups(prev => new Set([...prev, group.key]))
+    } finally {
+      setRemindLoading(null)
+    }
+  }
 
   if (loading) return <Loader />
 
@@ -140,21 +162,32 @@ export default function DashboardPage() {
           <Panel title="Behöver uppmärksamhet" href="/dashboard/briefs" linkText="Alla utskick">
             {activeDispatches.length === 0
               ? <BriefEmptyCard title="Inga pågående utskick" text="Det finns inga aktiva utskick som väntar på svar just nu." />
-              : activeDispatches.map(group => (
-                <Link
-                  key={group.key}
-                  href={batchLookup[group.sessions[0]?.id || '']?.dispatchId ? `/dashboard/dispatches/${batchLookup[group.sessions[0]?.id || '']?.dispatchId}` : '/dashboard/briefs'}
-                  style={{ ...rowStyle, textDecoration: 'none' }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{group.label}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
-                      {group.pendingCount} väntar · senaste utskick {formatDate(group.lastSentAt)}
+              : activeDispatches.map(group => {
+                const dispatchId = batchLookup[group.sessions[0]?.id || '']?.dispatchId
+                const href = dispatchId ? `/dashboard/dispatches/${dispatchId}` : '/dashboard/briefs'
+                const reminded = remindedGroups.has(group.key)
+                const isLoading = remindLoading === group.key
+                return (
+                  <div key={group.key} style={rowStyle}>
+                    <Link href={href} style={{ flex: 1, textDecoration: 'none', minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{group.label}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                        {group.pendingCount} väntar · senaste utskick {formatDate(group.lastSentAt)}
+                      </div>
+                    </Link>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                      <Pill ok={group.pendingCount === 0} />
+                      <button
+                        onClick={() => handleRemind(group)}
+                        disabled={reminded || isLoading}
+                        style={remindBtnStyle(reminded)}
+                      >
+                        {isLoading ? '...' : reminded ? 'Skickat' : 'Påminn'}
+                      </button>
                     </div>
                   </div>
-                  <Pill ok={group.pendingCount === 0} />
-                </Link>
-              ))}
+                )
+              })}
           </Panel>
 
           <Panel title="Frågebatterier att använda" href="/dashboard/question-sets" linkText="Hantera">
@@ -223,6 +256,21 @@ const primaryLinkStyle: React.CSSProperties = {
   textDecoration: 'none',
 }
 
+function remindBtnStyle(sent: boolean): React.CSSProperties {
+  return {
+    padding: '5px 10px',
+    borderRadius: 6,
+    border: '1px solid var(--border)',
+    background: sent ? 'var(--surface)' : 'var(--accent-dim)',
+    color: sent ? 'var(--text-3)' : 'var(--accent)',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: sent ? 'default' : 'pointer',
+    fontFamily: 'var(--font-display)',
+    opacity: sent ? 0.6 : 1,
+  }
+}
+
 function Panel({ title, href, linkText, children }: { title: string; href: string; linkText: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -242,7 +290,7 @@ function Pill({ ok }: { ok: boolean }) {
       letterSpacing: '0.01em',
       background: ok ? '#f0fdf4' : '#f5f5f4',
       color: ok ? '#16a34a' : '#a8a29e',
-      flexShrink: 0, marginLeft: 10,
+      flexShrink: 0,
     }}>
       {ok ? 'Klart' : 'Pågår'}
     </span>
