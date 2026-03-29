@@ -8,10 +8,16 @@ import { slugifyCustomer, type StoredCustomerRecord } from '@/lib/customers'
 import { BriefSubnav } from '@/app/dashboard/brief/ui'
 
 const F: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', borderRadius: 7,
-  border: '1px solid var(--border)', background: 'var(--bg)',
-  fontSize: 13.5, color: 'var(--text)', outline: 'none',
-  fontFamily: 'var(--font-sans)', transition: 'border-color 0.15s, box-shadow 0.15s',
+  width: '100%',
+  padding: '13px 16px',
+  borderRadius: 12,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.92)',
+  fontSize: 14,
+  color: 'var(--text)',
+  outline: 'none',
+  fontFamily: 'var(--font-sans)',
+  transition: 'border-color 0.18s, box-shadow 0.18s, background 0.18s',
 }
 
 type Recipient = {
@@ -534,9 +540,9 @@ function SendBriefInner() {
   if (sent) {
     const firstUrl = briefUrl(sent[0].token)
     return (
-      <div style={{ padding: '40px 44px', maxWidth: 560, animation: 'fadeUp 0.35s ease both' }}>
-        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '48px 36px', textAlign: 'center', border: '1px solid var(--border)' }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '1px solid #bbf7d0' }}>
+      <div style={pageShellStyle}>
+        <div style={{ ...panelStyle, maxWidth: 640, margin: '0 auto', padding: '44px 36px', textAlign: 'center' }}>
+          <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#f4fbf6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '1px solid #ccefd5' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
@@ -544,7 +550,7 @@ function SendBriefInner() {
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: '0 0 10px' }}>
             {sent.length === 1 ? 'Brief skickad!' : `${sent.length} briefs skickade!`}
           </h2>
-          <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 28px' }}>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 28px', lineHeight: 1.7 }}>
             {sent.length === 1 ? (
               <>Vi skickade en länk till <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{sent[0].email}</strong>.</>
             ) : (
@@ -552,8 +558,8 @@ function SendBriefInner() {
             )}
           </p>
           {sent.length > 1 && (
-            <div style={{ background: 'var(--bg)', borderRadius: 7, padding: '12px 14px', marginBottom: 16, textAlign: 'left', border: '1px solid var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 8 }}>
+            <div style={{ ...subtlePanelStyle, marginBottom: 16, textAlign: 'left' }}>
+              <div style={eyebrowLabelStyle}>
                 Skickade mottagare
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -569,32 +575,19 @@ function SendBriefInner() {
               </div>
             </div>
           )}
-          <div style={{ background: 'var(--bg)', borderRadius: 7, padding: '12px 14px', marginBottom: 24, textAlign: 'left', border: '1px solid var(--border)' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 5 }}>
+          <div style={{ ...subtlePanelStyle, marginBottom: 24, textAlign: 'left' }}>
+            <div style={{ ...eyebrowLabelStyle, marginBottom: 5 }}>
               {sent.length === 1 ? 'Länk till klienten' : 'Exempel på personlig länk'}
             </div>
             <div style={{ fontSize: 11.5, fontFamily: 'monospace', color: 'var(--text-2)', wordBreak: 'break-all' }}>{firstUrl}</div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => navigator.clipboard.writeText(firstUrl)} style={{
-              flex: 1, padding: '10px 0', borderRadius: 7,
-              border: '1px solid var(--border)', background: 'var(--surface)',
-              fontSize: 13.5, fontWeight: 500, color: 'var(--text-2)', cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-              transition: 'border-color 0.15s',
-            }}
+            <button onClick={() => navigator.clipboard.writeText(firstUrl)} style={{ ...secondaryButtonStyle, flex: 1, justifyContent: 'center' }}
             onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
             onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
               {sent.length === 1 ? 'Kopiera länk' : 'Kopiera första länk'}
             </button>
-            <button onClick={() => { setSent(null); setRecipientsInput(''); setClientOrg('') }} style={{
-              flex: 1, padding: '10px 0', borderRadius: 7,
-              border: '1px solid var(--border)', background: 'var(--surface)',
-              fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 700,
-              letterSpacing: '0.01em', color: 'var(--text)',
-              cursor: 'pointer',
-              transition: 'border-color 0.15s, background 0.15s',
-            }}>
+            <button onClick={() => { setSent(null); setRecipientsInput(''); setClientOrg('') }} style={{ ...primaryButtonStyle, flex: 1, justifyContent: 'center' }}>
               Skicka fler
             </button>
           </div>
@@ -607,37 +600,37 @@ function SendBriefInner() {
   }
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 700, animation: 'fadeUp 0.35s ease both' }}>
-      <div style={{ marginBottom: 28 }}>
+    <div style={pageShellStyle}>
+      <div style={{ marginBottom: 30 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
           Nytt utskick
         </h1>
-        <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8 }}>
+        <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 10, lineHeight: 1.7, maxWidth: 620 }}>
           Välj företag, frågor och mottagare. Skicka sedan briefen och följ svaren i utskicket.
         </p>
       </div>
 
       <BriefSubnav active="send" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 20 }}>
         {[
           ['1', 'Företag och mottagare', 'Välj företag och ange vilka som ska svara.'],
           ['2', 'Frågor', 'Skriv egna frågor eller utgå från ett befintligt batteri.'],
           ['3', 'Skicka', 'Skicka briefen och följ svarsläget i utskicket.'],
         ].map(([step, title, text]) => (
-          <div key={step} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 16px 14px' }}>
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
+          <div key={step} style={{ ...panelStyle, padding: '18px 18px 16px' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(198,35,104,0.10)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
               {step}
             </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{title}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>{text}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.6 }}>{text}</div>
           </div>
         ))}
       </div>
 
       <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', border: '1px solid var(--border)' }}>
+        <div style={{ ...panelStyle, padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <StepBadge value="1" />
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
@@ -646,7 +639,7 @@ function SendBriefInner() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Företag</label>
+              <label style={fieldLabelStyle}>Företag</label>
               <div style={{ position: 'relative' }}>
                 <input
                   value={clientOrg}
@@ -658,13 +651,13 @@ function SendBriefInner() {
                   style={F}
                   onFocus={e => {
                     setShowCustomerSuggestions(true)
-                    e.target.style.borderColor = 'var(--accent)'
-                    e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)'
+                    e.target.style.borderColor = 'rgba(198,35,104,0.45)'
+                    e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
                   }}
                   onBlur={e => {
                     window.setTimeout(() => setShowCustomerSuggestions(false), 120)
                     e.target.style.borderColor = 'var(--border)'
-                    e.target.style.boxShadow = ''
+                    e.target.style.boxShadow = 'none'
                   }}
                 />
                 {showCustomerSuggestions && customerSuggestions.length > 0 && (
@@ -674,10 +667,10 @@ function SendBriefInner() {
                     left: 0,
                     right: 0,
                     zIndex: 20,
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 10,
-                    boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+                    background: 'rgba(255,255,255,0.98)',
+                    border: '1px solid rgba(14,14,12,0.08)',
+                    borderRadius: 14,
+                    boxShadow: '0 18px 40px rgba(14,14,12,0.10)',
                     overflow: 'hidden',
                   }}>
                     {customerSuggestions.map(customer => (
@@ -692,10 +685,10 @@ function SendBriefInner() {
                         style={{
                           width: '100%',
                           textAlign: 'left',
-                          padding: '10px 12px',
+                          padding: '11px 14px',
                           border: 'none',
                           borderBottom: '1px solid var(--border-sub)',
-                          background: 'var(--surface)',
+                          background: 'rgba(255,255,255,0.98)',
                           color: 'var(--text)',
                           fontSize: 13,
                           cursor: 'pointer',
@@ -709,7 +702,7 @@ function SendBriefInner() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>Vilka ska svara? *</label>
+              <label style={fieldLabelStyle}>Vilka ska svara? *</label>
               <input
                 ref={fileRef}
                 type="file"
@@ -718,38 +711,20 @@ function SendBriefInner() {
                 style={{ display: 'none' }}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
-                <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+                <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
                   Klistra in flera rader eller importera en fil med mottagare.
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Link
                     href="/api/briefs/recipients-template"
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 7,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg)',
-                      color: 'var(--text)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                    }}
+                    style={{ ...secondaryLinkStyle }}
                   >
                     Ladda ner mall
                   </Link>
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 7,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg)',
-                      color: 'var(--text)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
+                    style={secondaryButtonStyle}
                   >
                     Importera CSV/XLSX
                   </button>
@@ -762,14 +737,14 @@ function SendBriefInner() {
                 required
                 rows={6}
                 style={{ ...F, minHeight: 148, resize: 'vertical', lineHeight: 1.55 }}
-                onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+                onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
               />
-              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
+              <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: '10px 0 0', lineHeight: 1.7 }}>
                 En person per rad. Du kan skriva <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
               </p>
               {importMessage && (
-                <p style={{ fontSize: 12, color: '#166534', margin: '8px 0 0', padding: '10px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 7 }}>
+                <p style={{ fontSize: 12.5, color: '#166534', margin: '10px 0 0', padding: '12px 14px', background: '#f4fbf6', border: '1px solid #ccefd5', borderRadius: 12 }}>
                   {importMessage}
                 </p>
               )}
@@ -777,7 +752,7 @@ function SendBriefInner() {
           </div>
         </div>
 
-        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', border: '1px solid var(--border)' }}>
+        <div style={{ ...panelStyle, padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
             <StepBadge value="2" />
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
@@ -785,11 +760,11 @@ function SendBriefInner() {
             </div>
           </div>
           <div style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
               Börja med egna frågor. Om du redan har ett frågebatteri kan du hämta in det och justera här.
             </p>
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 14 }}>
+          <div style={{ ...eyebrowLabelStyle, marginBottom: 14 }}>
             Egna frågor *
           </div>
           {sets.length === 0 ? (
@@ -798,11 +773,11 @@ function SendBriefInner() {
               <Link href="/dashboard/question-sets/new" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Skapa ett →</Link>
             </p>
           ) : (
-            <div style={{ marginBottom: 16, padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)' }}>
+            <div style={{ ...subtlePanelStyle, marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.5 }}>
                     Välj ett befintligt batteri om du vill använda det som startpunkt.
                   </div>
                 </div>
@@ -821,10 +796,10 @@ function SendBriefInner() {
                   alignItems: 'flex-start',
                   gap: 12,
                   marginTop: 10,
-                  padding: '12px 14px',
-                  borderRadius: 10,
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
+                  padding: '13px 15px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(14,14,12,0.08)',
+                  background: 'rgba(255,255,255,0.85)',
                 }}>
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedSetRecord.name}</div>
@@ -844,8 +819,8 @@ function SendBriefInner() {
                     onChange={e => setQuestionSetQuery(e.target.value)}
                     placeholder="Sök frågebatteri"
                     style={F}
-                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
                   />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
                     {visibleSets.map(s => (
@@ -857,9 +832,9 @@ function SendBriefInner() {
                           display: 'flex', alignItems: 'flex-start', gap: 12,
                           width: '100%',
                           textAlign: 'left',
-                          padding: '12px 14px', borderRadius: 7, cursor: 'pointer',
-                          border: `1.5px solid ${selectedSet === s.id ? 'var(--accent)' : 'var(--border)'}`,
-                          background: selectedSet === s.id ? 'var(--accent-dim)' : 'var(--surface)',
+                          padding: '13px 15px', borderRadius: 12, cursor: 'pointer',
+                          border: `1.5px solid ${selectedSet === s.id ? 'rgba(198,35,104,0.4)' : 'rgba(14,14,12,0.08)'}`,
+                          background: selectedSet === s.id ? 'rgba(198,35,104,0.08)' : 'rgba(255,255,255,0.82)',
                           transition: 'border-color 0.15s, background 0.15s',
                         }}
                       >
@@ -870,7 +845,7 @@ function SendBriefInner() {
                       </button>
                     ))}
                     {visibleSets.length === 0 && (
-                      <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
+                      <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(14,14,12,0.08)', fontSize: 12.5, color: 'var(--text-3)' }}>
                         Inga frågebatterier matchar din sökning.
                       </div>
                     )}
@@ -886,7 +861,7 @@ function SendBriefInner() {
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
+              <label style={fieldLabelStyle}>
                 Namn på frågebatteri
               </label>
               <input
@@ -894,12 +869,12 @@ function SendBriefInner() {
                 onChange={e => setCustomSetName(e.target.value)}
                 placeholder="Till exempel Workshop kickoff frågor"
                 style={F}
-                onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+                onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
+              <div style={eyebrowLabelStyle}>
                 Egna frågor
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -922,8 +897,8 @@ function SendBriefInner() {
                     rows={2}
                     placeholder={`Fråga ${index + 1}`}
                     style={{ ...F, resize: 'vertical', minHeight: 72 }}
-                    onFocus={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
-                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = '' }}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
                   />
                   <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
                     Ta bort
@@ -934,7 +909,7 @@ function SendBriefInner() {
           </div>
           {customQuestions.some(question => question.text.trim()) && (
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-sub)' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em', marginBottom: 8 }}>
+              <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
                 {customQuestions.filter(question => question.text.trim()).length} frågor i utskicket
               </div>
             </div>
@@ -942,32 +917,29 @@ function SendBriefInner() {
         </div>
 
         {error && (
-          <p style={{ fontSize: 13, color: '#dc2626', margin: 0, padding: '10px 14px', background: '#fef2f2', borderRadius: 7, border: '1px solid #fecaca' }}>
+          <p style={{ fontSize: 13, color: '#b42318', margin: 0, padding: '12px 14px', background: '#fef3f2', borderRadius: 12, border: '1px solid #fecdca' }}>
             {error}
           </p>
         )}
 
-        <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '20px 22px', border: '1px solid var(--border)' }}>
+        <div style={{ ...panelStyle, padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <StepBadge value="3" />
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
               Skicka utskicket
             </div>
           </div>
-          <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '0 0 14px' }}>
+          <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: '0 0 16px', lineHeight: 1.6 }}>
             När du skickar skapas ett utskick som du sedan följer under <strong style={{ color: 'var(--text)' }}>Utskick</strong>.
           </p>
           <button type="submit" disabled={sending || sets.length === 0} style={{
+            ...primaryButtonStyle,
             width: '100%',
-            padding: '13px 0', borderRadius: 7, border: '1px solid var(--border)',
-            background: (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)',
-            fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-            letterSpacing: '0.01em', color: (sending || sets.length === 0) ? 'var(--text-3)' : 'var(--text)',
+            justifyContent: 'center',
+            background: (sending || sets.length === 0) ? '#d78aa5' : 'var(--text)',
             cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
-            transition: 'border-color 0.15s, background 0.15s',
-          }}
-          onMouseEnter={e => { if (!sending && sets.length > 0) { const el = e.currentTarget; el.style.borderColor = 'var(--accent)'; el.style.background = 'var(--accent-dim)' } }}
-          onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = 'var(--border)'; el.style.background = (sending || sets.length === 0) ? 'var(--bg)' : 'var(--surface)' }}>
+            boxShadow: (sending || sets.length === 0) ? 'none' : '0 10px 24px rgba(14,14,12,0.12)',
+          }}>
             {sending ? 'Skickar…' : 'Skicka brief →'}
           </button>
         </div>
@@ -994,26 +966,107 @@ function PageLoader() {
 
 function StepBadge({ value }: { value: string }) {
   return (
-    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>
+    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(198,35,104,0.10)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>
       {value}
     </div>
   )
 }
 
-const ghostActionStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  borderRadius: 7,
+const pageShellStyle: React.CSSProperties = {
+  padding: '40px 44px',
+  maxWidth: 760,
+  animation: 'fadeUp 0.35s ease both',
+}
+
+const panelStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.9)',
+  borderRadius: 24,
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 18px 44px rgba(14,14,12,0.06), 0 4px 14px rgba(14,14,12,0.03)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+}
+
+const subtlePanelStyle: React.CSSProperties = {
+  padding: '14px 16px',
+  borderRadius: 16,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(250,248,246,0.9)',
+}
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11.5,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  marginBottom: 8,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  fontFamily: 'var(--font-display)',
+}
+
+const eyebrowLabelStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-display)',
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+}
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: '9px 13px',
+  borderRadius: 10,
   border: '1px solid var(--border)',
-  background: 'var(--bg)',
+  background: 'rgba(255,255,255,0.88)',
+  color: 'var(--text)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'var(--font-sans)',
+  textDecoration: 'none',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  transition: 'border-color 0.18s, background 0.18s',
+}
+
+const secondaryLinkStyle: React.CSSProperties = {
+  ...secondaryButtonStyle,
+}
+
+const primaryButtonStyle: React.CSSProperties = {
+  padding: '13px 18px',
+  borderRadius: 12,
+  border: 'none',
+  background: 'var(--text)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 14,
+  fontWeight: 700,
+  letterSpacing: '0.01em',
+  color: '#fff',
+  cursor: 'pointer',
+  transition: 'background 0.18s, box-shadow 0.18s',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+}
+
+const ghostActionStyle: React.CSSProperties = {
+  padding: '9px 13px',
+  borderRadius: 10,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.88)',
   fontSize: 12,
   color: 'var(--text)',
   fontWeight: 600,
   cursor: 'pointer',
+  transition: 'border-color 0.18s, background 0.18s',
 }
 
 const smallDeleteStyle: React.CSSProperties = {
-  padding: '7px 10px',
-  borderRadius: 7,
+  padding: '9px 12px',
+  borderRadius: 10,
   border: '1px solid transparent',
   background: 'none',
   color: 'var(--text-3)',

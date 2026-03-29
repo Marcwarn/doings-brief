@@ -72,35 +72,65 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <img src="/bg/bg-13.svg" alt="" aria-hidden draggable={false}
-             className="absolute inset-0 w-full h-full object-cover select-none" />
-      </div>
+      <div
+        className="fixed inset-0 -z-10"
+        style={{
+          background: [
+            'radial-gradient(circle at top left, rgba(198,35,104,0.08), transparent 34%)',
+            'radial-gradient(circle at right 18%, rgba(198,35,104,0.05), transparent 24%)',
+            'linear-gradient(180deg, #faf8f6 0%, #f5f2ef 100%)',
+          ].join(', '),
+        }}
+      />
 
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
         <div style={{
-          width: '100%', maxWidth: 460,
-          background: '#fff', borderRadius: 20, overflow: 'hidden',
-          border: '0.5px solid rgba(198,35,104,0.15)',
-          boxShadow: '0 24px 64px rgba(198,35,104,0.16), 0 4px 16px rgba(0,0,0,0.06)',
+          width: '100%',
+          maxWidth: 460,
+          background: 'rgba(255,255,255,0.9)',
+          borderRadius: 24,
+          overflow: 'hidden',
+          border: '1px solid rgba(14,14,12,0.08)',
+          boxShadow: '0 28px 72px rgba(14,14,12,0.08), 0 6px 18px rgba(14,14,12,0.04)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
         }}>
 
           {/* Header */}
-          <div style={{ background: '#C62368', padding: '2rem 2.4rem 2.2rem', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', right: -40, top: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(247,202,202,0.12)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', right: 30, bottom: -60, width: 130, height: 130, borderRadius: '50%', background: 'rgba(247,202,202,0.08)', pointerEvents: 'none' }} />
+          <div
+            style={{
+              padding: '2rem 2.25rem 1.4rem',
+              position: 'relative',
+              overflow: 'hidden',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(251,247,248,0.96) 100%)',
+              borderBottom: '1px solid rgba(14,14,12,0.06)',
+            }}
+          >
+            <div style={{ position: 'absolute', right: -30, top: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(198,35,104,0.05)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', left: -30, bottom: -40, width: 120, height: 120, borderRadius: '50%', background: 'rgba(198,35,104,0.035)', pointerEvents: 'none' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.4rem', position: 'relative', zIndex: 1 }}>
-              <DoingsLogo />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.03em', fontFamily: 'var(--font-display)' }}>
+              <div style={{
+                width: 52,
+                height: 52,
+                borderRadius: 16,
+                background: 'var(--text)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 10px 24px rgba(14,14,12,0.14)',
+              }}>
+                <DoingsLogo />
+              </div>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>
                 Brief
               </span>
             </div>
 
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700, color: '#fff', margin: '0 0 0.4rem', lineHeight: 1.2, letterSpacing: '-0.01em', position: 'relative', zIndex: 1 }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 29, fontWeight: 700, color: 'var(--text)', margin: '0 0 0.45rem', lineHeight: 1.15, letterSpacing: '-0.02em', position: 'relative', zIndex: 1 }}>
               {mode === 'login' ? 'Välkommen tillbaka.' : 'Återställ lösenord.'}
             </h1>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, color: 'rgba(255,255,255,0.65)', margin: 0, position: 'relative', zIndex: 1, fontWeight: 300, lineHeight: 1.55 }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'var(--text-2)', margin: 0, position: 'relative', zIndex: 1, fontWeight: 400, lineHeight: 1.65, maxWidth: 340 }}>
               {mode === 'login'
                 ? 'Logga in med din e-post och ditt lösenord.'
                 : 'Ange din e-post så skickar vi en återställningslänk.'
@@ -109,25 +139,37 @@ export default function LoginPage() {
           </div>
 
           {/* Body */}
-          <div style={{ padding: '2rem 2.4rem 2.4rem', background: '#fdf5f7' }}>
+          <div style={{ padding: '1.9rem 2.25rem 2.3rem', background: 'transparent' }}>
 
             {mode === 'login' ? (
               <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <Field label="E-postadress">
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                          placeholder="din@doings.se" autoFocus required style={inputStyle}
-                         onFocus={e => (e.target.style.borderColor = '#C62368')}
-                         onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
+                         onFocus={e => {
+                           e.target.style.borderColor = 'rgba(198,35,104,0.45)'
+                           e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
+                         }}
+                         onBlur={e => {
+                           e.target.style.borderColor = 'var(--border)'
+                           e.target.style.boxShadow = 'none'
+                         }} />
                 </Field>
 
                 <Field label="Lösenord">
                   <input type="password" value={password} onChange={e => setPassword(e.target.value)}
                          placeholder="••••••••" required style={inputStyle}
-                         onFocus={e => (e.target.style.borderColor = '#C62368')}
-                         onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
+                         onFocus={e => {
+                           e.target.style.borderColor = 'rgba(198,35,104,0.45)'
+                           e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
+                         }}
+                         onBlur={e => {
+                           e.target.style.borderColor = 'var(--border)'
+                           e.target.style.boxShadow = 'none'
+                         }} />
                 </Field>
 
-                {error && <p style={{ color: '#C62368', fontSize: 12.5, margin: 0, fontFamily: 'var(--font-sans)' }}>{error}</p>}
+                {error && <p style={{ color: '#a22d5f', fontSize: 12.5, margin: 0, fontFamily: 'var(--font-sans)' }}>{error}</p>}
 
                 <button type="submit" disabled={loading} style={primaryBtn(loading)}>
                   {loading ? 'Loggar in…' : (
@@ -136,21 +178,21 @@ export default function LoginPage() {
                 </button>
 
                 <button type="button" onClick={() => { setMode('forgot'); setError(''); setSent(false) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12.5, color: '#c4909f', textDecoration: 'underline', textAlign: 'center' as const, padding: 0 }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12.5, color: 'var(--text-3)', textDecoration: 'underline', textAlign: 'center' as const, padding: 0 }}>
                   Glömt lösenord?
                 </button>
               </form>
             ) : sent ? (
               <div style={{ textAlign: 'center', padding: '12px 0' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fff', border: '1px solid #f0cdd8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(198,35,104,0.06)', border: '1px solid rgba(198,35,104,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C62368" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <p style={{ fontSize: 14, color: '#6b3348', fontFamily: 'var(--font-sans)', fontWeight: 500, margin: '0 0 6px' }}>Kolla din inbox</p>
-                <p style={{ fontSize: 13, color: '#a0607a', fontFamily: 'var(--font-sans)', margin: '0 0 20px' }}>
+                <p style={{ fontSize: 14.5, color: 'var(--text)', fontFamily: 'var(--font-sans)', fontWeight: 600, margin: '0 0 6px' }}>Kolla din inbox</p>
+                <p style={{ fontSize: 13.5, color: 'var(--text-2)', fontFamily: 'var(--font-sans)', margin: '0 0 20px', lineHeight: 1.6 }}>
                   Vi skickade en länk till <strong>{email}</strong>
                 </p>
                 <button type="button" onClick={() => { setMode('login'); setSent(false) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12.5, color: '#c4909f', textDecoration: 'underline' }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12.5, color: 'var(--text-3)', textDecoration: 'underline' }}>
                   Tillbaka till inloggning
                 </button>
               </div>
@@ -159,18 +201,24 @@ export default function LoginPage() {
                 <Field label="E-postadress">
                   <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                          placeholder="din@doings.se" autoFocus required style={inputStyle}
-                         onFocus={e => (e.target.style.borderColor = '#C62368')}
-                         onBlur={e => (e.target.style.borderColor = '#f0cdd8')} />
+                         onFocus={e => {
+                           e.target.style.borderColor = 'rgba(198,35,104,0.45)'
+                           e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
+                         }}
+                         onBlur={e => {
+                           e.target.style.borderColor = 'var(--border)'
+                           e.target.style.boxShadow = 'none'
+                         }} />
                 </Field>
 
-                {error && <p style={{ color: '#C62368', fontSize: 12.5, margin: 0, fontFamily: 'var(--font-sans)' }}>{error}</p>}
+                {error && <p style={{ color: '#a22d5f', fontSize: 12.5, margin: 0, fontFamily: 'var(--font-sans)' }}>{error}</p>}
 
                 <button type="submit" disabled={loading} style={primaryBtn(loading)}>
                   {loading ? 'Skickar…' : (<>Skicka återställningslänk <Arrow /></>)}
                 </button>
 
                 <button type="button" onClick={() => { setMode('login'); setError('') }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12.5, color: '#c4909f', textDecoration: 'underline', textAlign: 'center' as const, padding: 0 }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: 12.5, color: 'var(--text-3)', textDecoration: 'underline', textAlign: 'center' as const, padding: 0 }}>
                   Tillbaka till inloggning
                 </button>
               </form>
@@ -185,7 +233,7 @@ export default function LoginPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, letterSpacing: '0.01em', color: '#a0607a', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
+      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 8, fontFamily: 'var(--font-display)' }}>
         {label}
       </label>
       {children}
@@ -202,23 +250,36 @@ function Arrow() {
 }
 
 const inputStyle: React.CSSProperties = {
-  width: '100%', background: '#fff',
-  border: '1.5px solid #f0cdd8', borderRadius: 10,
+  width: '100%',
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid var(--border)',
+  borderRadius: 12,
   padding: '13px 16px',
-  fontFamily: 'var(--font-sans)', fontSize: 15, color: '#1a1a1a',
-  outline: 'none', transition: 'border-color 0.18s',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 15,
+  color: 'var(--text)',
+  outline: 'none',
+  transition: 'border-color 0.18s, box-shadow 0.18s',
 }
 
 function primaryBtn(loading: boolean): React.CSSProperties {
   return {
     width: '100%',
-    background: loading ? '#e08aaa' : '#C62368',
-    color: '#fff', border: 'none', borderRadius: 10,
+    background: loading ? '#d78aa5' : 'var(--text)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
     padding: '14px 20px',
-    fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700,
+    fontFamily: 'var(--font-display)',
+    fontSize: 15,
+    fontWeight: 700,
     letterSpacing: '0.01em',
     cursor: loading ? 'not-allowed' : 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     transition: 'background 0.18s',
+    boxShadow: '0 10px 24px rgba(14,14,12,0.12)',
   }
 }

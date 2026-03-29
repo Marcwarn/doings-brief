@@ -28,6 +28,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Länk till sessionsdetalj, frågeuppsättningar, kunder, utskicksflöde
 - AI-sammanfattning per session (genereras via `/api/briefs/summarize`)
 - Word-export av brief + sammanfattning
+- `/dashboard/send` har nu ett lugnare formulärspråk med mjukare kort, neutralare CTA:er och samma visuella riktning som den uppdaterade loginvyn
 
 **Saknas**: `app/dashboard/error.tsx` (ingen error boundary — okänt React-fel kraschar hela sidan)
 
@@ -75,6 +76,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 - Supabase Auth med cookie-session
 - Password reset-flöde
 - Callback-route för OAuth
+- Loginvyn är nu nedtonad visuellt med ljusare shell, mörk primärknapp och mindre skrikig accentanvändning
 
 ---
 
