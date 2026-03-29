@@ -147,7 +147,7 @@ Optional later additions:
 - save current view
 - compare two segments side by side
 
-### 2. KPI row
+### 2. Overview row
 
 Directly below the filter bar, the consultant should see a compact row of summary cards:
 
@@ -240,7 +240,7 @@ Should include:
 - "Rensa filter"
 - visible result scope text such as "Visar 48 svar från 2 utskick"
 
-### KpiCard
+### SummaryCard
 
 Purpose:
 
