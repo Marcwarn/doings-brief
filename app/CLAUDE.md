@@ -44,8 +44,9 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/api/discovery/templates` kan nu spara och lista Discovery-upplägg för inloggad konsult
 - `/api/discovery/templates/[id]` kan nu hämta ett fullständigt sparat Discovery-upplägg
 - Buildern i `/dashboard/discovery` kan nu spara nya upplägg och ladda sparade upplägg från databasen
+- Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 
-**Saknas**: Persistens, verklig submit-koppling och separat publik kundroute
+**Saknas**: Send-flöde som skapar sessions och skickar ut token-länkar
 
 ---
 
