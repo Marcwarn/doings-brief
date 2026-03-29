@@ -16,7 +16,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
     const sessionId = typeof params.id === 'string' ? params.id.trim() : ''
     if (!sessionId) {
-      return NextResponse.json({ error: 'id krävs' }, { status: 400 })
+      return NextResponse.json({ error: 'Id saknas.' }, { status: 400 })
     }
 
     const { data: session, error: sessionError } = await admin
@@ -26,7 +26,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       .single()
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Discovery-svaret hittades inte.' }, { status: 404 })
+      return NextResponse.json({ error: 'Svaret hittades inte.' }, { status: 404 })
     }
 
     if (session.consultant_id !== user.id) {
@@ -47,12 +47,12 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     ])
 
     if (templateError || !template) {
-      return NextResponse.json({ error: 'Discovery-upplägget hittades inte.' }, { status: 404 })
+      return NextResponse.json({ error: 'Upplägget hittades inte.' }, { status: 404 })
     }
 
     if (sectionsError) {
       console.error('discovery session sections error:', sectionsError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-temana.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa temana.' }, { status: 500 })
     }
 
     const sectionIds = (sections || []).map(section => section.id)
@@ -66,7 +66,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
     if (questionsError) {
       console.error('discovery session questions error:', questionsError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-frågorna.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa frågorna.' }, { status: 500 })
     }
 
     const questionIds = (questions || []).map(question => question.id)
@@ -87,7 +87,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
     if (responsesError) {
       console.error('discovery session responses error:', responsesError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-svaren.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa svaren.' }, { status: 500 })
     }
 
     if (responseOptionsError) {

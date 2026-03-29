@@ -186,7 +186,7 @@ export default function DiscoveryPublicPage() {
     return (
       <Shell>
         <SimpleCard
-          title="Discovery-sidan hittades inte"
+          title="Sidan hittades inte"
           description="Länken kan vara gammal, felaktig eller ännu inte aktiverad."
         />
       </Shell>
@@ -233,7 +233,7 @@ export default function DiscoveryPublicPage() {
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1, color: '#fff' }}>Discovery</div>
             </div>
             <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
-              Behovsanalys
+              Underlag inför nästa steg
             </div>
           </div>
 

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const { recipients, error: recipientError } = normalizeRecipients(body.recipients)
 
     if (!templateId) {
-      return NextResponse.json({ error: 'Välj ett discovery-upplägg innan du skickar.' }, { status: 400 })
+      return NextResponse.json({ error: 'Välj ett upplägg innan du skickar.' }, { status: 400 })
     }
 
     if (recipientError) {
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     ])
 
     if (templateError || !template) {
-      return NextResponse.json({ error: 'Discovery-upplägget hittades inte.' }, { status: 404 })
+      return NextResponse.json({ error: 'Upplägget hittades inte.' }, { status: 404 })
     }
 
     if (template.user_id !== user.id) {
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     if (sessionInsertError || !sessions || sessions.length === 0) {
       console.error('discovery session insert error:', sessionInsertError)
-      return NextResponse.json({ error: 'Kunde inte skapa discovery-utskicket.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte skapa utskicket.' }, { status: 500 })
     }
 
     const fromEmail = process.env.FROM_EMAIL || 'brief@doingsclients.se'
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
           from: `${senderName} via Doings <${fromEmail}>`,
           reply_to: user.email || undefined,
           to: session.client_email,
-          subject: `${template.intro_title} – underlag inför nästa steg med ${senderName}`,
+          subject: `${template.intro_title} – några fördjupande frågor inför nästa steg`,
           html,
           text: `Hej ${session.client_name}!\n\nTack för dialogen hittills. Här vill ${senderName} på Doings samla in några fördjupande perspektiv för att förstå nuläge, behov och riktning bättre.\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\nÖppna din personliga länk här:\n${discoveryUrl}\n\n${footerContactText}\n\n– Doings`,
         })

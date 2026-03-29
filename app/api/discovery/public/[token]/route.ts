@@ -19,7 +19,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
       .single()
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Discovery-sidan hittades inte.' }, { status: 404 })
+      return NextResponse.json({ error: 'Sidan hittades inte.' }, { status: 404 })
     }
 
     const { data: template, error: templateError } = await admin
@@ -29,7 +29,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
       .single()
 
     if (templateError || !template) {
-      return NextResponse.json({ error: 'Discovery-upplägget hittades inte.' }, { status: 404 })
+      return NextResponse.json({ error: 'Upplägget hittades inte.' }, { status: 404 })
     }
 
     const { data: sections, error: sectionsError } = await admin
@@ -40,7 +40,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     if (sectionsError) {
       console.error('discovery public sections error:', sectionsError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-temana.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa temana.' }, { status: 500 })
     }
 
     const sectionIds = (sections || []).map(section => section.id)
@@ -54,7 +54,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     if (questionsError) {
       console.error('discovery public questions error:', questionsError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-frågorna.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa frågorna.' }, { status: 500 })
     }
 
     const questionIds = (questions || []).map(question => question.id)
@@ -68,7 +68,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     if (optionsError) {
       console.error('discovery public options error:', optionsError)
-      return NextResponse.json({ error: 'Kunde inte läsa alternativen för discovery-frågorna.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa alternativen för frågorna.' }, { status: 500 })
     }
 
     const optionsByQuestionId = new Map<string, Array<{

@@ -209,7 +209,7 @@ export default function DiscoveryPage() {
       const payload = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Kunde inte hämta discovery-uppläggen.')
+        throw new Error(payload?.error || 'Kunde inte hämta uppläggen.')
       }
 
       const nextTemplates = Array.isArray(payload?.templates) ? payload.templates as DiscoveryTemplateSummary[] : []
@@ -226,7 +226,7 @@ export default function DiscoveryPage() {
         setLoading(false)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte hämta discovery-uppläggen.')
+      setError(err instanceof Error ? err.message : 'Kunde inte hämta uppläggen.')
       setLoading(false)
     }
   }
@@ -344,7 +344,7 @@ export default function DiscoveryPage() {
       const payload = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(payload?.error || 'Kunde inte läsa discovery-upplägget.')
+        throw new Error(payload?.error || 'Kunde inte läsa upplägget.')
       }
 
       const template = (payload as DiscoveryTemplateDetail).template
@@ -364,7 +364,7 @@ export default function DiscoveryPage() {
         setTemplates(knownTemplates)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte läsa discovery-upplägget.')
+      setError(err instanceof Error ? err.message : 'Kunde inte läsa upplägget.')
     } finally {
       setLoadingTemplateId(null)
       setLoading(false)
@@ -409,7 +409,7 @@ export default function DiscoveryPage() {
 
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        throw new Error(payload?.error || 'Kunde inte spara discovery-upplägget.')
+        throw new Error(payload?.error || 'Kunde inte spara upplägget.')
       }
 
       const savedTemplateId = typeof payload?.templateId === 'string' ? payload.templateId : currentTemplateId
@@ -421,7 +421,7 @@ export default function DiscoveryPage() {
         setSaveState(current => current === 'saved' ? 'idle' : current)
       }, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte spara discovery-upplägget.')
+      setError(err instanceof Error ? err.message : 'Kunde inte spara upplägget.')
     } finally {
       setSaving(false)
     }
@@ -432,7 +432,7 @@ export default function DiscoveryPage() {
     setSendResults(null)
 
     if (!currentTemplateId) {
-      setSendError('Spara discovery-upplägget innan du skickar det.')
+      setSendError('Spara upplägget innan du skickar det.')
       return
     }
 
@@ -457,7 +457,7 @@ export default function DiscoveryPage() {
 
       const payload = await response.json().catch(() => null)
       if (!response.ok && !payload?.results) {
-        throw new Error(payload?.error || 'Kunde inte skicka discovery-utskicket.')
+        throw new Error(payload?.error || 'Kunde inte skicka utskicket.')
       }
 
       const nextResults = Array.isArray(payload?.results) ? payload.results as DiscoverySendResult[] : []
@@ -472,7 +472,7 @@ export default function DiscoveryPage() {
         setClientOrganisation('')
       }
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'Kunde inte skicka discovery-utskicket.')
+      setSendError(err instanceof Error ? err.message : 'Kunde inte skicka utskicket.')
     } finally {
       setSending(false)
     }
@@ -678,7 +678,7 @@ export default function DiscoveryPage() {
                   {activeCategory.label}
                 </h2>
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
-                  Redigera innehållet till vänster. Kundens vy uppdateras direkt till höger.
+                  Anpassa innehållet här. Förhandsvisningen till höger uppdateras direkt.
                 </p>
                 <div style={{ marginTop: 12 }}>
                   <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
@@ -689,7 +689,7 @@ export default function DiscoveryPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'grid', gap: 10 }}>
-                  <Field label="Sparat upplägg">
+                  <Field label="Välj upplägg">
                     <select
                       value={currentTemplateId || ''}
                       onChange={event => {
@@ -721,7 +721,7 @@ export default function DiscoveryPage() {
                   </div>
                 </div>
 
-                <Field label="Internt namn">
+                <Field label="Namn internt">
                   <input
                     value={templateName}
                     onChange={event => setTemplateName(event.target.value)}
@@ -729,7 +729,7 @@ export default function DiscoveryPage() {
                   />
                 </Field>
 
-                <Field label="Rubrik">
+                <Field label="Rubrik i introduktionen">
                   <input
                     value={introTitle}
                     onChange={event => setIntroTitle(event.target.value)}
@@ -737,7 +737,7 @@ export default function DiscoveryPage() {
                   />
                 </Field>
 
-                <Field label="Ingress">
+                <Field label="Inledning">
                   <textarea
                     value={introText}
                     onChange={event => setIntroText(event.target.value)}
@@ -751,7 +751,7 @@ export default function DiscoveryPage() {
                     Skicka underlag
                   </div>
 
-                  <Field label="Organisation">
+                  <Field label="Organisation eller kund">
                     <input
                       value={clientOrganisation}
                       onChange={event => setClientOrganisation(event.target.value)}
@@ -760,7 +760,7 @@ export default function DiscoveryPage() {
                     />
                   </Field>
 
-                  <Field label="Mottagare">
+                  <Field label="Mottagare och kontaktpersoner">
                     <textarea
                       value={recipientsInput}
                       onChange={event => setRecipientsInput(event.target.value)}
@@ -782,7 +782,7 @@ export default function DiscoveryPage() {
                   {sendResults && sendResults.length > 0 && (
                     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'grid', gap: 8 }}>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Skickstatus
+                        Status per mottagare
                       </div>
                       {sendResults.map(result => (
                         <div key={result.sessionId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
@@ -796,7 +796,7 @@ export default function DiscoveryPage() {
                   )}
                 </div>
 
-                <Field label="Temanamn">
+                <Field label="Temats namn">
                   <input
                     value={activeCategory.label}
                     onChange={event => updateCategoryField(activeCategory.id, 'label', event.target.value)}
@@ -804,7 +804,7 @@ export default function DiscoveryPage() {
                   />
                 </Field>
 
-                <Field label="Introduktion">
+                <Field label="Temats inledning">
                   <textarea
                     value={activeCategory.desc}
                     onChange={event => updateCategoryField(activeCategory.id, 'desc', event.target.value)}
@@ -834,7 +834,7 @@ export default function DiscoveryPage() {
 
                       {question.type === 'choice' && (
                         <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                          <Field label="Alternativ, ett per rad">
+                          <Field label="Svarsalternativ, ett per rad">
                             <textarea
                               value={question.options.join('\n')}
                               onChange={event => updateChoiceOptions(activeCategory.id, questionIndex, event.target.value)}
@@ -842,7 +842,7 @@ export default function DiscoveryPage() {
                               style={{ ...editorInputStyle, minHeight: 120, resize: 'vertical' }}
                             />
                           </Field>
-                          <Field label="Max antal val">
+                          <Field label="Högsta antal val">
                             <input
                               type="number"
                               min={1}

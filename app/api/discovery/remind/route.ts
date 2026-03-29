@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         from: `${senderName} via Doings <${fromEmail}>`,
         reply_to: user.email || undefined,
         to: session.client_email,
-        subject: `Påminnelse: ${template?.intro_title || 'Underlag'} – nästa steg med ${senderName}`,
+        subject: `Påminnelse: ${template?.intro_title || 'Underlag'} – vi vill gärna få in era svar`,
         html,
         text: `Hej ${session.client_name}!\n\nVi vill påminna om att vi fortfarande gärna vill få in era fördjupande perspektiv inför nästa steg.\n\nDin personliga länk är fortfarande aktiv:\n${discoveryUrl}\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\n– ${senderName} via Doings`,
       })

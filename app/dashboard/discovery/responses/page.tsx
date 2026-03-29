@@ -87,7 +87,7 @@ export default function DiscoveryResponsesPage() {
       {sessions.length === 0 ? (
         <EmptyCard
           title="Inga utskick ännu"
-          text="Skicka ett discovery-upplägg från redigeringen för att börja samla in svar."
+          text="Skicka ett upplägg från redigeringen för att börja samla in svar."
         />
       ) : (
         <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>

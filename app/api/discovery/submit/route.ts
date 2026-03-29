@@ -99,11 +99,11 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (sessionError || !session) {
-      return NextResponse.json({ error: 'Discovery-sidan hittades inte.' }, { status: 404 })
+      return NextResponse.json({ error: 'Sidan hittades inte.' }, { status: 404 })
     }
 
     if (session.status === 'submitted') {
-      return NextResponse.json({ error: 'Det här discovery-svaret har redan skickats in.' }, { status: 409 })
+      return NextResponse.json({ error: 'Det här formuläret har redan skickats in.' }, { status: 409 })
     }
 
     const { data: sections, error: sectionsError } = await admin
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     if (sectionsError) {
       console.error('discovery submit sections error:', sectionsError)
-      return NextResponse.json({ error: 'Kunde inte verifiera discovery-upplägget.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte verifiera upplägget.' }, { status: 500 })
     }
 
     const sectionIds = (sections || []).map(section => section.id)
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
 
     if (questionsError) {
       console.error('discovery submit questions error:', questionsError)
-      return NextResponse.json({ error: 'Kunde inte verifiera discovery-frågorna.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte verifiera frågorna.' }, { status: 500 })
     }
 
     const questionIds = (questions || []).map(question => question.id)
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     if (optionsError) {
       console.error('discovery submit options error:', optionsError)
-      return NextResponse.json({ error: 'Kunde inte verifiera alternativen för discovery-frågorna.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte verifiera alternativen för frågorna.' }, { status: 500 })
     }
 
     const questionById = new Map((questions || []).map(question => [question.id, question]))
@@ -158,11 +158,11 @@ export async function POST(req: NextRequest) {
     for (const response of responses) {
       const question = questionById.get(response.questionId)
       if (!question) {
-        return NextResponse.json({ error: 'Ett eller flera svar matchar inte discovery-upplägget.' }, { status: 400 })
+        return NextResponse.json({ error: 'Ett eller flera svar matchar inte upplägget.' }, { status: 400 })
       }
 
       if (question.type !== response.responseType) {
-        return NextResponse.json({ error: 'Svarstypen matchar inte discovery-frågan.' }, { status: 400 })
+        return NextResponse.json({ error: 'Svarstypen matchar inte frågan.' }, { status: 400 })
       }
 
       if (response.responseType === 'choice') {
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 
     if (insertResponsesError || !insertedResponses) {
       console.error('discovery submit insert responses error:', insertResponsesError)
-      return NextResponse.json({ error: 'Kunde inte spara discovery-svaren.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte spara svaren.' }, { status: 500 })
     }
 
     const responseIdByQuestionId = new Map(insertedResponses.map(item => [item.question_id, item.id]))
@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
 
     if (sessionUpdateError) {
       console.error('discovery submit session update error:', sessionUpdateError)
-      return NextResponse.json({ error: 'Kunde inte avsluta discovery-svaret.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte avsluta formuläret.' }, { status: 500 })
     }
 
     return NextResponse.json({ ok: true })

@@ -22,7 +22,7 @@ export async function GET() {
 
     if (sessionError) {
       console.error('discovery sessions list error:', sessionError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-utskicken.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa utskicken.' }, { status: 500 })
     }
 
     const templateIds = Array.from(new Set((sessions || []).map(session => session.template_id).filter(Boolean)))
@@ -36,7 +36,7 @@ export async function GET() {
 
     if (templateError) {
       console.error('discovery sessions template lookup error:', templateError)
-      return NextResponse.json({ error: 'Kunde inte läsa discovery-uppläggen.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte läsa uppläggen.' }, { status: 500 })
     }
 
     const templateNameById = new Map((templates || []).map(template => [template.id, template.name]))
@@ -45,7 +45,7 @@ export async function GET() {
       sessions: (sessions || []).map(session => ({
         id: session.id,
         templateId: session.template_id,
-        templateName: templateNameById.get(session.template_id) || 'Discovery',
+        templateName: templateNameById.get(session.template_id) || 'Fördjupat underlag',
         clientName: session.client_name,
         clientEmail: session.client_email,
         clientOrganisation: session.client_organisation,

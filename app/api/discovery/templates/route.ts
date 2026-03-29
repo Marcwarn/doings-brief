@@ -219,7 +219,7 @@ export async function GET() {
 
     if (error) {
       console.error('discovery templates list error:', error)
-      return NextResponse.json({ error: 'Kunde inte hämta discovery-uppläggen.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte hämta uppläggen.' }, { status: 500 })
     }
 
     return NextResponse.json({
@@ -252,15 +252,15 @@ export async function POST(req: NextRequest) {
     const status = payload.status === 'active' ? 'active' : 'draft'
 
     if (!name) {
-      return NextResponse.json({ error: 'Discovery-upplägget måste ha ett namn.' }, { status: 400 })
+      return NextResponse.json({ error: 'Upplägget måste ha ett namn.' }, { status: 400 })
     }
 
     if (!introTitle) {
-      return NextResponse.json({ error: 'Lägg till en rubrik för discovery-sidan.' }, { status: 400 })
+      return NextResponse.json({ error: 'Lägg till en rubrik för sidan.' }, { status: 400 })
     }
 
     if (!introText) {
-      return NextResponse.json({ error: 'Lägg till en introduktion för discovery-sidan.' }, { status: 400 })
+      return NextResponse.json({ error: 'Lägg till en inledning för sidan.' }, { status: 400 })
     }
 
     const { sections, error: sectionsError } = normalizeSections(payload.sections)
@@ -278,7 +278,7 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (existingTemplateError || !existingTemplate) {
-        return NextResponse.json({ error: 'Discovery-upplägget kunde inte hittas.' }, { status: 404 })
+        return NextResponse.json({ error: 'Upplägget kunde inte hittas.' }, { status: 404 })
       }
 
       if (existingTemplate.user_id !== user.id) {
@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
 
       if (templateUpdateError) {
         console.error('discovery template update error:', templateUpdateError)
-        return NextResponse.json({ error: 'Kunde inte uppdatera discovery-upplägget.' }, { status: 500 })
+        return NextResponse.json({ error: 'Kunde inte uppdatera upplägget.' }, { status: 500 })
       }
 
       const { error: deleteSectionsError } = await admin
@@ -308,7 +308,7 @@ export async function POST(req: NextRequest) {
 
       if (deleteSectionsError) {
         console.error('discovery section reset error:', deleteSectionsError)
-        return NextResponse.json({ error: 'Kunde inte uppdatera discovery-upplägget.' }, { status: 500 })
+        return NextResponse.json({ error: 'Kunde inte uppdatera upplägget.' }, { status: 500 })
       }
     } else {
       const { data: createdTemplate, error: templateInsertError } = await admin
@@ -325,7 +325,7 @@ export async function POST(req: NextRequest) {
 
       if (templateInsertError || !createdTemplate) {
         console.error('discovery template insert error:', templateInsertError)
-        return NextResponse.json({ error: 'Kunde inte skapa discovery-upplägget.' }, { status: 500 })
+        return NextResponse.json({ error: 'Kunde inte skapa upplägget.' }, { status: 500 })
       }
 
       templateId = createdTemplate.id
@@ -343,7 +343,7 @@ export async function POST(req: NextRequest) {
 
     if (sectionsInsertError || !insertedSections) {
       console.error('discovery section insert error:', sectionsInsertError)
-      return NextResponse.json({ error: 'Kunde inte spara discovery-temana.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte spara temana.' }, { status: 500 })
     }
 
     const sectionIdByOrder = new Map(insertedSections.map(item => [item.order_index, item.id]))
@@ -371,7 +371,7 @@ export async function POST(req: NextRequest) {
 
     if (questionsInsertError || !insertedQuestions) {
       console.error('discovery question insert error:', questionsInsertError)
-      return NextResponse.json({ error: 'Kunde inte spara discovery-frågorna.' }, { status: 500 })
+      return NextResponse.json({ error: 'Kunde inte spara frågorna.' }, { status: 500 })
     }
 
     const questionIdByKey = new Map(
@@ -401,7 +401,7 @@ export async function POST(req: NextRequest) {
 
       if (optionsInsertError) {
         console.error('discovery question option insert error:', optionsInsertError)
-        return NextResponse.json({ error: 'Kunde inte spara alternativen för discovery-frågorna.' }, { status: 500 })
+        return NextResponse.json({ error: 'Kunde inte spara alternativen för frågorna.' }, { status: 500 })
       }
     }
 
