@@ -120,6 +120,8 @@ The font is Inter Variable (loaded via `next/font/local` bound to `--font-sans` 
 4. **Never hardcode env vars** — use `process.env.VARIABLE_NAME` with the `requiredEnv()` pattern from `lib/server-clients.ts`.
 5. **Vercel `maxDuration` cap** — AI and transcription routes must export `maxDuration`. Set to 30 for AI chat, 60 for transcription.
 6. **Do not create a `pages/` directory** — this project uses the Next.js 14 App Router exclusively.
+7. **`middleware.ts` is global** — it runs on every request. Never add redirect logic without checking the current path first (risk of infinite loop). Never remove `supabase.auth.getUser()` — it is what keeps sessions alive. Keep middleware minimal; heavy logic belongs in API routes.
+8. **Update `docs/project_notes/` when work is done** — fixed a bug → `bugs.md`, made an architectural decision → `decisions.md`, discovered a new technical problem → `issues.md`. These files are only useful if they are kept current.
 
 ---
 
