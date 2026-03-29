@@ -6,13 +6,17 @@ import { useRouter } from 'next/navigation'
 import { createClient, type QuestionSet } from '@/lib/supabase'
 import { BriefSubnav } from '@/app/dashboard/brief/ui'
 
+type Impact = { sessionCount: number; responseCount: number }
+
 export default function QuestionSetsPage() {
   const sb = createClient()
   const router = useRouter()
-  const [sets, setSets]           = useState<QuestionSet[]>([])
-  const [loading, setLoading]     = useState(true)
+  const [sets, setSets]             = useState<QuestionSet[]>([])
+  const [loading, setLoading]       = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
-  const [deleting, setDeleting]   = useState<string | null>(null)
+  const [impact, setImpact]         = useState<Impact | null>(null)
+  const [impactLoading, setImpactLoading] = useState(false)
+  const [deleting, setDeleting]     = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   function load() {
@@ -22,6 +26,19 @@ export default function QuestionSetsPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  async function startConfirm(id: string) {
+    setConfirming(id)
+    setImpact(null)
+    setDeleteError(null)
+    setImpactLoading(true)
+    try {
+      const res = await fetch(`/api/question-sets/delete?id=${id}`)
+      if (res.ok) setImpact(await res.json())
+    } finally {
+      setImpactLoading(false)
+    }
+  }
 
   async function deleteSet(id: string) {
     setDeleting(id)
@@ -35,12 +52,12 @@ export default function QuestionSetsPage() {
       if (!res.ok) {
         const body = await res.json()
         setDeleteError(body.error || 'Kunde inte radera')
-        setDeleting(null)
         setConfirming(null)
         return
       }
       setSets(prev => prev.filter(s => s.id !== id))
       setConfirming(null)
+      setImpact(null)
     } finally {
       setDeleting(null)
     }
@@ -102,7 +119,7 @@ export default function QuestionSetsPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
-          {sets.map((s, idx) => (
+          {sets.map(s => (
             <div key={s.id} style={{
               background: 'var(--surface)', padding: '16px 22px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
@@ -140,27 +157,40 @@ export default function QuestionSetsPage() {
                   Redigera
                 </Link>
                 {confirming === s.id ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-sans)' }}>Radera?</span>
-                    <button onClick={() => deleteSet(s.id)} disabled={deleting === s.id} style={{
-                      padding: '5px 10px', borderRadius: 6, border: 'none',
-                      background: 'var(--text)', color: 'var(--bg)',
-                      fontSize: 12, fontWeight: 600, cursor: deleting === s.id ? 'not-allowed' : 'pointer',
-                      fontFamily: 'var(--font-sans)', opacity: deleting === s.id ? 0.5 : 1,
-                    }}>
-                      {deleting === s.id ? '…' : 'Ja'}
-                    </button>
-                    <button onClick={() => setConfirming(null)} style={{
-                      padding: '5px 10px', borderRadius: 6,
-                      border: '1px solid var(--border)', background: 'none',
-                      fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                    }}>
-                      Avbryt
-                    </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    {impactLoading ? (
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Kollar…</span>
+                    ) : impact && (impact.sessionCount > 0 || impact.responseCount > 0) ? (
+                      <div style={{ padding: '8px 12px', borderRadius: 8, background: '#fef9c3', border: '1px solid #fde68a', fontSize: 12, color: '#92400e', maxWidth: 260, lineHeight: 1.5 }}>
+                        Batteriet har skickats till <strong>{impact.sessionCount} {impact.sessionCount === 1 ? 'klient' : 'klienter'}</strong> med <strong>{impact.responseCount} {impact.responseCount === 1 ? 'svar' : 'svar'}</strong>. Alla svar raderas permanent.
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Radera batteriet?</span>
+                    )}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => deleteSet(s.id)} disabled={deleting === s.id || impactLoading} style={{
+                        padding: '5px 10px', borderRadius: 6, border: 'none',
+                        background: impact && (impact.sessionCount > 0 || impact.responseCount > 0) ? '#b91c1c' : 'var(--text)',
+                        color: '#fff',
+                        fontSize: 12, fontWeight: 600,
+                        cursor: deleting === s.id || impactLoading ? 'not-allowed' : 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                        opacity: deleting === s.id || impactLoading ? 0.5 : 1,
+                      }}>
+                        {deleting === s.id ? '…' : 'Ja, radera'}
+                      </button>
+                      <button onClick={() => { setConfirming(null); setImpact(null) }} style={{
+                        padding: '5px 10px', borderRadius: 6,
+                        border: '1px solid var(--border)', background: 'none',
+                        fontSize: 12, color: 'var(--text-3)', cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)',
+                      }}>
+                        Avbryt
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirming(s.id)} style={{
+                  <button onClick={() => startConfirm(s.id)} style={{
                     padding: '7px 10px', borderRadius: 6,
                     background: 'none', border: '1px solid transparent',
                     fontSize: 12.5, color: 'var(--text-3)', cursor: 'pointer',
