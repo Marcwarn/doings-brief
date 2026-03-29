@@ -32,6 +32,13 @@ Running log of significant decisions made during development. For formal archite
 - a flat list of all responses should not be the default entry point
 - theme detail views and drill-down should carry more weight than generic tables
 
+## 2026-03-30 — Next.js Was Upgraded to a Patched 14.2.x Release
+
+- the app was upgraded from `next@14.2.5` to `next@14.2.35`
+- the reason was multiple advisories, including critical middleware and authorization issues in the older version
+- the upgrade stayed within the same minor line and passed `npm run build`
+- dependency risk remains in `xlsx`, which should be handled separately rather than mixed into the Next.js security upgrade
+
 ## 2024 — Initial Architecture
 
 - **Chose Next.js 14 App Router** over Pages Router for better server/client component control and co-located API routes
