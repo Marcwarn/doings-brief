@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\": \"VIKTIGT: Innan du foreslar vad som ska byggas eller antar att nagot saknas — las app/CLAUDE.md for att se vad som redan ar byggt. Gissa aldrig.\"}'",
+            "command": "echo '{\"additionalContext\": \"VIKTIGT: Innan du foreslar vad som ska byggas eller antar att nagot saknas - las app/CLAUDE.md for att se vad som redan ar byggt. Gissa aldrig.\"}'",
             "timeout": 5
           }
         ]
