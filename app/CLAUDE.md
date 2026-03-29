@@ -41,6 +41,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Speglar discovery-landningssidan visuellt med nuvarande `doings-brief`-färger och typografi
 - Teman och frågor ligger exakt enligt discovery-referensen
 - Split-view med redigering till vänster och kundförhandsvisning till höger
+- Redigeringspanelen är nu uppdelad i flikarna `Frågor`, `Upplägg` och `Skicka`, med aktiva teman kvar överst
 - Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
 - Buildern kan nu öppna tidigare Discovery-upplägg i en tydligare lista med kund, målgrupp och senaste aktivitet
 - Buildern kan nu slå av hela teman för att smalna av ett bredare Discovery innan det sparas eller skickas

@@ -298,6 +298,7 @@ export default function DiscoveryPage() {
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [templateQuery, setTemplateQuery] = useState('')
+  const [editorTab, setEditorTab] = useState<'questions' | 'setup' | 'send'>('questions')
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('Perspektiv')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
@@ -820,143 +821,178 @@ export default function DiscoveryPage() {
                 </div>
               </div>
 
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {[
+                  { id: 'questions', label: 'Frågor' },
+                  { id: 'setup', label: 'Upplägg' },
+                  { id: 'send', label: 'Skicka' },
+                ].map(tab => {
+                  const active = editorTab === tab.id
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEditorTab(tab.id as 'questions' | 'setup' | 'send')}
+                      style={{
+                        flex: 1,
+                        borderRadius: 999,
+                        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                        background: active ? 'rgba(198,35,104,0.10)' : 'var(--surface)',
+                        color: active ? 'var(--accent)' : 'var(--text-2)',
+                        padding: '9px 12px',
+                        fontSize: 12.5,
+                        fontWeight: active ? 700 : 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'grid', gap: 10, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    Upplägget
-                  </div>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                    Här styr du vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>
-                      Skapa nytt
-                    </button>
-                    <button type="button" onClick={() => setShowTemplatePicker(current => !current)} style={secondaryButtonStyle}>
-                      {showTemplatePicker ? 'Stäng tidigare' : 'Öppna tidigare'}
-                    </button>
-                    <button type="button" onClick={() => void saveTemplate('draft')} disabled={saving || Boolean(loadingTemplateId)} style={primaryButtonStyle(saving || Boolean(loadingTemplateId))}>
-                      {saving ? 'Sparar…' : saveState === 'saved' ? 'Sparat' : 'Spara upplägg'}
-                    </button>
-                  </div>
-
-                  {currentTemplateId && !showTemplatePicker && (
-                    <div style={pickerPanelStyle}>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
-                        Öppet nu
+                {editorTab === 'setup' && (
+                  <>
+                    <div style={{ display: 'grid', gap: 10, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        Upplägget
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-                        {templates.find(template => template.id === currentTemplateId)?.name || templateName}
+                      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                        Här styr du vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
                       </div>
-                    </div>
-                  )}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>
+                          Skapa nytt
+                        </button>
+                        <button type="button" onClick={() => setShowTemplatePicker(current => !current)} style={secondaryButtonStyle}>
+                          {showTemplatePicker ? 'Stäng tidigare' : 'Öppna tidigare'}
+                        </button>
+                        <button type="button" onClick={() => void saveTemplate('draft')} disabled={saving || Boolean(loadingTemplateId)} style={primaryButtonStyle(saving || Boolean(loadingTemplateId))}>
+                          {saving ? 'Sparar…' : saveState === 'saved' ? 'Sparat' : 'Spara upplägg'}
+                        </button>
+                      </div>
 
-                  {showTemplatePicker && (
-                    <div style={pickerPanelStyle}>
-                      <div style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Tidigare discovery</div>
-                        <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                          Fortsätt i ett upplägg du redan har börjat arbeta med. Kund, målgrupp och senaste aktivitet hjälper dig hitta rätt.
+                      {currentTemplateId && !showTemplatePicker && (
+                        <div style={pickerPanelStyle}>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
+                            Öppet nu
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                            {templates.find(template => template.id === currentTemplateId)?.name || templateName}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
+                      {showTemplatePicker && (
+                        <div style={pickerPanelStyle}>
+                          <div style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Tidigare discovery</div>
+                            <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                              Fortsätt i ett upplägg du redan har börjat arbeta med. Kund, målgrupp och senaste aktivitet hjälper dig hitta rätt.
+                            </div>
+                          </div>
+
+                          <input
+                            value={templateQuery}
+                            onChange={event => setTemplateQuery(event.target.value)}
+                            placeholder="Sök på namn, kund eller målgrupp"
+                            style={editorInputStyle}
+                          />
+
+                          <div style={{ display: 'grid', gap: 8, marginTop: 12, maxHeight: 320, overflowY: 'auto' }}>
+                            {filteredTemplates.map(template => (
+                              <button
+                                key={template.id}
+                                type="button"
+                                onClick={() => void loadTemplate(template.id)}
+                                style={{
+                                  ...templateRowStyle,
+                                  borderColor: template.id === currentTemplateId ? 'rgba(198,35,104,0.35)' : 'rgba(14,14,12,0.08)',
+                                  background: template.id === currentTemplateId ? 'rgba(198,35,104,0.06)' : 'rgba(255,255,255,0.88)',
+                                }}
+                              >
+                                <div style={{ display: 'grid', gap: 4, textAlign: 'left' }}>
+                                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                                    {(template.latestOrganisation?.trim() || 'Utan kund kopplad') + ' · ' + template.name}
+                                  </div>
+                                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                                    {formatRelativeDate(template.updatedAt)} · {audienceLabel(template.audienceMode)} · {template.sessionCount === 0 ? 'Inte skickat ännu' : `${template.sessionCount} utskick`}
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>
+                                  {loadingTemplateId === template.id ? 'Öppnar…' : 'Öppna'}
+                                </div>
+                              </button>
+                            ))}
+                            {filteredTemplates.length === 0 && (
+                              <div style={{ fontSize: 12.5, color: 'var(--text-3)', padding: '10px 2px' }}>
+                                Inga tidigare discovery matchar din sökning.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Field label="Namn internt">
                       <input
-                        value={templateQuery}
-                        onChange={event => setTemplateQuery(event.target.value)}
-                        placeholder="Sök på namn, kund eller målgrupp"
+                        value={templateName}
+                        onChange={event => setTemplateName(event.target.value)}
                         style={editorInputStyle}
                       />
+                    </Field>
 
-                      <div style={{ display: 'grid', gap: 8, marginTop: 12, maxHeight: 320, overflowY: 'auto' }}>
-                        {filteredTemplates.map(template => (
-                          <button
-                            key={template.id}
-                            type="button"
-                            onClick={() => void loadTemplate(template.id)}
-                            style={{
-                              ...templateRowStyle,
-                              borderColor: template.id === currentTemplateId ? 'rgba(198,35,104,0.35)' : 'rgba(14,14,12,0.08)',
-                              background: template.id === currentTemplateId ? 'rgba(198,35,104,0.06)' : 'rgba(255,255,255,0.88)',
-                            }}
-                          >
-                            <div style={{ display: 'grid', gap: 4, textAlign: 'left' }}>
-                              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-                                {(template.latestOrganisation?.trim() || 'Utan kund kopplad') + ' · ' + template.name}
-                              </div>
-                              <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
-                                {formatRelativeDate(template.updatedAt)} · {audienceLabel(template.audienceMode)} · {template.sessionCount === 0 ? 'Inte skickat ännu' : `${template.sessionCount} utskick`}
-                              </div>
-                            </div>
-                            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)' }}>
-                              {loadingTemplateId === template.id ? 'Öppnar…' : 'Öppna'}
-                            </div>
-                          </button>
-                        ))}
-                        {filteredTemplates.length === 0 && (
-                          <div style={{ fontSize: 12.5, color: 'var(--text-3)', padding: '10px 2px' }}>
-                            Inga tidigare discovery matchar din sökning.
-                          </div>
-                        )}
+                    <Field label="Rubrik i introduktionen">
+                      <input
+                        value={introTitle}
+                        onChange={event => setIntroTitle(event.target.value)}
+                        style={editorInputStyle}
+                      />
+                    </Field>
+
+                    <Field label="Inledning">
+                      <textarea
+                        value={introText}
+                        onChange={event => setIntroText(event.target.value)}
+                        rows={3}
+                        style={{ ...editorInputStyle, minHeight: 88, resize: 'vertical' }}
+                      />
+                    </Field>
+
+                    <Field label="Målgrupp">
+                      <select
+                        value={audienceMode}
+                        onChange={event => setAudienceMode(event.target.value as AudienceMode)}
+                        style={editorInputStyle}
+                      >
+                        <option value="shared">Blandad eller oklar målgrupp</option>
+                        <option value="leaders">Främst ledare</option>
+                        <option value="mixed">Blandad grupp med ledare och medarbetare</option>
+                      </select>
+                    </Field>
+
+                    <div style={{ marginTop: -6, marginBottom: 4 }}>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                        Målgruppen sparas på upplägget. Du kan också ladda rekommenderade standardfrågor för den valda målgruppen utan att bygga om allt för hand.
+                      </div>
+                      <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => applyAudienceDefaults(audienceMode)}
+                          style={secondaryButtonStyle}
+                        >
+                          Ladda rekommenderade frågor
+                        </button>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-3)', alignSelf: 'center' }}>
+                          Påverkar främst Ledarskap, Change management, AI readiness och Vision & mål.
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
 
-                <Field label="Namn internt">
-                  <input
-                    value={templateName}
-                    onChange={event => setTemplateName(event.target.value)}
-                    style={editorInputStyle}
-                  />
-                </Field>
-
-                <Field label="Rubrik i introduktionen">
-                  <input
-                    value={introTitle}
-                    onChange={event => setIntroTitle(event.target.value)}
-                    style={editorInputStyle}
-                  />
-                </Field>
-
-                <Field label="Inledning">
-                  <textarea
-                    value={introText}
-                    onChange={event => setIntroText(event.target.value)}
-                    rows={3}
-                    style={{ ...editorInputStyle, minHeight: 88, resize: 'vertical' }}
-                  />
-                </Field>
-
-                <Field label="Målgrupp">
-                  <select
-                    value={audienceMode}
-                    onChange={event => setAudienceMode(event.target.value as AudienceMode)}
-                    style={editorInputStyle}
-                  >
-                    <option value="shared">Blandad eller oklar målgrupp</option>
-                    <option value="leaders">Främst ledare</option>
-                    <option value="mixed">Blandad grupp med ledare och medarbetare</option>
-                  </select>
-                </Field>
-
-                <div style={{ marginTop: -6, marginBottom: 4 }}>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                    Målgruppen sparas på upplägget. Du kan också ladda rekommenderade standardfrågor för den valda målgruppen utan att bygga om allt för hand.
-                  </div>
-                  <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => applyAudienceDefaults(audienceMode)}
-                      style={secondaryButtonStyle}
-                    >
-                      Ladda rekommenderade frågor
-                    </button>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', alignSelf: 'center' }}>
-                      Påverkar främst Ledarskap, Change management, AI readiness och Vision & mål.
-                    </div>
-                  </div>
-                </div>
-
+                {editorTab === 'send' && (
                 <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                     Skicka underlag
@@ -1028,7 +1064,9 @@ export default function DiscoveryPage() {
                     </div>
                   )}
                 </div>
+                )}
 
+                {editorTab === 'questions' && (
                 <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                     <div>
@@ -1109,6 +1147,7 @@ export default function DiscoveryPage() {
                   ))}
                 </div>
                 </div>
+                )}
               </div>
             </div>
           </aside>
