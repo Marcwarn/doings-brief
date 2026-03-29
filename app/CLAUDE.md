@@ -42,6 +42,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
 - Discovery har nu dokumenterad spec, ADR och initial SQL-schema-grund i repo:t
 - `/api/discovery/templates` kan nu spara och lista Discovery-upplägg för inloggad konsult
+- `/api/discovery/templates/[id]` kan nu hämta ett fullständigt sparat Discovery-upplägg
 
 **Saknas**: Persistens, verklig submit-koppling och separat publik kundroute
 
