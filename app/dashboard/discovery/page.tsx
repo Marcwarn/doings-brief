@@ -73,6 +73,42 @@ type DiscoveryTemplateDetail = {
   }
 }
 
+type DiscoveryDataPayload = {
+  template: {
+    id: string
+    name: string
+    introTitle: string
+  }
+  overview: {
+    invitedCount: number
+    submittedCount: number
+    pendingCount: number
+    responseRate: number
+    latestSubmittedAt: string | null
+  }
+  sections: Array<{
+    id: string
+    label: string
+    description: string
+    orderIndex: number
+    questionCount: number
+  }>
+  sessions: Array<{
+    id: string
+    clientName: string
+    clientEmail: string
+    clientOrganisation: string | null
+    status: 'pending' | 'submitted'
+    createdAt: string
+    submittedAt: string | null
+    sectionResponses: Array<{
+      sectionId: string
+      answeredCount: number
+      excerpts: string[]
+    }>
+  }>
+}
+
 const sharedCategories: DiscoveryCategory[] = [
   { id: 'team', label: 'Teamutveckling', desc: 'Utforska hur samarbetet fungerar i teamet och vad som skulle hjälpa er framåt.', questions: [
     { type: 'open', text: 'Vad fungerar riktigt bra i teamet idag, och var märks det att ni fortfarande har något att lösa?' },
@@ -318,6 +354,12 @@ export default function DiscoveryPage() {
     Object.fromEntries(buildDefaultCategories(defaultAudienceMode).map(category => [category.id, {}]))
   )
   const [successId, setSuccessId] = useState<string | null>(null)
+  const [dataPayload, setDataPayload] = useState<DiscoveryDataPayload | null>(null)
+  const [dataLoading, setDataLoading] = useState(false)
+  const [dataError, setDataError] = useState<string | null>(null)
+  const [dataStatusFilter, setDataStatusFilter] = useState<'all' | 'submitted' | 'pending'>('all')
+  const [dataQuery, setDataQuery] = useState('')
+  const [selectedDataSectionId, setSelectedDataSectionId] = useState<string>('all')
 
   const enabledCategories = builderCategories.filter(category => category.enabled)
   const activeCategory = enabledCategories.find(category => category.id === activeId) || enabledCategories[0] || builderCategories[0]
@@ -330,9 +372,107 @@ export default function DiscoveryPage() {
     }
   }, [activeCategory, answers])
 
+  const filteredDataSessions = useMemo(() => {
+    const sessions = dataPayload?.sessions || []
+    const query = dataQuery.trim().toLowerCase()
+
+    return sessions.filter(session => {
+      if (dataStatusFilter !== 'all' && session.status !== dataStatusFilter) return false
+      if (!query) return true
+      return [session.clientName, session.clientEmail, session.clientOrganisation || '']
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
+    })
+  }, [dataPayload, dataQuery, dataStatusFilter])
+
+  const dataThemeCards = useMemo(() => {
+    const sections = dataPayload?.sections || []
+    const submittedSessions = filteredDataSessions.filter(session => session.status === 'submitted')
+
+    return sections
+      .filter(section => enabledCategories.some(category => category.id === section.id))
+      .map(section => {
+        const sessionEntries = submittedSessions
+          .map(session => ({
+            session,
+            response: session.sectionResponses.find(item => item.sectionId === section.id) || null,
+          }))
+          .filter(entry => entry.response && entry.response.answeredCount > 0)
+
+        const respondentCount = sessionEntries.length
+        const totalAnswered = sessionEntries.reduce((sum, entry) => sum + (entry.response?.answeredCount || 0), 0)
+        const possibleAnswers = submittedSessions.length > 0 && section.questionCount > 0
+          ? submittedSessions.length * section.questionCount
+          : 0
+        const coveragePercent = possibleAnswers > 0 ? Math.round((totalAnswered / possibleAnswers) * 100) : 0
+        const firstExcerpt = sessionEntries
+          .flatMap(entry => entry.response?.excerpts || [])
+          .find(Boolean) || ''
+
+        let signalLabel = 'Inga svar ännu'
+        if (respondentCount > 0 && coveragePercent >= 70) signalLabel = 'Tydlig signal'
+        else if (respondentCount > 0 && coveragePercent >= 35) signalLabel = 'Viss signal'
+        else if (respondentCount > 0) signalLabel = 'På väg'
+
+        const splitLabel = respondentCount >= 4 && coveragePercent >= 35 && coveragePercent <= 65
+          ? 'Olika perspektiv'
+          : ''
+
+        return {
+          ...section,
+          respondentCount,
+          coveragePercent,
+          signalLabel,
+          splitLabel,
+          excerpt: firstExcerpt,
+        }
+      })
+  }, [dataPayload, enabledCategories, filteredDataSessions])
+
+  const selectedDataSectionIdOrDefault = useMemo(() => {
+    if (selectedDataSectionId === 'all') return 'all'
+    return dataThemeCards.some(section => section.id === selectedDataSectionId)
+      ? selectedDataSectionId
+      : 'all'
+  }, [dataThemeCards, selectedDataSectionId])
+
+  const dataOverview = useMemo(() => {
+    const invitedCount = filteredDataSessions.length
+    const submittedCount = filteredDataSessions.filter(session => session.status === 'submitted').length
+    const pendingCount = filteredDataSessions.filter(session => session.status === 'pending').length
+    const latestSubmittedAt = filteredDataSessions
+      .map(session => session.submittedAt)
+      .filter(Boolean)
+      .sort()
+      .at(-1) || null
+
+    return {
+      invitedCount,
+      submittedCount,
+      pendingCount,
+      responseRate: invitedCount > 0 ? Math.round((submittedCount / invitedCount) * 100) : 0,
+      latestSubmittedAt,
+      strongSignalCount: dataThemeCards.filter(card => card.signalLabel === 'Tydlig signal').length,
+      splitCount: dataThemeCards.filter(card => card.splitLabel).length,
+    }
+  }, [dataThemeCards, filteredDataSessions])
+
+  const rawDataSessions = useMemo(() => {
+    return filteredDataSessions.filter(session => {
+      if (selectedDataSectionIdOrDefault === 'all') return true
+      return session.sectionResponses.some(item => item.sectionId === selectedDataSectionIdOrDefault && item.answeredCount > 0)
+    })
+  }, [filteredDataSessions, selectedDataSectionIdOrDefault])
+
   useEffect(() => {
     void loadTemplateList()
   }, [])
+
+  useEffect(() => {
+    if (editorTab !== 'data' || !currentTemplateId) return
+    void loadData(currentTemplateId)
+  }, [editorTab, currentTemplateId])
 
   async function loadTemplateList(preferredTemplateId?: string) {
     setLoading(true)
@@ -379,6 +519,32 @@ export default function DiscoveryPage() {
     setSaveState('idle')
     setShowTemplatePicker(false)
     setTemplateQuery('')
+    setDataPayload(null)
+    setDataError(null)
+    setDataStatusFilter('all')
+    setDataQuery('')
+    setSelectedDataSectionId('all')
+  }
+
+  async function loadData(templateId: string) {
+    setDataLoading(true)
+    setDataError(null)
+
+    try {
+      const response = await fetch(`/api/discovery/data/${templateId}`, { cache: 'no-store' })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Kunde inte läsa datavyn.')
+      }
+
+      setDataPayload(payload as DiscoveryDataPayload)
+    } catch (err) {
+      setDataError(err instanceof Error ? err.message : 'Kunde inte läsa datavyn.')
+      setDataPayload(null)
+    } finally {
+      setDataLoading(false)
+    }
   }
 
   function parseRecipients(input: string) {
@@ -503,6 +669,11 @@ export default function DiscoveryPage() {
       setSaveState('idle')
       setShowTemplatePicker(false)
       setTemplateQuery('')
+      setDataPayload(null)
+      setDataError(null)
+      setDataStatusFilter('all')
+      setDataQuery('')
+      setSelectedDataSectionId('all')
 
       if (knownTemplates) {
         setTemplates(knownTemplates)
@@ -1166,42 +1337,83 @@ export default function DiscoveryPage() {
                     <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                       Data
                     </div>
-                    <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
-                      Här kommer ni att kunna följa inkomna svar, se signaler per tema och låta AI analysera materialet ur olika perspektiv.
-                    </div>
-                    <div style={{
-                      background: 'rgba(14,14,12,0.03)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 16,
-                      padding: '16px 16px 14px',
-                      display: 'grid',
-                      gap: 12,
-                    }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-                        Planerad struktur
+                    {!currentTemplateId ? (
+                      <div style={dataPanelStyle}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                          Spara upplägget först
+                        </div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                          Datavyn bygger på ett sparat discovery-upplägg. Spara eller öppna ett tidigare upplägg för att se inkomna svar här.
+                        </div>
                       </div>
-                      <div style={{ display: 'grid', gap: 8 }}>
-                        {[
-                          'Överblick över svarsläge och svarsfrekvens',
-                          'Temakort med signaler och återkommande mönster',
-                          'Råsvar bakom varje tema',
-                          'AI-analyslinser som Gemensamma behov och Skillnader i perspektiv',
-                        ].map(item => (
-                          <div key={item} style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.55 }}>
-                            {item}
+                    ) : (
+                      <>
+                        <Field label="Visa">
+                          <select
+                            value={dataStatusFilter}
+                            onChange={event => setDataStatusFilter(event.target.value as 'all' | 'submitted' | 'pending')}
+                            style={editorInputStyle}
+                          >
+                            <option value="all">Alla mottagare</option>
+                            <option value="submitted">Bara besvarade</option>
+                            <option value="pending">Bara väntande</option>
+                          </select>
+                        </Field>
+
+                        <Field label="Sök">
+                          <input
+                            value={dataQuery}
+                            onChange={event => setDataQuery(event.target.value)}
+                            placeholder="Namn, e-post eller kund"
+                            style={editorInputStyle}
+                          />
+                        </Field>
+
+                        <Field label="Tema">
+                          <select
+                            value={selectedDataSectionIdOrDefault}
+                            onChange={event => setSelectedDataSectionId(event.target.value)}
+                            style={editorInputStyle}
+                          >
+                            <option value="all">Alla teman</option>
+                            {dataThemeCards.map(section => (
+                              <option key={section.id} value={section.id}>{section.label}</option>
+                            ))}
+                          </select>
+                        </Field>
+
+                        <div style={dataPanelStyle}>
+                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
+                            Datavyn till höger
                           </div>
-                        ))}
-                      </div>
-                      <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
-                        Öppna inkomna svar
-                      </Link>
-                    </div>
+                          <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                            Här filtrerar du urvalet. Högersidan visar överblick, temakort och råsvar för det sparade discoveryt.
+                          </div>
+                          <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
+                            Öppna alla inkomna svar
+                          </Link>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </aside>
 
+          {editorTab === 'data' ? (
+            <DiscoveryDataCanvas
+              currentTemplateId={currentTemplateId}
+              loading={dataLoading}
+              error={dataError}
+              templateName={templateName}
+              overview={dataOverview}
+              themeCards={dataThemeCards}
+              rawSessions={rawDataSessions}
+              selectedSectionId={selectedDataSectionIdOrDefault}
+              onSelectSection={setSelectedDataSectionId}
+            />
+          ) : (
           <section style={{ minWidth: 0 }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 22, overflow: 'hidden', boxShadow: '0 18px 48px rgba(16,24,40,0.06)' }}>
               <header style={{ background: 'var(--text)', color: '#fff' }}>
@@ -1472,7 +1684,334 @@ export default function DiscoveryPage() {
               </div>
             </div>
           </section>
+          )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function DiscoveryDataCanvas({
+  currentTemplateId,
+  loading,
+  error,
+  templateName,
+  overview,
+  themeCards,
+  rawSessions,
+  selectedSectionId,
+  onSelectSection,
+}: {
+  currentTemplateId: string | null
+  loading: boolean
+  error: string | null
+  templateName: string
+  overview: {
+    invitedCount: number
+    submittedCount: number
+    pendingCount: number
+    responseRate: number
+    latestSubmittedAt: string | null
+    strongSignalCount: number
+    splitCount: number
+  }
+  themeCards: Array<{
+    id: string
+    label: string
+    description: string
+    questionCount: number
+    respondentCount: number
+    coveragePercent: number
+    signalLabel: string
+    splitLabel: string
+    excerpt: string
+  }>
+  rawSessions: Array<{
+    id: string
+    clientName: string
+    clientEmail: string
+    clientOrganisation: string | null
+    status: 'pending' | 'submitted'
+    createdAt: string
+    submittedAt: string | null
+    sectionResponses: Array<{
+      sectionId: string
+      answeredCount: number
+      excerpts: string[]
+    }>
+  }>
+  selectedSectionId: string
+  onSelectSection: (value: string) => void
+}) {
+  if (!currentTemplateId) {
+    return (
+      <section style={{ minWidth: 0 }}>
+        <div style={dataCanvasShellStyle}>
+          <div style={dataHeroStyle}>
+            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
+              Data
+            </div>
+            <h2 style={dataHeroTitleStyle}>Spara eller öppna ett upplägg först</h2>
+            <p style={dataHeroTextStyle}>
+              När discoveryt är sparat kan datavyn visa svarsläge, temakort och råsvar för just det upplägget.
+            </p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (loading) {
+    return (
+      <section style={{ minWidth: 0 }}>
+        <div style={{ ...dataCanvasShellStyle, display: 'grid', placeItems: 'center', minHeight: 460 }}>
+          <PageLoader />
+        </div>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section style={{ minWidth: 0 }}>
+        <div style={{ ...dataCanvasShellStyle, padding: 28 }}>
+          <InlineError text={error} />
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section style={{ minWidth: 0 }}>
+      <div style={dataCanvasShellStyle}>
+        <div style={dataHeroStyle}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600, marginBottom: 10 }}>
+                Data
+              </div>
+              <h2 style={dataHeroTitleStyle}>{templateName}</h2>
+              <p style={dataHeroTextStyle}>
+                En första överblick över svarsläge, tematiska signaler och råsvar från discoveryt.
+              </p>
+            </div>
+            <Link href="/dashboard/discovery/responses" style={{ ...responsesLinkStyle, background: 'rgba(255,255,255,0.08)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+              Inkomna svar
+            </Link>
+          </div>
+        </div>
+
+        <div style={{ padding: '22px 24px 26px', display: 'grid', gap: 18 }}>
+          <div style={summaryGridStyle}>
+            <DataSummaryCard label="Inbjudna" value={`${overview.invitedCount}`} sublabel="I aktuellt urval" />
+            <DataSummaryCard label="Svar inkomna" value={`${overview.submittedCount}`} sublabel="Besvarade discovery" />
+            <DataSummaryCard label="Svarsfrekvens" value={`${overview.responseRate}%`} sublabel={overview.pendingCount > 0 ? `${overview.pendingCount} väntar fortfarande` : 'Alla har svarat'} />
+            <DataSummaryCard label="Senaste svar" value={overview.latestSubmittedAt ? formatDataDateTime(overview.latestSubmittedAt) : 'Inga ännu'} sublabel="Senaste aktivitet" />
+            <DataSummaryCard label="Tydliga teman" value={`${overview.strongSignalCount}`} sublabel="Med stark signal" />
+            <DataSummaryCard label="Olika perspektiv" value={`${overview.splitCount}`} sublabel="Teman med splittring" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(300px, 0.75fr)', gap: 18, alignItems: 'start' }}>
+            <div style={{ display: 'grid', gap: 18 }}>
+              <section style={dataPanelStyle}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={dataSectionLabelStyle}>Teman</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Temakorten hjälper dig hitta var discoveryt ger tydliga signaler och var det fortfarande finns olika perspektiv.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                  {themeCards.map(card => {
+                    const active = selectedSectionId === card.id
+                    return (
+                      <button
+                        key={card.id}
+                        type="button"
+                        onClick={() => onSelectSection(active ? 'all' : card.id)}
+                        style={{
+                          textAlign: 'left',
+                          borderRadius: 16,
+                          border: `1px solid ${active ? 'rgba(198,35,104,0.26)' : 'var(--border)'}`,
+                          background: active ? 'rgba(198,35,104,0.06)' : 'var(--surface)',
+                          padding: '16px 16px 14px',
+                          display: 'grid',
+                          gap: 10,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{card.label}</div>
+                          <div style={{
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            color: card.signalLabel === 'Tydlig signal' ? '#166534' : card.signalLabel === 'Inga svar ännu' ? 'var(--text-3)' : 'var(--accent)',
+                          }}>
+                            {card.signalLabel}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                          {card.respondentCount} personer har svarat · {card.coveragePercent}% täckning
+                        </div>
+                        <div style={{ height: 5, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
+                          <div style={{ width: `${card.coveragePercent}%`, height: '100%', borderRadius: 999, background: card.signalLabel === 'Tydlig signal' ? '#166534' : 'var(--accent)' }} />
+                        </div>
+                        {card.splitLabel && (
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#9a3412' }}>
+                            {card.splitLabel}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-2)' }}>
+                          {card.excerpt ? truncate(card.excerpt, 120) : card.description}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section style={dataPanelStyle}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={dataSectionLabelStyle}>Råsvar</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Råsvaren är bevislagret bakom sammanfattningen. Börja i överblicken och borra sedan ner här.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {rawSessions.length === 0 ? (
+                    <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '6px 2px' }}>
+                      Inga svar matchar ditt nuvarande urval ännu.
+                    </div>
+                  ) : rawSessions.map(session => {
+                    const selectedResponse = selectedSectionId === 'all'
+                      ? session.sectionResponses.find(item => item.excerpts.length > 0)
+                      : session.sectionResponses.find(item => item.sectionId === selectedSectionId)
+
+                    return (
+                      <div key={session.id} style={{
+                        borderRadius: 14,
+                        border: '1px solid var(--border)',
+                        background: 'var(--surface)',
+                        padding: '14px 16px',
+                        display: 'grid',
+                        gap: 10,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                              {session.clientName}
+                              {session.clientOrganisation ? ` · ${session.clientOrganisation}` : ''}
+                            </div>
+                            <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+                              {session.clientEmail} · {session.status === 'submitted' && session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : `Skickad ${formatDataDateTime(session.createdAt)}`}
+                            </div>
+                          </div>
+                          <div style={{
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            color: session.status === 'submitted' ? '#166534' : '#9a3412',
+                            background: session.status === 'submitted' ? '#f0fdf4' : '#fff7ed',
+                            border: session.status === 'submitted' ? '1px solid #bbf7d0' : '1px solid #fed7aa',
+                            borderRadius: 999,
+                            padding: '5px 9px',
+                          }}>
+                            {session.status === 'submitted' ? 'Besvarad' : 'Väntar'}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                          {selectedResponse?.excerpts?.[0]
+                            ? truncate(selectedResponse.excerpts[0], 190)
+                            : session.status === 'submitted'
+                              ? 'Det här svaret innehåller främst val eller skalfrågor i det valda temat.'
+                              : 'Inget svar har kommit in ännu.'}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                            {session.sectionResponses.reduce((sum, item) => sum + item.answeredCount, 0)} besvarade frågor i urvalet
+                          </div>
+                          <Link href={`/dashboard/discovery/responses/${session.id}`} style={responsesLinkStyle}>
+                            Öppna svar
+                          </Link>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            </div>
+
+            <aside style={{ display: 'grid', gap: 18 }}>
+              <section style={dataPanelStyle}>
+                <div style={dataSectionLabelStyle}>Analysvyer</div>
+                <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6, marginTop: 4 }}>
+                  Nästa steg är att lägga på AI-analys ovanpå samma urval. Då ska den alltid stå nära råsvaren och vara tydlig med vilket perspektiv som används.
+                </div>
+                <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
+                  {[
+                    'Gemensamma behov',
+                    'Skillnader i perspektiv',
+                    'Beredskap för nästa steg',
+                    'Vad bör utforskas vidare',
+                  ].map(label => (
+                    <div key={label} style={{
+                      borderRadius: 12,
+                      border: '1px solid var(--border)',
+                      background: 'rgba(14,14,12,0.03)',
+                      padding: '12px 13px',
+                      fontSize: 13,
+                      color: 'var(--text)',
+                      fontWeight: 600,
+                    }}>
+                      {label}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section style={dataPanelStyle}>
+                <div style={dataSectionLabelStyle}>Valt tema</div>
+                <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                  {selectedSectionId === 'all'
+                    ? 'Alla teman'
+                    : themeCards.find(card => card.id === selectedSectionId)?.label || 'Alla teman'}
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                  Klicka på ett temakort för att smalna av råsvaren och fokusera analysen. Klicka igen för att gå tillbaka till hela materialet.
+                </div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function DataSummaryCard({ label, value, sublabel }: { label: string; value: string; sublabel: string }) {
+  return (
+    <div style={{
+      borderRadius: 16,
+      border: '1px solid var(--border)',
+      background: 'var(--surface)',
+      padding: '14px 16px',
+      display: 'grid',
+      gap: 6,
+    }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 28, lineHeight: 1, fontFamily: 'var(--font-display)', color: 'var(--text)' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+        {sublabel}
       </div>
     </div>
   )
@@ -1513,6 +2052,22 @@ function formatRelativeDate(value: string) {
   if (yesterday.toDateString() === date.toDateString()) return 'Uppdaterad igår'
 
   return `Uppdaterad ${date.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`
+}
+
+function formatDataDateTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Okänt datum'
+
+  return date.toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function truncate(value: string, length: number) {
+  if (value.length <= length) return value
+  return `${value.slice(0, length).trim()}…`
 }
 
 const editorInputStyle: React.CSSProperties = {
@@ -1571,6 +2126,60 @@ const pickerPanelStyle: React.CSSProperties = {
   borderRadius: 14,
   background: 'var(--bg)',
   padding: '14px',
+}
+
+const dataPanelStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 18,
+  background: 'var(--surface)',
+  padding: '16px',
+  display: 'grid',
+  gap: 12,
+}
+
+const dataCanvasShellStyle: React.CSSProperties = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 22,
+  overflow: 'hidden',
+  boxShadow: '0 18px 48px rgba(16,24,40,0.06)',
+}
+
+const dataHeroStyle: React.CSSProperties = {
+  background: 'var(--text)',
+  color: '#fff',
+  padding: '24px 24px 26px',
+}
+
+const dataHeroTitleStyle: React.CSSProperties = {
+  margin: 0,
+  fontFamily: 'var(--font-display)',
+  fontSize: 'clamp(2rem, 3vw, 2.8rem)',
+  lineHeight: 1.05,
+  letterSpacing: '-0.03em',
+  color: '#fff',
+}
+
+const dataHeroTextStyle: React.CSSProperties = {
+  margin: '10px 0 0',
+  maxWidth: 640,
+  fontSize: 14.5,
+  lineHeight: 1.7,
+  color: 'rgba(255,255,255,0.74)',
+}
+
+const summaryGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+  gap: 12,
+}
+
+const dataSectionLabelStyle: React.CSSProperties = {
+  fontSize: 10.5,
+  fontWeight: 700,
+  color: 'var(--accent)',
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
 }
 
 const templateRowStyle: React.CSSProperties = {
