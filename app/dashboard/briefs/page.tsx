@@ -184,7 +184,7 @@ export default function BriefsPage() {
         </Link>
       </div>
 
-      <BriefSubnav active="briefs" />
+      <BriefSubnav active="overview" />
 
       {pageError && (
         <div style={{

@@ -29,6 +29,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - AI-sammanfattning per session (genereras via `/api/briefs/summarize`)
 - Word-export av brief + sammanfattning
 - `/dashboard/send` har nu ett lugnare formulärspråk med mjukare kort, neutralare CTA:er och samma visuella riktning som den uppdaterade loginvyn
+- Brief-subnaven är nu förenklad till `Nytt utskick`, `Översikt` och `Frågebatterier`, medan kunder och utskick fångas upp under översikten
 
 **Saknas**: `app/dashboard/error.tsx` (ingen error boundary — okänt React-fel kraschar hela sidan)
 
