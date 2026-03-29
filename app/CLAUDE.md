@@ -41,7 +41,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Speglar discovery-landningssidan visuellt med nuvarande `doings-brief`-färger och typografi
 - Teman och frågor ligger exakt enligt discovery-referensen
 - Split-view med redigering till vänster och kundförhandsvisning till höger
-- Redigeringspanelen är nu uppdelad i flikarna `Frågor`, `Upplägg` och `Skicka`, med aktiva teman kvar överst
+- Redigeringspanelen är nu uppdelad i flikarna `Frågor`, `Upplägg`, `Skicka` och `Data`, med aktiva teman kvar överst
 - Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
 - Buildern kan nu öppna tidigare Discovery-upplägg i en tydligare lista med kund, målgrupp och senaste aktivitet
 - Buildern kan nu slå av hela teman för att smalna av ett bredare Discovery innan det sparas eller skickas
@@ -58,6 +58,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/api/discovery/remind` och knappar i responses-vyn kan nu skicka manuella påminnelser till väntande Discovery-mottagare
 - `Discovery` har nu dokumenterad riktlinje för målgruppsanpassning: vissa teman ska vara gemensamma, medan andra senare bör få varianter för ledare kontra blandade grupper
 - `Discovery` har nu en dokumenterad spec för en framtida `Data`-flik med visualiseringar, råsvar och fasta AI-analyslinser
+- `Data`-fliken finns nu som en första intern platshållare i buildern och länkar vidare till inkomna Discovery-svar
 
 **Saknas**: Eventuell mer avancerad översikt/filtering och dispatch-gruppering för Discovery
 

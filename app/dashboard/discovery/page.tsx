@@ -298,7 +298,7 @@ export default function DiscoveryPage() {
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [templateQuery, setTemplateQuery] = useState('')
-  const [editorTab, setEditorTab] = useState<'questions' | 'setup' | 'send'>('questions')
+  const [editorTab, setEditorTab] = useState<'questions' | 'setup' | 'send' | 'data'>('questions')
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('Perspektiv')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
@@ -796,10 +796,19 @@ export default function DiscoveryPage() {
                         key={`${category.id}-chip`}
                         type="button"
                         onClick={() => {
-                          if (!isEnabled && enabledCount <= 1) return
+                          if (isEnabled && enabledCount <= 1) return
+
+                          if (isEnabled) {
+                            toggleCategoryEnabled(category.id)
+                            if (isActive) {
+                              const nextEnabled = builderCategories.find(item => item.id !== category.id && item.enabled)
+                              if (nextEnabled) setActiveId(nextEnabled.id)
+                            }
+                            return
+                          }
+
                           toggleCategoryEnabled(category.id)
-                          if (isEnabled && activeId === category.id) return
-                          if (category.enabled) setActiveId(category.id)
+                          setActiveId(category.id)
                         }}
                         style={{
                           borderRadius: 999,
@@ -826,23 +835,26 @@ export default function DiscoveryPage() {
                   { id: 'questions', label: 'Frågor' },
                   { id: 'setup', label: 'Upplägg' },
                   { id: 'send', label: 'Skicka' },
+                  { id: 'data', label: 'Data' },
                 ].map(tab => {
                   const active = editorTab === tab.id
                   return (
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setEditorTab(tab.id as 'questions' | 'setup' | 'send')}
+                      onClick={() => setEditorTab(tab.id as 'questions' | 'setup' | 'send' | 'data')}
                       style={{
                         flex: 1,
                         borderRadius: 999,
-                        border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
-                        background: active ? 'rgba(198,35,104,0.10)' : 'var(--surface)',
-                        color: active ? 'var(--accent)' : 'var(--text-2)',
+                        border: `1px solid ${active ? 'rgba(14,14,12,0.88)' : 'var(--border)'}`,
+                        background: active ? 'rgba(14,14,12,0.92)' : 'rgba(14,14,12,0.03)',
+                        color: active ? '#fff' : 'var(--text-2)',
                         padding: '9px 12px',
                         fontSize: 12.5,
                         fontWeight: active ? 700 : 600,
                         cursor: 'pointer',
+                        boxShadow: active ? '0 10px 24px rgba(14,14,12,0.12)' : 'none',
+                        transition: 'background 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s',
                       }}
                     >
                       {tab.label}
@@ -1147,6 +1159,44 @@ export default function DiscoveryPage() {
                   ))}
                 </div>
                 </div>
+                )}
+
+                {editorTab === 'data' && (
+                  <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                      Data
+                    </div>
+                    <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                      Här kommer ni att kunna följa inkomna svar, se signaler per tema och låta AI analysera materialet ur olika perspektiv.
+                    </div>
+                    <div style={{
+                      background: 'rgba(14,14,12,0.03)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 16,
+                      padding: '16px 16px 14px',
+                      display: 'grid',
+                      gap: 12,
+                    }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                        Planerad struktur
+                      </div>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {[
+                          'Överblick över svarsläge och svarsfrekvens',
+                          'Temakort med signaler och återkommande mönster',
+                          'Råsvar bakom varje tema',
+                          'AI-analyslinser som Gemensamma behov och Skillnader i perspektiv',
+                        ].map(item => (
+                          <div key={item} style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                      <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
+                        Öppna inkomna svar
+                      </Link>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
