@@ -13,6 +13,7 @@ export default function QuestionSetsPage() {
   const [loading, setLoading]     = useState(true)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [deleting, setDeleting]   = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   function load() {
     setLoading(true)
@@ -24,10 +25,25 @@ export default function QuestionSetsPage() {
 
   async function deleteSet(id: string) {
     setDeleting(id)
-    const { error } = await sb.from('question_sets').delete().eq('id', id)
-    if (error) { setDeleting(null); setConfirming(null); return }
-    setSets(prev => prev.filter(s => s.id !== id))
-    setConfirming(null); setDeleting(null)
+    setDeleteError(null)
+    try {
+      const res = await fetch('/api/question-sets/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        setDeleteError(body.error || 'Kunde inte radera')
+        setDeleting(null)
+        setConfirming(null)
+        return
+      }
+      setSets(prev => prev.filter(s => s.id !== id))
+      setConfirming(null)
+    } finally {
+      setDeleting(null)
+    }
     router.refresh()
   }
 
@@ -65,6 +81,12 @@ export default function QuestionSetsPage() {
       </div>
 
       <BriefSubnav active="question-sets" />
+
+      {deleteError && (
+        <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 13 }}>
+          {deleteError}
+        </div>
+      )}
 
       {sets.length === 0 ? (
         <div style={{
