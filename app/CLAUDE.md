@@ -46,8 +46,9 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Buildern i `/dashboard/discovery` kan nu spara nya upplägg och ladda sparade upplägg från databasen
 - Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 - `/api/discovery/send` kan nu skapa sessions och skicka Discovery-mejl, och buildern kan trigga utskicket
+- `/dashboard/discovery/responses` och `/api/discovery/sessions*` finns nu för att följa Discovery-sessions och öppna enskilda svar
 
-**Saknas**: Översiktssida för Discovery-sessions/svar och påminnelseflöde för Discovery
+**Saknas**: Påminnelseflöde för Discovery och eventuell mer avancerad översikt/filtering
 
 ---
 

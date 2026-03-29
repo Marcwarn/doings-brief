@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 
 type DiscoveryQuestion =
@@ -679,6 +680,11 @@ export default function DiscoveryPage() {
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
                   Redigera innehållet till vänster. Kundens vy uppdateras direkt till höger.
                 </p>
+                <div style={{ marginTop: 12 }}>
+                  <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
+                    Öppna discovery-svar
+                  </Link>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1092,4 +1098,17 @@ const secondaryButtonStyle: React.CSSProperties = {
   fontSize: 13.5,
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+const responsesLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '8px 12px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'var(--bg)',
+  color: 'var(--text-2)',
+  textDecoration: 'none',
+  fontSize: 12.5,
+  fontWeight: 600,
 }
