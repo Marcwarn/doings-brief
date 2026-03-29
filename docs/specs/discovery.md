@@ -61,6 +61,19 @@ The recipient who:
 
 No dedicated Discovery-specific admin workflow is required in the first version.
 
+## Audience Fit
+
+`Discovery` must support different respondent constellations:
+
+- leaders only
+- employees only
+- a full team
+- mixed groups where leaders and employees answer side by side
+
+The default question language should therefore stay audience-neutral unless a theme clearly benefits from a more specific variant.
+
+See `docs/specs/discovery-audience-guidance.md` for theme-by-theme recommendations on where shared wording is sufficient and where leader-specific or mixed-group variants should be introduced later.
+
 ## Scope
 
 ## In scope for first implementation

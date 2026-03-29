@@ -9,6 +9,14 @@ Running log of significant decisions made during development. For formal archite
 - the intended shape is a dedicated `discovery_*` table family with its own public route, send flow, response flow, and dashboard views
 - reuse platform patterns where safe: token access, consultant auth, invite mechanics, and reminders
 
+## 2026-03-29 — Discovery Questions Must Handle Mixed Audiences
+
+- `Discovery` cannot assume a single respondent type
+- some sends target only leaders, some only employees, some full teams, and some mixed groups
+- the default editorial strategy is therefore audience-neutral question wording
+- only themes with clear hierarchy-sensitive perspective shifts should later get dedicated variants
+- first candidates for variants are `Ledarskap`, `Change management`, `AI readiness`, and `Vision & mål`
+
 ## 2024 — Initial Architecture
 
 - **Chose Next.js 14 App Router** over Pages Router for better server/client component control and co-located API routes
