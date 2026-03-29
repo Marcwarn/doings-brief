@@ -2,6 +2,13 @@
 
 Running log of significant decisions made during development. For formal architectural decisions, see `docs/decisions/ADR-*.md`.
 
+## 2026-03-29 — Discovery Will Be Spec-First and Separate from Brief
+
+- `Discovery` is treated as a separate product format, not as a UI variation of `Brief`
+- implementation should start from a written spec and explicit data model rather than incremental ad hoc reuse of `brief_*` tables
+- the intended shape is a dedicated `discovery_*` table family with its own public route, send flow, response flow, and dashboard views
+- reuse platform patterns where safe: token access, consultant auth, invite mechanics, and reminders
+
 ## 2024 — Initial Architecture
 
 - **Chose Next.js 14 App Router** over Pages Router for better server/client component control and co-located API routes
