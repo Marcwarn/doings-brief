@@ -820,25 +820,14 @@ export default function DiscoveryPage() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-                  Redigering
-                </div>
-                <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: 24, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-                  {activeCategory.label}
-                </h2>
-                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
-                  Anpassa innehållet här. Förhandsvisningen till höger uppdateras direkt.
-                </p>
-                <div style={{ marginTop: 12 }}>
-                  <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
-                    Öppna inkomna svar
-                  </Link>
-                </div>
-              </div>
-
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'grid', gap: 10 }}>
+                <div style={{ display: 'grid', gap: 10, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Upplägget
+                  </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                    Här styr du vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
+                  </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>
                       Skapa nytt
@@ -1088,6 +1077,24 @@ export default function DiscoveryPage() {
                   )}
                 </div>
 
+                <div style={{ paddingTop: 6, borderTop: '1px solid var(--border)', display: 'grid', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                        Aktivt tema
+                      </div>
+                      <h2 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+                        {activeCategory.label}
+                      </h2>
+                    </div>
+                    <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
+                      Inkomna svar
+                    </Link>
+                  </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
+                    Förhandsvisningen till höger uppdateras direkt när du ändrar namn, intro eller frågor i det här temat.
+                  </div>
+
                 <Field label="Temats namn">
                   <input
                     value={activeCategory.label}
@@ -1148,6 +1155,7 @@ export default function DiscoveryPage() {
                       )}
                     </div>
                   ))}
+                </div>
                 </div>
               </div>
             </div>
