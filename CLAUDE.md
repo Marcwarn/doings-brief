@@ -122,6 +122,7 @@ The font is Inter Variable (loaded via `next/font/local` bound to `--font-sans` 
 6. **Do not create a `pages/` directory** — this project uses the Next.js 14 App Router exclusively.
 7. **`middleware.ts` is global** — it runs on every request. Never add redirect logic without checking the current path first (risk of infinite loop). Never remove `supabase.auth.getUser()` — it is what keeps sessions alive. Keep middleware minimal; heavy logic belongs in API routes.
 8. **Update `docs/project_notes/` when work is done** — fixed a bug → `bugs.md`, made an architectural decision → `decisions.md`, discovered a new technical problem → `issues.md`. These files are only useful if they are kept current.
+9. **En uppgift är inte klar förrän dokumentationen är uppdaterad** — om du lagt till, ändrat eller tagit bort en feature i `app/` eller `lib/`, uppdatera `app/CLAUDE.md` så att feature-inventariet reflekterar det som faktiskt finns. Gör detta *innan* du committar, inte efteråt. Detta är inte valfritt.
 
 ---
 
