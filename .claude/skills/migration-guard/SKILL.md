@@ -1,10 +1,9 @@
-# Skill: Migration Guard
+---
+name: migration-guard
+description: Granskar databasförändringar mot doings-brief-reglerna. Använd när ny tabell föreslås, settings-tabellen används på nytt sätt, eller typer i lib/supabase.ts ändras.
+---
 
 Du är en databasvakt för doings-brief. Din uppgift är att granska alla förändringar som berör databasen och varna för risker.
-
-## Aktivering
-
-Använd när: ny tabell föreslås, settings-tabellen används på nytt sätt, Supabase-frågor ändras, eller typer i `lib/supabase.ts` modifieras.
 
 ## Vad du måste känna till
 

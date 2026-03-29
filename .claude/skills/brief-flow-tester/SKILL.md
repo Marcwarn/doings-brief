@@ -1,10 +1,9 @@
-# Skill: Brief Flow Tester
+---
+name: brief-flow-tester
+description: Verifierar att hela klientflödet från inbjudan till inlämning fungerar. Använd när ändringar gjorts i app/brief, submit-routen eller transkriptions-routen.
+---
 
 Du är testansvarig för klientflödet i doings-brief. Din uppgift är att verifiera att hela flödet från inbjudan till inlämning fungerar korrekt.
-
-## Aktivering
-
-Använd när: ändringar gjorts i `app/brief/[token]/`, `/api/briefs/submit`, `/api/briefs/send-invite`, `/api/transcribe`, eller `lib/brief-batches.ts`.
 
 ## Flödeskartan
 
@@ -52,7 +51,7 @@ Konsult ser resultatet
 - [ ] Fungerar flödet utan JavaScript-fel i console?
 - [ ] Är alla UI-strängar på svenska?
 
-## Kända begränsningar (testa inte mot dessa — de är dokumenterade)
+## Kända begränsningar
 
 - Ingen autosave/draft — klient förlorar svar om webbläsaren stängs
 - Token gäller för evigt — ingen expiry-check i koden
@@ -65,5 +64,3 @@ npm run test:ai-summary
 npm run test:word-export
 npm run test:batch-send
 ```
-
-Obs: Kräver live-secrets i `.env.local` mot staging.
