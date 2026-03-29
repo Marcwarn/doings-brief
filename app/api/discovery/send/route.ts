@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
             <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,.68);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Discovery från ${escHtml(senderName)}</p>
             <h1 style="margin:0;font-size:26px;font-weight:700;color:#fff;line-height:1.15;">Hej ${escHtml(session.client_name)}!</h1>
             <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:rgba(255,255,255,.78);max-width:430px;">
-              Du har fått en discovery från Doings för att hjälpa oss förstå era behov bättre inför nästa steg.
+              Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv inför nästa steg.
             </p>
           </td>
         </tr>
@@ -151,12 +151,12 @@ export async function POST(req: NextRequest) {
           <td style="padding:32px 32px 28px;">
             <div style="padding:18px 18px 16px;border:1px solid #ece4f3;border-radius:14px;background:linear-gradient(180deg,#fcfbfe 0%,#f8f4fb 100%);margin-bottom:24px;">
               <p style="margin:0;font-size:14px;color:#5e5873;line-height:1.65;">
-                ${escHtml(senderName)} vill samla in ett mer genomarbetat underlag inför ert kommande arbete.
+                Era svar hjälper oss att förstå nuläge, behov och riktning bättre och skapa en första utgångspunkt tillsammans.
                 Discoveryn tar ungefär <strong style="color:#241433;">10–15 minuter</strong> att besvara.
               </p>
             </div>
             <p style="margin:0 0 22px;font-size:15px;color:#312a3f;line-height:1.72;">
-              Klicka på knappen nedan för att öppna din personliga länk och svara i lugn och ro.
+              Klicka på knappen nedan för att öppna din personliga länk och dela era perspektiv i lugn och ro.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
               <tr>
@@ -189,9 +189,9 @@ export async function POST(req: NextRequest) {
           from: `${senderName} via Doings <${fromEmail}>`,
           reply_to: user.email || undefined,
           to: session.client_email,
-          subject: `${template.intro_title} – discovery från ${senderName}`,
+          subject: `${template.intro_title} – nästa steg med ${senderName}`,
           html,
-          text: `Hej ${session.client_name}!\n\n${senderName} på Doings vill samla in ett mer genomarbetat underlag inför ert kommande arbete.\n\nÖppna din personliga länk här:\n${discoveryUrl}\n\n${footerContactText}\n\n– Doings Discovery`,
+          text: `Hej ${session.client_name}!\n\nTack för dialogen hittills. Här vill ${senderName} på Doings samla in några fördjupande perspektiv för att förstå nuläge, behov och riktning bättre.\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\nÖppna din personliga länk här:\n${discoveryUrl}\n\n${footerContactText}\n\n– Doings Discovery`,
         })
 
         if (emailError) {

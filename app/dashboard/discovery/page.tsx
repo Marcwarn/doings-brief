@@ -148,8 +148,8 @@ const categories: DiscoveryCategory[] = [
   ] },
 ]
 
-const defaultIntroTitle = 'Berätta vad ni behöver'
-const defaultIntroText = 'Välj det område som känns mest relevant och svara på frågorna. Vi återkommer med ett skräddarsytt förslag.'
+const defaultIntroTitle = 'Fördjupa underlaget inför nästa steg'
+const defaultIntroText = 'Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.'
 
 type CategoryState = Record<number, string | string[]>
 

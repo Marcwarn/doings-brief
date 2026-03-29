@@ -209,7 +209,7 @@ export default function DiscoveryPublicPage() {
       <Shell>
         <SimpleCard
           title={payload.template.introTitle}
-          description={`${payload.session.clientOrganisation || payload.session.clientName}, det här är en fördjupad discovery från Doings. Det tar bara några minuter att svara.`}
+          description={`${payload.session.clientOrganisation || payload.session.clientName}, tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.`}
         >
           <button
             type="button"

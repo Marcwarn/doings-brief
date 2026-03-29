@@ -63,14 +63,14 @@ export async function POST(req: NextRequest) {
             <p style="margin:0 0 8px;font-size:12px;color:rgba(255,255,255,.68);font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Påminnelse från ${escHtml(senderName)}</p>
             <h1 style="margin:0;font-size:26px;font-weight:700;color:#fff;line-height:1.15;">Hej ${escHtml(session.client_name)}!</h1>
             <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:rgba(255,255,255,.78);max-width:430px;">
-              Vi vill påminna om att du fortfarande har en discovery från Doings att svara på.
+              Vi vill påminna om att vi fortfarande gärna vill få in era fördjupande perspektiv inför nästa steg.
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding:32px 32px 28px;">
             <p style="margin:0 0 22px;font-size:15px;color:#312a3f;line-height:1.72;">
-              Din personliga länk är fortfarande aktiv. Discoveryn tar ungefär 10–15 minuter att slutföra.
+              Din personliga länk är fortfarande aktiv. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.
             </p>
             <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
               <tr>
@@ -100,9 +100,9 @@ export async function POST(req: NextRequest) {
         from: `${senderName} via Doings <${fromEmail}>`,
         reply_to: user.email || undefined,
         to: session.client_email,
-        subject: `Påminnelse: ${template?.intro_title || 'Discovery'} från ${senderName}`,
+        subject: `Påminnelse: ${template?.intro_title || 'Discovery'} – nästa steg med ${senderName}`,
         html,
-        text: `Hej ${session.client_name}!\n\nVi vill påminna om att du fortfarande har en discovery från Doings att svara på.\n\nDin personliga länk är fortfarande aktiv:\n${discoveryUrl}\n\n– ${senderName}`,
+        text: `Hej ${session.client_name}!\n\nVi vill påminna om att vi fortfarande gärna vill få in era fördjupande perspektiv inför nästa steg.\n\nDin personliga länk är fortfarande aktiv:\n${discoveryUrl}\n\nEra svar hjälper oss att skapa en första utgångspunkt tillsammans.\n\n– ${senderName}`,
       })
 
       if (emailError) {
