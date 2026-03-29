@@ -24,6 +24,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 
 - Översikt: pending/submitted per kund och dispatch
 - "Needs attention"-panel med aktiva dispatches
+- Manuell påminnelseknapp för väntande dispatches
 - Länk till sessionsdetalj, frågeuppsättningar, kunder, utskicksflöde
 - AI-sammanfattning per session (genereras via `/api/briefs/summarize`)
 - Word-export av brief + sammanfattning
@@ -60,6 +61,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 |---|---|
 | `/api/briefs/submit` | Sparar svar, markerar session submitted, **skickar notismail till konsult** |
 | `/api/briefs/send-invite` | Skickar inbjudningsmail med token-länk till klient |
+| `/api/briefs/remind` | Skickar manuella påminnelsemail till väntande mottagare i konsultens egna utskick |
 | `/api/briefs/summarize` | Genererar AI-sammanfattning via Llama-3.3-70B, cachas i settings |
 | `/api/briefs/batches` | Hämtar batch-metadata för dashboard-gruppering |
 | `/api/briefs/delete` | Tar bort session |
@@ -72,13 +74,13 @@ Separat flöde från brief — används för att samla in feedback från kliente
 | `/api/evaluations` | Utvärderingsformulär-state |
 | `/api/admin/*` | Admin: bulk-template, invite, users |
 
-**Finns inte**: Påminnelsemail till klienter som inte svarat, token-expiry enforcement
+**Finns inte**: Automatisk påminnelsemailing och token-expiry enforcement
 
 ---
 
 ## Vad som genuint saknas (prioriterat)
 
-1. **Påminnelsemail** — ingen automatik om klient inte svarat
+1. **Automatiska påminnelser** — manuell påminnelse finns, men ingen scheduler eller overdue-logik
 2. **Token-expiry** — inbjudningslänkar gäller för evigt trots att copy säger 30 dagar
 3. **Autosave** — klient förlorar svar om webbläsaren stängs
 4. **Error boundary** — `app/dashboard/error.tsx` saknas

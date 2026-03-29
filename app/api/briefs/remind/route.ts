@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (error || !session) return { sessionId, ok: false, reason: 'hittades inte' }
+      if (session.consultant_id && session.consultant_id !== user.id) {
+        return { sessionId, ok: false, reason: 'obehörig' }
+      }
       if (session.status === 'submitted') return { sessionId, ok: false, reason: 'redan besvarad' }
+      if (!session.token || !session.client_email) return { sessionId, ok: false, reason: 'saknar data' }
 
       const reminderKey = `brief_reminder:${sessionId}`
       const { data: existing } = await sb
@@ -110,17 +114,29 @@ export async function POST(req: NextRequest) {
         return { sessionId, ok: false, reason: 'email misslyckades' }
       }
 
-      await sb.from('settings').upsert({
+      const { error: settingsError } = await sb.from('settings').upsert({
         key: reminderKey,
         value: JSON.stringify({ sentAt: new Date().toISOString(), clientEmail: session.client_email }),
         updated_at: new Date().toISOString(),
       })
 
+      if (settingsError) {
+        console.error('remind settings upsert error:', settingsError)
+        return { sessionId, ok: false, reason: 'kunde inte logga påminnelse' }
+      }
+
       return { sessionId, ok: true }
     }))
 
     const sent = results.filter(r => r.ok).length
-    return NextResponse.json({ ok: true, sent, results })
+    const failed = results.length - sent
+
+    if (sent === 0) {
+      const reason = results[0]?.reason || 'inga påminnelser skickades'
+      return NextResponse.json({ ok: false, sent, failed, results, error: reason }, { status: 409 })
+    }
+
+    return NextResponse.json({ ok: failed === 0, sent, failed, results })
   } catch (err) {
     console.error('remind error:', err)
     return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 })

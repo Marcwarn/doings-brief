@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [remindedGroups, setRemindedGroups] = useState<Record<string, boolean>>({})
   const [remindLoading, setRemindLoading] = useState<string | null>(null)
+  const [remindFeedback, setRemindFeedback] = useState<Record<string, string>>({})
 
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
@@ -56,6 +57,7 @@ export default function DashboardPage() {
   async function handleRemind(group: ReturnType<typeof groupBriefSessions>[number]) {
     const pendingSessions = group.sessions.filter(s => s.status === 'pending')
     if (pendingSessions.length === 0) return
+    setRemindFeedback(prev => ({ ...prev, [group.key]: '' }))
     setRemindLoading(group.key)
     try {
       const res = await fetch('/api/briefs/remind', {
@@ -63,8 +65,23 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionIds: pendingSessions.map(s => s.id) }),
       })
-      if (res.ok) {
+      const payload = await res.json().catch(() => null)
+      const sent = typeof payload?.sent === 'number' ? payload.sent : 0
+      const failed = typeof payload?.failed === 'number' ? payload.failed : Math.max(pendingSessions.length - sent, 0)
+
+      if (res.ok && sent === pendingSessions.length) {
         setRemindedGroups(prev => ({ ...prev, [group.key]: true }))
+        setRemindFeedback(prev => ({ ...prev, [group.key]: 'Påminnelse skickad.' }))
+      } else if (sent > 0) {
+        setRemindFeedback(prev => ({
+          ...prev,
+          [group.key]: `${sent} skickades, ${failed} misslyckades.`,
+        }))
+      } else {
+        setRemindFeedback(prev => ({
+          ...prev,
+          [group.key]: payload?.error || 'Kunde inte skicka påminnelse.',
+        }))
       }
     } finally {
       setRemindLoading(null)
@@ -163,16 +180,22 @@ export default function DashboardPage() {
               : activeDispatches.map(group => {
                 const reminded = !!remindedGroups[group.key]
                 const isLoading = remindLoading === group.key
+                const feedback = remindFeedback[group.key]
                 const dispatchHref = batchLookup[group.sessions[0]?.id || '']?.dispatchId
                   ? `/dashboard/dispatches/${batchLookup[group.sessions[0]?.id || '']?.dispatchId}`
                   : '/dashboard/briefs'
                 return (
-                  <div key={group.key} style={{ ...rowStyle }}>
+                  <div key={group.key} style={{ ...rowStyle, alignItems: 'flex-start' }}>
                     <Link href={dispatchHref} style={{ minWidth: 0, textDecoration: 'none', flex: 1 }}>
                       <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{group.label}</div>
                       <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
                         {group.pendingCount} väntar · senaste utskick {formatDate(group.lastSentAt)}
                       </div>
+                      {feedback && (
+                        <div style={{ fontSize: 11.5, color: reminded ? '#15803d' : '#92400e', marginTop: 6 }}>
+                          {feedback}
+                        </div>
+                      )}
                     </Link>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                       <button
