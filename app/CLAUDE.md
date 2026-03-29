@@ -33,6 +33,17 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 
 ---
 
+## `/dashboard/discovery` — Discoveryyta
+
+- Egen meny i dashboarden
+- Speglar discovery-landningssidan visuellt med nuvarande `doings-brief`-färger och typografi
+- Teman och frågor ligger exakt enligt discovery-referensen
+- Tabs mellan teman, progress per tema, skalknappar, öppna svar och valbara alternativ
+
+**Saknas**: Persistens, verklig submit-koppling och separat publik kundroute
+
+---
+
 ## `/evaluation` — Utvärderingsformulär (publik)
 
 Separat flöde från brief — används för att samla in feedback från klienter.

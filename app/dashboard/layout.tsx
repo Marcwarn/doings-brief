@@ -34,6 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const nav = [
     { href: '/dashboard',               label: 'Brief',          Icon: HomeIcon },
+    { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
     { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
@@ -156,6 +157,12 @@ const ChartIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <path d="M3 3v18h18"/>
     <path d="M7 14l4-4 3 3 5-7"/>
+  </svg>
+)
+const CompassIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M15.8 8.2l-2.4 7.2-7.2 2.4 2.4-7.2 7.2-2.4z" />
   </svg>
 )
 const LogoutIcon = () => (
