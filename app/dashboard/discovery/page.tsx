@@ -170,8 +170,9 @@ export default function DiscoveryPage() {
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)' }}>
       <header style={{ background: 'var(--text)', color: '#fff' }}>
-        <div style={{ padding: '22px 34px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+        <div style={{ padding: '24px 34px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <img src="/doings-logo-white.svg" alt="Doings" style={{ width: 28, height: 28 }} />
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1, color: '#fff' }}>Discovery</div>
           </div>
@@ -180,22 +181,22 @@ export default function DiscoveryPage() {
           </div>
         </div>
 
-        <div style={{ padding: '34px 34px 58px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ padding: '42px 34px 76px', position: 'relative', overflow: 'hidden' }}>
           <div style={{
             position: 'absolute',
-            inset: 'auto auto -22px 0',
+            inset: 'auto auto -18px 0',
             width: '100%',
-            height: 42,
+            height: 38,
             background: 'var(--bg)',
             borderTopLeftRadius: '50% 100%',
             borderTopRightRadius: '50% 100%',
           }} />
           <h1 style={{
-            margin: '0 0 10px',
-            maxWidth: 580,
+            margin: '0 0 12px',
+            maxWidth: 640,
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(2rem, 4vw, 2.8rem)',
-            lineHeight: 1.16,
+            fontSize: 'clamp(2.2rem, 4vw, 3.2rem)',
+            lineHeight: 1.1,
             letterSpacing: '-0.03em',
             position: 'relative',
             zIndex: 1,
@@ -204,9 +205,9 @@ export default function DiscoveryPage() {
           </h1>
           <p style={{
             margin: 0,
-            maxWidth: 560,
-            fontSize: 15,
-            lineHeight: 1.7,
+            maxWidth: 610,
+            fontSize: 15.5,
+            lineHeight: 1.75,
             color: 'rgba(255,255,255,0.74)',
             position: 'relative',
             zIndex: 1,
@@ -214,9 +215,11 @@ export default function DiscoveryPage() {
             Välj det område som känns mest relevant och svara på frågorna. Vi återkommer med ett skräddarsytt förslag.
           </p>
         </div>
+        </div>
       </header>
 
-      <div style={{ padding: '28px 34px 0', overflowX: 'auto', scrollbarWidth: 'none' as const }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+      <div style={{ padding: '30px 34px 0', overflowX: 'auto', scrollbarWidth: 'none' as const }}>
         <div style={{ display: 'flex', gap: 8, minWidth: 'max-content', paddingBottom: 2 }}>
           {categories.map(category => {
             const active = category.id === activeId
@@ -234,11 +237,12 @@ export default function DiscoveryPage() {
                   border: `1px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
                   background: active ? 'var(--accent)' : 'var(--surface)',
                   color: active ? '#fff' : 'var(--text-2)',
-                  padding: '7px 15px',
+                  padding: '8px 16px',
                   fontSize: 12.5,
                   fontWeight: 600,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
+                  boxShadow: active ? '0 8px 20px rgba(0,0,0,0.08)' : 'none',
                 }}
               >
                 {category.label}
@@ -248,17 +252,18 @@ export default function DiscoveryPage() {
         </div>
       </div>
 
-      <main style={{ padding: '24px 34px 56px', maxWidth: 920 }}>
-        <section style={{ marginBottom: 26, paddingBottom: 18, borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: 30, letterSpacing: '-0.03em', color: 'var(--text)' }}>
+      <main style={{ padding: '22px 34px 72px' }}>
+        <div style={{ maxWidth: 940 }}>
+        <section style={{ marginBottom: 28, paddingBottom: 18, borderBottom: '1px solid var(--border)' }}>
+          <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '-0.03em', color: 'var(--text)' }}>
             {activeCategory.label}
           </h2>
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-3)', lineHeight: 1.65 }}>
+          <p style={{ margin: 0, maxWidth: 620, fontSize: 14.5, color: 'var(--text-3)', lineHeight: 1.7 }}>
             {activeCategory.desc}
           </p>
         </section>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {activeCategory.questions.map((question, questionIndex) => {
             const value = answers[activeCategory.id]?.[questionIndex]
             return (
@@ -267,20 +272,21 @@ export default function DiscoveryPage() {
                 style={{
                   background: 'var(--surface)',
                   border: '1px solid var(--border)',
-                  borderRadius: 14,
-                  padding: '20px 22px',
+                  borderRadius: 16,
+                  padding: '22px 24px 20px',
+                  boxShadow: '0 1px 0 rgba(0,0,0,0.02)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
                   Fråga {questionIndex + 1}
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.55, color: 'var(--text)', marginBottom: 16 }}>
+                <div style={{ fontSize: 15.5, fontWeight: 600, lineHeight: 1.58, color: 'var(--text)', marginBottom: 18, maxWidth: 720 }}>
                   {question.text}
                 </div>
 
                 {question.type === 'scale' && (
                   <>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
                       {[1, 2, 3, 4, 5].map(option => {
                         const selected = value === `${option}`
                         return (
@@ -289,9 +295,9 @@ export default function DiscoveryPage() {
                             type="button"
                             onClick={() => setScale(activeCategory.id, questionIndex, `${option}`)}
                             style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: 10,
+                              width: 42,
+                              height: 42,
+                              borderRadius: 12,
                               border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
                               background: selected ? 'var(--accent)' : 'transparent',
                               color: selected ? '#fff' : 'var(--text-2)',
@@ -305,7 +311,7 @@ export default function DiscoveryPage() {
                         )
                       })}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11, color: 'var(--text-3)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11, color: 'var(--text-3)', maxWidth: 250 }}>
                       <span>Håller inte alls</span>
                       <span>Håller helt</span>
                     </div>
@@ -320,13 +326,13 @@ export default function DiscoveryPage() {
                     rows={3}
                     style={{
                       width: '100%',
-                      minHeight: 96,
+                      minHeight: 104,
                       resize: 'vertical',
-                      borderRadius: 10,
+                      borderRadius: 12,
                       border: '1px solid var(--border)',
                       background: 'var(--bg)',
                       color: 'var(--text)',
-                      padding: '12px 14px',
+                      padding: '14px 16px',
                       fontSize: 14,
                       lineHeight: 1.6,
                       fontFamily: 'var(--font-sans)',
@@ -336,7 +342,7 @@ export default function DiscoveryPage() {
                 )}
 
                 {question.type === 'choice' && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9 }}>
                     {question.options.map(option => {
                       const checked = Array.isArray(value) && value.includes(option)
                       return (
@@ -349,9 +355,9 @@ export default function DiscoveryPage() {
                             border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`,
                             background: checked ? 'var(--accent-dim)' : 'var(--bg)',
                             color: checked ? 'var(--accent)' : 'var(--text-2)',
-                            padding: '8px 14px',
+                            padding: '9px 15px',
                             fontSize: 13,
-                            lineHeight: 1.45,
+                            lineHeight: 1.4,
                             cursor: 'pointer',
                             textAlign: 'left',
                           }}
@@ -367,47 +373,51 @@ export default function DiscoveryPage() {
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
-          <button
-            type="button"
-            onClick={() => submitCategory(activeCategory.id)}
-            style={{
-              border: 'none',
-              borderRadius: 10,
-              background: 'var(--accent)',
-              color: '#fff',
-              padding: '11px 24px',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Skicka svar till Doings →
-          </button>
-          <button
-            type="button"
-            onClick={() => clearCategory(activeCategory.id)}
-            style={{
-              border: '1px solid var(--border)',
-              borderRadius: 10,
-              background: 'transparent',
-              color: 'var(--text-2)',
-              padding: '11px 18px',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Rensa
-          </button>
-        </div>
-
-        <div style={{ marginTop: 14 }}>
-          <div style={{ height: 4, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
-            <div style={{ width: `${activeProgress.percent}%`, height: '100%', borderRadius: 999, background: 'var(--accent)', transition: 'width 0.25s ease' }} />
-          </div>
-          <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--text-3)' }}>
-            {activeProgress.count} av {activeCategory.questions.length} besvarade
+        <div style={{ marginTop: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '18px 20px' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 240, flex: 1 }}>
+              <div style={{ height: 4, borderRadius: 999, background: 'var(--border)', overflow: 'hidden' }}>
+                <div style={{ width: `${activeProgress.percent}%`, height: '100%', borderRadius: 999, background: 'var(--accent)', transition: 'width 0.25s ease' }} />
+              </div>
+              <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--text-3)' }}>
+                {activeProgress.count} av {activeCategory.questions.length} besvarade
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => clearCategory(activeCategory.id)}
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  background: 'transparent',
+                  color: 'var(--text-2)',
+                  padding: '11px 18px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Rensa
+              </button>
+              <button
+                type="button"
+                onClick={() => submitCategory(activeCategory.id)}
+                style={{
+                  border: 'none',
+                  borderRadius: 10,
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  padding: '11px 24px',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 24px rgba(0,0,0,0.08)',
+                }}
+              >
+                Skicka svar till Doings →
+              </button>
+            </div>
           </div>
         </div>
 
@@ -425,7 +435,9 @@ export default function DiscoveryPage() {
             Tack! Vi har tagit emot era svar och återkommer med ett skräddarsytt förslag.
           </div>
         )}
+        </div>
       </main>
+      </div>
     </div>
   )
 }
