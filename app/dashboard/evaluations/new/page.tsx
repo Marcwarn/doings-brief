@@ -20,6 +20,50 @@ type CreatedPayload = {
   publicUrl: string
 }
 
+const evaluationQuestionStarters = [
+  {
+    id: 'reflection',
+    label: 'Reflektion efter dagen',
+    description: 'Korta frågor om vad deltagarna tar med sig från workshopen och vad som är viktigast att ta vidare.',
+    questionSetName: 'Reflektion efter dagen',
+    questions: [
+      { text: 'Vad tar du framför allt med dig från dagen?', type: 'text' as const },
+      { text: 'Hur relevant var innehållet för din vardag?', type: 'scale_1_5' as const },
+      { text: 'Vad vill du se mer av eller fördjupa framåt?', type: 'text' as const },
+    ],
+  },
+  {
+    id: 'value',
+    label: 'Värde och nästa steg',
+    description: 'Passar när ni vill förstå vad som skapade mest värde och vad som bör följas upp efteråt.',
+    questionSetName: 'Värde och nästa steg',
+    questions: [
+      { text: 'Vad var mest värdefullt för dig under workshopen?', type: 'text' as const },
+      { text: 'Hur användbart känns detta för det som väntar framåt?', type: 'scale_1_5' as const },
+      { text: 'Vilket nästa steg skulle göra störst skillnad nu?', type: 'text' as const },
+    ],
+  },
+  {
+    id: 'facilitation',
+    label: 'Dagens upplägg',
+    description: 'Passar när ni vill få återkoppling på upplägg, energi, delaktighet och facilitering.',
+    questionSetName: 'Återkoppling på dagens upplägg',
+    questions: [
+      { text: 'Hur upplevde du dagens upplägg och tempo?', type: 'text' as const },
+      { text: 'Hur väl skapade dagen utrymme för delaktighet och reflektion?', type: 'scale_1_5' as const },
+      { text: 'Vad hade gjort upplevelsen ännu bättre för dig?', type: 'text' as const },
+    ],
+  },
+] as const
+
+function buildStarterQuestions(starterId: string) {
+  const starter = evaluationQuestionStarters.find(item => item.id === starterId) || evaluationQuestionStarters[0]
+  return {
+    questionSetName: starter.questionSetName,
+    questions: starter.questions.map(item => ({ text: item.text, type: item.type })),
+  }
+}
+
 export default function NewEvaluationPage() {
   const sb = createClient()
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
@@ -29,12 +73,11 @@ export default function NewEvaluationPage() {
   const [questionSetId, setQuestionSetId] = useState('')
   const [questionSetQuery, setQuestionSetQuery] = useState('')
   const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(false)
+  const [selectedStarterId, setSelectedStarterId] = useState<string>(evaluationQuestionStarters[0].id)
   const [questionPreview, setQuestionPreview] = useState<Question[]>([])
-  const [customQuestionSetName, setCustomQuestionSetName] = useState('')
-  const [customQuestions, setCustomQuestions] = useState<{ text: string; type: EvaluationQuestionType }[]>([
-    { text: '', type: 'text' },
-    { text: '', type: 'text' },
-  ])
+  const initialStarter = buildStarterQuestions(evaluationQuestionStarters[0].id)
+  const [customQuestionSetName, setCustomQuestionSetName] = useState<string>(initialStarter.questionSetName)
+  const [customQuestions, setCustomQuestions] = useState<{ text: string; type: EvaluationQuestionType }[]>(initialStarter.questions)
   const [label, setLabel] = useState('')
   const [collectEmail, setCollectEmail] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -91,7 +134,7 @@ export default function NewEvaluationPage() {
 
   useEffect(() => {
     if (!customQuestionSetName.trim() && label.trim()) {
-      setCustomQuestionSetName(`${label.trim()} · Frågor`)
+      setCustomQuestionSetName(`${label.trim()} · utvärderingsfrågor`)
     }
   }, [label, customQuestionSetName])
 
@@ -115,6 +158,18 @@ export default function NewEvaluationPage() {
     setCustomQuestions(prev => prev.length <= 1 ? prev : prev.filter((_, questionIndex) => questionIndex !== index))
   }
 
+  function applyStarter(starterId: string) {
+    const starter = buildStarterQuestions(starterId)
+    setSelectedStarterId(starterId)
+    setQuestionSetId('')
+    setQuestionSetQuery('')
+    setShowQuestionSetPicker(false)
+    setQuestionPreview([])
+    setCustomQuestionSetName(starter.questionSetName)
+    setCustomQuestions(starter.questions)
+    setError(null)
+  }
+
   async function selectQuestionSetSource(setId: string) {
     const selected = questionSets.find(item => item.id === setId) || null
     setQuestionSetId(setId)
@@ -124,20 +179,20 @@ export default function NewEvaluationPage() {
     const { data } = await sb.from('questions').select('*').eq('question_set_id', setId).order('order_index')
     const nextQuestions = data || []
     setQuestionPreview(nextQuestions)
-    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selected?.name || 'Importerade frågor'} · kopia`)
+    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selected?.name || 'Importerade frågor'} · anpassning`)
     setCustomQuestions(nextQuestions.length > 0
       ? nextQuestions.map(question => ({ text: question.text, type: 'text' as const }))
-      : [{ text: '', type: 'text' }, { text: '', type: 'text' }])
+      : buildStarterQuestions(selectedStarterId).questions)
   }
 
   function importSelectedQuestionSetAgain() {
     if (!questionSetId || questionPreview.length === 0) {
-      setError('Välj ett frågebatteri först om du vill importera det.')
+      setError('Välj tidigare frågor först om du vill importera dem.')
       return
     }
 
     setError(null)
-    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selectedQuestionSet?.name || 'Importerade frågor'} · kopia`)
+    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selectedQuestionSet?.name || 'Importerade frågor'} · anpassning`)
     setCustomQuestions(questionPreview.map(question => ({ text: question.text, type: 'text' })))
   }
 
@@ -238,18 +293,52 @@ export default function NewEvaluationPage() {
             </>
           </Field>
 
-          <Field label="Frågebatteri">
+          <Field label="Utvärderingsfrågor">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Börja med ett utvärderingsupplägg</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                    Utvärdering ska kännas som workshopfeedback, inte som en brief. Välj ett startupplägg och justera frågorna fritt.
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {evaluationQuestionStarters.map(item => {
+                    const active = selectedStarterId === item.id && !questionSetId
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => applyStarter(item.id)}
+                        style={{
+                          display: 'grid',
+                          gap: 4,
+                          textAlign: 'left',
+                          padding: '12px 14px',
+                          borderRadius: 10,
+                          border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                          background: active ? 'rgba(198,35,104,0.08)' : 'var(--surface)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{item.label}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.55 }}>{item.description}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div style={{ padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
                   <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Använd tidigare frågor som startpunkt</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                      Välj ett befintligt batteri om du vill använda det som startpunkt.
+                      Om du vill kan du hämta in tidigare frågor och anpassa dem för dagens utvärdering.
                     </div>
                   </div>
                   <button type="button" onClick={() => setShowQuestionSetPicker(prev => !prev)} style={ghostButtonStyle}>
-                    {selectedQuestionSet ? 'Byt källa' : 'Välj frågebatteri'}
+                    {selectedQuestionSet ? 'Byt tidigare frågor' : 'Välj tidigare frågor'}
                   </button>
                 </div>
 
@@ -261,10 +350,10 @@ export default function NewEvaluationPage() {
                         <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{selectedQuestionSet.description}</div>
                       )}
                     </div>
-                          <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                            Aktiv källa
-                          </div>
-                        </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      Importerad startpunkt
+                    </div>
+                  </div>
                 )}
 
                 {showQuestionSetPicker && (
@@ -272,7 +361,7 @@ export default function NewEvaluationPage() {
                     <input
                       value={questionSetQuery}
                       onChange={e => setQuestionSetQuery(e.target.value)}
-                      placeholder="Sök frågebatteri"
+                      placeholder="Sök tidigare frågor"
                       style={inputStyle}
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
@@ -302,7 +391,7 @@ export default function NewEvaluationPage() {
                       ))}
                       {visibleQuestionSets.length === 0 && (
                         <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
-                          Inga frågebatterier matchar din sökning.
+                          Inga tidigare frågor matchar din sökning.
                         </div>
                       )}
                     </div>
@@ -311,21 +400,21 @@ export default function NewEvaluationPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <Field label="Namn på frågebatteri">
+                <Field label="Namn på frågorna">
                   <input
                     value={customQuestionSetName}
                     onChange={e => setCustomQuestionSetName(e.target.value)}
-                    placeholder="Till exempel Ledarutbildning Malmö · Frågor"
+                    placeholder="Till exempel Reflektion efter dagen"
                     style={inputStyle}
                   />
                 </Field>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)' }}>Egna frågor</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)' }}>Frågor till deltagarna</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {selectedQuestionSet && (
                       <button type="button" onClick={importSelectedQuestionSetAgain} style={ghostButtonStyle}>
-                        Hämta in källan igen
+                        Hämta in tidigare frågor igen
                       </button>
                     )}
                     <button type="button" onClick={addCustomQuestion} style={ghostButtonStyle}>
@@ -411,7 +500,7 @@ export default function NewEvaluationPage() {
               {created.evaluation.label}
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 16 }}>
-              {created.evaluation.customer} · {created.evaluation.questionSetName || 'Frågebatteri'}
+              {created.evaluation.customer} · {created.evaluation.questionSetName || 'Utvärderingsfrågor'}
               <span style={{ marginLeft: 6 }}>
                 · {created.evaluation.collectEmail ? 'E-post samlas in' : 'Helt anonym'}
               </span>

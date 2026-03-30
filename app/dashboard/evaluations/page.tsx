@@ -71,7 +71,7 @@ export default function EvaluationsPage() {
                       {evaluation.label}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6 }}>
-                      {evaluation.customer} · {evaluation.questionSetName || 'Frågebatteri'}
+                      {evaluation.customer} · {evaluation.questionSetName || 'Utvärderingsfrågor'}
                     </div>
                   </div>
                   <Link href={`/dashboard/evaluations/${evaluation.id}`} style={secondaryLinkStyle}>

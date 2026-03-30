@@ -189,7 +189,7 @@ export default function EvaluationDetailPage() {
         <SectionCard title="Översikt">
           <div style={{ display: 'grid', gap: 10 }}>
             <OverviewRow label="Kund" value={evaluation.customer} />
-            <OverviewRow label="Frågebatteri" value={evaluation.questionSetName || payload.questionSet?.name || 'Ej angivet'} />
+            <OverviewRow label="Frågor" value={evaluation.questionSetName || payload.questionSet?.name || 'Ej angivet'} />
             <OverviewRow label="Svarsläge" value={evaluation.collectEmail ? 'Med e-post' : 'Anonymt'} />
             <OverviewRow label="Svar hittills" value={`${responses.length}`} />
             <OverviewRow label="Senaste svar" value={latestResponseAt ? formatDateTime(latestResponseAt) : 'Inga ännu'} />
