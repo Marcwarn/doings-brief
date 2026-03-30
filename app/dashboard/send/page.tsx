@@ -1033,9 +1033,6 @@ function SendBriefInner() {
               <div style={{ display: 'grid', gap: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', paddingTop: 10 }}>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
-                      Förhandsvisning
-                    </div>
                     <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
                       {firstPreviewRecipient ? `Till ${firstPreviewRecipient.name}` : 'Så här möter briefen mottagaren'}
                     </div>
