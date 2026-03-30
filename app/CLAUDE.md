@@ -37,6 +37,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - mottagarimport i `/dashboard/send` är nu begränsad till `.csv` och `.txt` för att undvika osäkert Excel-beroende
 - Brief-subnaven är nu förenklad till `Nytt utskick`, `Översikt` och `Frågebatterier`, medan kunder och utskick fångas upp under översikten
 - Den synliga produktetiketten i dashboarden är nu `Debrief`, och sidomenyns huvudlänk går direkt till `Nytt utskick` i stället för översikten
+- Debrief ska alltid öppna i vänsterfliken `Nytt utskick`, inte i översikt eller frågor
 
 **Saknas**: `app/dashboard/error.tsx` (ingen error boundary — okänt React-fel kraschar hela sidan)
 
@@ -95,6 +96,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 - Utvärdering utgår nu tydligare från egna workshopfrågor och starter-upplägg, medan återanvändning av tidigare frågor bara är en sekundär startpunkt
 - En utvärdering kan nu tas bort från detaljvyn tillsammans med inkomna svar och tillhörande frågeupplägg, men bara om frågorna inte används av någon annan utvärdering
 - Dashboardens huvudlänk för `Utvärdering` går nu direkt till skapaflödet i stället för översikten
+- Utvärdering ska alltid öppna i vänsterfliken först, via skapaflödet och inte via översikten
 
 ---
 
