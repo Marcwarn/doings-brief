@@ -60,6 +60,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 - `/api/discovery/send` kan nu skapa sessions och skicka Discovery-mejl, och buildern kan trigga utskicket
 - `Discovery` kan nu också skickas i anonymt läge via en delbar länk i stället för personliga mottagare
+- anonymt läge i `Skicka` har nu tydligare delnings-UI med instruktioner och kopiera-länk-knapp
 - den publika `Discovery`-sidan stödjer nu frivilliga bakgrundsfält för roll och team/enhet i anonymt läge
 - `/api/discovery/submit` skickar nu notismail till konsulten när ett Discovery-svar kommer in
 - Discovery-svar sparas nu via en separat submissionsnivå under sessionen, så att flera anonyma svar kan komma in bakom samma länk

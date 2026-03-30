@@ -410,6 +410,7 @@ export default function DiscoveryPage() {
   const [recipientsInput, setRecipientsInput] = useState('')
   const [responseMode, setResponseMode] = useState<DiscoveryResponseMode>('named')
   const [sendResults, setSendResults] = useState<DiscoverySendResult[] | null>(null)
+  const [copiedShareUrl, setCopiedShareUrl] = useState<string | null>(null)
   const [builderCategories, setBuilderCategories] = useState(() => buildDefaultCategories(defaultAudienceMode))
   const [activeId, setActiveId] = useState(() => buildDefaultCategories(defaultAudienceMode)[0].id)
   const [answers, setAnswers] = useState<Record<string, CategoryState>>(() =>
@@ -931,6 +932,7 @@ export default function DiscoveryPage() {
   async function sendTemplate() {
     setSendError(null)
     setSendResults(null)
+    setCopiedShareUrl(null)
 
     if (!currentTemplateId) {
       setSendError('Spara upplägget innan du skickar det.')
@@ -989,6 +991,18 @@ export default function DiscoveryPage() {
       ...prev,
       [categoryId]: { ...prev[categoryId], [questionIndex]: value },
     }))
+  }
+
+  async function copyShareUrl(url: string) {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedShareUrl(url)
+      window.setTimeout(() => {
+        setCopiedShareUrl(current => current === url ? null : current)
+      }, 2500)
+    } catch {
+      setSendError('Kunde inte kopiera länken automatiskt. Markera och kopiera den manuellt.')
+    }
   }
 
   function setOpen(categoryId: string, questionIndex: number, value: string) {
@@ -1429,18 +1443,31 @@ export default function DiscoveryPage() {
                     </Field>
                   ) : (
                     <div style={{
-                      borderRadius: 12,
+                      borderRadius: 16,
                       border: '1px solid var(--border)',
-                      background: 'var(--bg)',
-                      padding: '14px 16px',
+                      background: 'linear-gradient(180deg,#fff 0%,#faf8fc 100%)',
+                      padding: '16px 16px 14px',
                       display: 'grid',
-                      gap: 6,
+                      gap: 12,
                     }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
-                        Delbar anonym länk
+                      <div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
+                          Delbar anonym länk
+                        </div>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)', marginTop: 4 }}>
+                          När du skapar länken kan du dela den vidare inom kunden. Varje person som svarar kommer in som ett eget anonymt svar i datan.
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
-                        När du skickar skapas en länk som kan delas vidare inom kunden. Varje person som svarar kommer in som ett eget anonymt svar i datan.
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {[
+                          '1. Skapa länken för vald kund eller organisation.',
+                          '2. Kopiera och dela den i mejl, chat eller kalenderinbjudan.',
+                          '3. Följ sedan inkomna svar i Data-fliken.',
+                        ].map(step => (
+                          <div key={step} style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                            {step}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1472,7 +1499,7 @@ export default function DiscoveryPage() {
                       </div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: sendFailureCount > 0 ? '#9a3412' : '#166534' }}>
                         {responseMode === 'anonymous'
-                          ? 'Kopiera länken nedan och dela den med gruppen eller kunden.'
+                          ? 'Kopiera länken nedan och dela den med gruppen eller kunden. Den kan användas av flera personer.'
                           : sendFailureCount > 0
                           ? 'Se status per mottagare nedan och försök igen för dem som inte fick mejlet.'
                           : 'Discovery-länkarna är nu utskickade och du kan följa svaren under inkomna svar.'}
@@ -1495,16 +1522,42 @@ export default function DiscoveryPage() {
                           </div>
                           {responseMode === 'anonymous' && result.url && (
                             <div style={{
-                              borderRadius: 10,
+                              borderRadius: 12,
                               border: '1px solid var(--border)',
                               background: '#fff',
-                              padding: '10px 12px',
-                              fontSize: 12,
-                              lineHeight: 1.5,
-                              color: 'var(--text-2)',
-                              wordBreak: 'break-all',
+                              padding: '12px',
+                              display: 'grid',
+                              gap: 10,
                             }}>
-                              {result.url}
+                              <div style={{
+                                fontSize: 12,
+                                lineHeight: 1.55,
+                                color: 'var(--text-2)',
+                                wordBreak: 'break-all',
+                              }}>
+                                {result.url}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                                <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                                  Dela länken i det sammanhang där gruppen redan kommunicerar.
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => void copyShareUrl(result.url!)}
+                                  style={{
+                                    padding: '8px 12px',
+                                    borderRadius: 999,
+                                    border: '1px solid var(--border)',
+                                    background: copiedShareUrl === result.url ? 'rgba(198,35,104,0.08)' : 'var(--surface)',
+                                    color: copiedShareUrl === result.url ? 'var(--accent)' : 'var(--text-2)',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {copiedShareUrl === result.url ? 'Kopierad' : 'Kopiera länk'}
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
