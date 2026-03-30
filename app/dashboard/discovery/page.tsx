@@ -403,7 +403,7 @@ export default function DiscoveryPage() {
   const [dataStatusFilter, setDataStatusFilter] = useState<'all' | 'submitted' | 'pending'>('all')
   const [dataQuery, setDataQuery] = useState('')
   const [selectedDataSectionId, setSelectedDataSectionId] = useState<string>('all')
-  const [selectedDataSessionId, setSelectedDataSessionId] = useState<string>('overview')
+  const [selectedDataSessionId, setSelectedDataSessionId] = useState<string>('none')
   const [selectedAnalysisLens, setSelectedAnalysisLens] = useState<DiscoveryAnalysisLens>('Gemensamma behov')
   const [analysisPayload, setAnalysisPayload] = useState<DiscoveryAnalysisPayload | null>(null)
   const [analysisUpdatedAt, setAnalysisUpdatedAt] = useState<string | null>(null)
@@ -513,14 +513,16 @@ export default function DiscoveryPage() {
   }, [filteredDataSessions])
 
   const selectedDataSessionIdOrDefault = useMemo(() => {
-    if (selectedDataSessionId === 'overview') return 'overview'
+    if (selectedDataSessionId === 'none' || selectedDataSessionId === 'overview') return selectedDataSessionId
     return submittedDataSessions.some(session => session.id === selectedDataSessionId)
       ? selectedDataSessionId
-      : 'overview'
+      : 'none'
   }, [selectedDataSessionId, submittedDataSessions])
 
   const rawDataSessions = useMemo(() => {
-    const baseSessions = selectedDataSessionIdOrDefault === 'overview'
+    const baseSessions = selectedDataSessionIdOrDefault === 'none'
+      ? []
+      : selectedDataSessionIdOrDefault === 'overview'
       ? filteredDataSessions
       : filteredDataSessions.filter(session => session.id === selectedDataSessionIdOrDefault)
 
@@ -589,7 +591,7 @@ export default function DiscoveryPage() {
     setDataStatusFilter('all')
     setDataQuery('')
     setSelectedDataSectionId('all')
-    setSelectedDataSessionId('overview')
+    setSelectedDataSessionId('none')
     setSelectedAnalysisLens('Gemensamma behov')
     setAnalysisPayload(null)
     setAnalysisUpdatedAt(null)
@@ -610,7 +612,7 @@ export default function DiscoveryPage() {
       }
 
       setDataPayload(payload as DiscoveryDataPayload)
-      setSelectedDataSessionId('overview')
+      setSelectedDataSessionId('none')
     } catch (err) {
       setDataError(err instanceof Error ? err.message : 'Kunde inte läsa datavyn.')
       setDataPayload(null)
@@ -783,7 +785,7 @@ export default function DiscoveryPage() {
       setDataStatusFilter('all')
       setDataQuery('')
       setSelectedDataSectionId('all')
-      setSelectedDataSessionId('overview')
+      setSelectedDataSessionId('none')
       setSelectedAnalysisLens('Gemensamma behov')
       setAnalysisPayload(null)
       setAnalysisUpdatedAt(null)
@@ -1964,6 +1966,52 @@ function DiscoveryDataCanvas({
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
                 <div style={inactiveDataTabStyle}>Överblick</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (selectedSessionId === 'none') {
+    return (
+      <section style={{ minWidth: 0 }}>
+        <div style={dataCanvasShellStyle}>
+          <div style={dataHeroStyle}>
+            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
+              Data
+            </div>
+            <h2 style={dataHeroTitleStyle}>Välj ett kundspår</h2>
+            <p style={dataHeroTextStyle}>
+              Data är kopplat till faktiska svar. Välj först en besvarad person eller gå in i en samlad överblick för att börja läsa materialet.
+            </p>
+          </div>
+
+          <div style={{ padding: '22px 24px 26px', display: 'grid', gap: 18 }}>
+            <section style={dataPanelStyle}>
+              <div style={dataSectionLabelStyle}>Öppna data för</div>
+              <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
+                Välj `Överblick` om du vill se det samlade läget, eller öppna en person direkt om du vill läsa det som redan har besvarats.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => onSelectSession('overview')}
+                  style={inactiveDataTabButtonStyle}
+                >
+                  Överblick
+                </button>
+                {submittedSessions.map(session => (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => onSelectSession(session.id)}
+                    style={inactiveDataTabButtonStyle}
+                  >
+                    {session.clientName}
+                  </button>
+                ))}
               </div>
             </section>
           </div>
