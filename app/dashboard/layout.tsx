@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard',               label: 'Brief',          Icon: HomeIcon },
+    { href: '/dashboard/send',          label: 'Debrief',       Icon: HomeIcon },
     { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
     { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
@@ -65,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               fontSize: 13, fontWeight: 700, letterSpacing: '0.12em',
               color: 'var(--text)',
             }}>
-              Brief
+              Debrief
             </span>
           </div>
           <div style={{ height: 1, background: 'var(--border-sub)', marginTop: 20 }} />

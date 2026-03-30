@@ -70,7 +70,7 @@ function Modal({ header, children }: { header: React.ReactNode; children: React.
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem', position: 'relative', zIndex: 1 }}>
           <DoingsLogo />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            Brief
+            Debrief
           </span>
         </div>
         {header}
@@ -265,7 +265,7 @@ export default function BriefPage() {
       <Background index={0} />
       <Modal header={
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em', fontWeight: 700, color: '#fff', margin: 0, position: 'relative', zIndex: 1 }}>
-          Brief hittades inte
+          Debrief hittades inte
         </h1>
       }>
         <p style={{ fontSize: 15, color: '#6f6660', lineHeight: 1.75, fontFamily: 'var(--font-sans)' }}>
@@ -507,7 +507,7 @@ export default function BriefPage() {
           <div style={{ background: 'radial-gradient(circle at top right,rgba(198,35,104,0.24) 0%,rgba(198,35,104,0.08) 22%,rgba(17,16,15,0) 44%),linear-gradient(180deg,#171413 0%,#11100f 100%)', padding: '1.4rem 1.8rem', display: 'flex', alignItems: 'center', gap: 10 }}>
             <DoingsLogo />
             <div>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.10em', textTransform: 'uppercase' }}>Brief</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.10em', textTransform: 'uppercase' }}>Debrief</span>
               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.64)', marginLeft: 10 }}>Granska dina svar</span>
             </div>
           </div>

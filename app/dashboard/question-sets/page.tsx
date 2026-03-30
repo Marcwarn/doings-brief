@@ -74,7 +74,7 @@ export default function QuestionSetsPage() {
             Frågebatterier
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 10, lineHeight: 1.7, maxWidth: 720 }}>
-            Samla dina återanvändbara frågor i en egen yta. Här bygger du underlaget som sedan kan skickas som korta briefs till rätt personer.
+            Samla dina återanvändbara frågor i en egen yta. Här bygger du underlaget som sedan kan skickas som korta debriefs till rätt personer.
           </p>
         </div>
         <Link href="/dashboard/question-sets/new" style={primaryLinkStyle}>
@@ -102,7 +102,7 @@ export default function QuestionSetsPage() {
             Inga frågebatterier ännu
           </div>
           <p style={{ fontSize: 14, color: 'var(--text-2)', margin: '0 0 18px', lineHeight: 1.7, maxWidth: 560 }}>
-            Skapa ditt första batteri när du vill återanvända en kort fråga, en kickoff-debrief eller ett genomarbetat upplägg i flera utskick.
+            Skapa ditt första upplägg när du vill återanvända en kort fråga, en kickoff-debrief eller ett genomarbetat upplägg i flera utskick.
           </p>
           <Link href="/dashboard/question-sets/new" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', textDecoration: 'none' }}>
             Skapa första batteriet →

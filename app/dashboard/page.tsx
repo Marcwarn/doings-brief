@@ -113,14 +113,14 @@ export default function DashboardPage() {
       <div style={statsRowStyle}>
         <OverviewStatCard label="Utskicksgrupper" value={`${dispatchGroups.length}`} text="aktiva och historiska grupper i vyn" />
         <OverviewStatCard label="Väntar på svar" value={`${pendingCount}`} text="personer som ännu inte har svarat" />
-        <OverviewStatCard label="Svar inkomna" value={`${submittedCount}`} text="briefs som redan är besvarade" />
+        <OverviewStatCard label="Svar inkomna" value={`${submittedCount}`} text="debriefs som redan är besvarade" />
         <OverviewStatCard label="Kunder" value={`${customers.length}`} text="organisationer med utskick eller historik" />
       </div>
 
       <div style={journeyGridStyle}>
         <JourneyCard
           title="Nytt utskick"
-          text="Börja med kund, fråga och mottagare. Bygg briefen och se direkt hur den kommer att landa hos mottagaren."
+          text="Börja med kund, fråga och mottagare. Bygg debriefen och se direkt hur den kommer att landa hos mottagaren."
           href="/dashboard/send"
           linkText="Öppna arbetsytan"
         />
@@ -212,7 +212,7 @@ export default function DashboardPage() {
           )}
         </SurfacePanel>
 
-        <SurfacePanel title="Frågebatterier att använda" subtitle="Det senaste du kan utgå från när du skickar en ny brief." href="/dashboard/question-sets" linkText="Hantera">
+        <SurfacePanel title="Frågor att använda" subtitle="Det senaste du kan utgå från när du skickar en ny debrief." href="/dashboard/question-sets" linkText="Hantera">
           {questionSets.length === 0 ? (
             <BriefEmptyCard title="Inga frågebatterier ännu" text="Skapa ditt första frågebatteri för att komma igång med briefs." />
           ) : (
