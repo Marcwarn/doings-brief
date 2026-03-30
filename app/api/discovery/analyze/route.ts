@@ -198,6 +198,7 @@ export async function POST(req: NextRequest) {
     const templateId = typeof body?.templateId === 'string' ? body.templateId.trim() : ''
     const themeId = typeof body?.themeId === 'string' && body.themeId.trim() ? body.themeId.trim() : null
     const query = typeof body?.query === 'string' ? body.query.trim() : ''
+    const customerKey = typeof body?.customerKey === 'string' && body.customerKey.trim() ? body.customerKey.trim().toLowerCase() : null
     const regenerate = body?.regenerate === true
     const lens = normalizeString(body?.lens) as DiscoveryAnalysisLens
 
@@ -259,6 +260,8 @@ export async function POST(req: NextRequest) {
     }
 
     const filteredSessions = (sessions || []).filter(session => {
+      const sessionCustomerKey = (session.client_organisation?.trim() || session.client_name.trim() || 'okand-kund').toLowerCase()
+      if (customerKey && sessionCustomerKey !== customerKey) return false
       if (!queryLower) return true
       return [session.client_name, session.client_email, session.client_organisation || '']
         .join(' ')
@@ -398,6 +401,7 @@ export async function POST(req: NextRequest) {
       themeId,
       lens,
       query,
+      customerKey,
       entryIds: (submissionEntries || []).map(entry => entry.id).sort(),
     })
     const cacheKey = buildAnalysisKey(templateId, themeId, lens, scopeHash)
@@ -423,6 +427,7 @@ export async function POST(req: NextRequest) {
       `Upplägg: ${template.name}`,
       `Målgrupp: ${template.audience_mode}`,
       `Respondenter: ${respondentCount}`,
+      customerKey ? `Kundscope: ${customerKey}` : 'Kundscope: alla kunder i urvalet',
       `Tema: ${themeId ? sectionById.get(themeId)?.label || 'Okänt tema' : 'Alla teman'}`,
       query ? `Urval: filtrerat på "${query}"` : 'Urval: alla besvarade svar i scope',
     ].join('\n')

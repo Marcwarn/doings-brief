@@ -375,6 +375,20 @@ function answeredCount(category: DiscoveryCategory, answers: CategoryState) {
   }, 0)
 }
 
+function customerKeyForSession(session: {
+  clientName: string
+  clientOrganisation: string | null
+}) {
+  return (session.clientOrganisation?.trim() || session.clientName.trim() || 'okand-kund').toLowerCase()
+}
+
+function customerLabelForSession(session: {
+  clientName: string
+  clientOrganisation: string | null
+}) {
+  return session.clientOrganisation?.trim() || session.clientName.trim() || 'Okänd kund'
+}
+
 export default function DiscoveryPage() {
   const [loading, setLoading] = useState(true)
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
@@ -441,9 +455,63 @@ export default function DiscoveryPage() {
     })
   }, [dataPayload, dataQuery, dataStatusFilter])
 
+  const customerGroups = useMemo(() => {
+    const submitted = filteredDataSessions.filter(session => session.status === 'submitted')
+    const groups = new Map<string, {
+      key: string
+      label: string
+      sessions: typeof submitted
+      respondentCount: number
+      latestSubmittedAt: string | null
+      responseMode: DiscoveryResponseMode | 'mixed'
+    }>()
+
+    for (const session of submitted) {
+      const key = customerKeyForSession(session)
+      const current = groups.get(key) || {
+        key,
+        label: customerLabelForSession(session),
+        sessions: [],
+        respondentCount: 0,
+        latestSubmittedAt: null,
+        responseMode: session.responseMode || 'named',
+      }
+
+      current.sessions.push(session)
+      current.respondentCount += session.responseMode === 'anonymous'
+        ? (session.respondentCount || 0)
+        : 1
+
+      if (!current.latestSubmittedAt || (session.submittedAt && session.submittedAt > current.latestSubmittedAt)) {
+        current.latestSubmittedAt = session.submittedAt
+      }
+
+      if (current.responseMode !== (session.responseMode || 'named')) {
+        current.responseMode = 'mixed'
+      }
+
+      groups.set(key, current)
+    }
+
+    return Array.from(groups.values()).sort((a, b) => (b.latestSubmittedAt || '').localeCompare(a.latestSubmittedAt || ''))
+  }, [filteredDataSessions])
+
+  const selectedDataScope = useMemo(() => {
+    if (selectedDataSessionId === 'none' || selectedDataSessionId === 'overview') return selectedDataSessionId
+    return customerGroups.some(group => `customer:${group.key}` === selectedDataSessionId)
+      ? selectedDataSessionId
+      : 'none'
+  }, [customerGroups, selectedDataSessionId])
+
+  const scopedDataSessions = useMemo(() => {
+    if (selectedDataScope === 'none' || selectedDataScope === 'overview') return filteredDataSessions
+    const customerKey = selectedDataScope.replace(/^customer:/, '')
+    return filteredDataSessions.filter(session => customerKeyForSession(session) === customerKey)
+  }, [filteredDataSessions, selectedDataScope])
+
   const dataThemeCards = useMemo(() => {
     const sections = dataPayload?.sections || []
-    const submittedSessions = filteredDataSessions.filter(session => session.status === 'submitted')
+    const submittedSessions = scopedDataSessions.filter(session => session.status === 'submitted')
 
     return sections
       .filter(section => enabledCategories.some(category => category.id === section.id))
@@ -483,7 +551,7 @@ export default function DiscoveryPage() {
           excerpt: firstExcerpt,
         }
       })
-  }, [dataPayload, enabledCategories, filteredDataSessions])
+  }, [dataPayload, enabledCategories, scopedDataSessions])
 
   const selectedDataSectionIdOrDefault = useMemo(() => {
     if (selectedDataSectionId === 'all') return 'all'
@@ -493,15 +561,15 @@ export default function DiscoveryPage() {
   }, [dataThemeCards, selectedDataSectionId])
 
   const dataOverview = useMemo(() => {
-    const invitedCount = filteredDataSessions.length
-    const submittedCount = filteredDataSessions.reduce((sum, session) => {
+    const invitedCount = scopedDataSessions.length
+    const submittedCount = scopedDataSessions.reduce((sum, session) => {
       if (session.responseMode === 'anonymous') {
         return sum + (session.respondentCount || 0)
       }
       return sum + (session.status === 'submitted' ? 1 : 0)
     }, 0)
-    const pendingCount = filteredDataSessions.filter(session => session.status === 'pending').length
-    const latestSubmittedAt = filteredDataSessions
+    const pendingCount = scopedDataSessions.filter(session => session.status === 'pending').length
+    const latestSubmittedAt = scopedDataSessions
       .map(session => session.submittedAt)
       .filter(Boolean)
       .sort()
@@ -516,31 +584,18 @@ export default function DiscoveryPage() {
       strongSignalCount: dataThemeCards.filter(card => card.signalLabel === 'Tydlig signal').length,
       splitCount: dataThemeCards.filter(card => card.splitLabel).length,
     }
-  }, [dataThemeCards, filteredDataSessions])
-
-  const submittedDataSessions = useMemo(() => {
-    return filteredDataSessions.filter(session => session.status === 'submitted')
-  }, [filteredDataSessions])
-
-  const selectedDataSessionIdOrDefault = useMemo(() => {
-    if (selectedDataSessionId === 'none' || selectedDataSessionId === 'overview') return selectedDataSessionId
-    return submittedDataSessions.some(session => session.id === selectedDataSessionId)
-      ? selectedDataSessionId
-      : 'none'
-  }, [selectedDataSessionId, submittedDataSessions])
+  }, [dataThemeCards, scopedDataSessions])
 
   const rawDataSessions = useMemo(() => {
-    const baseSessions = selectedDataSessionIdOrDefault === 'none'
+    const baseSessions = selectedDataScope === 'none'
       ? []
-      : selectedDataSessionIdOrDefault === 'overview'
-      ? filteredDataSessions
-      : filteredDataSessions.filter(session => session.id === selectedDataSessionIdOrDefault)
+      : scopedDataSessions
 
     return baseSessions.filter(session => {
       if (selectedDataSectionIdOrDefault === 'all') return true
       return session.sectionResponses.some(item => item.sectionId === selectedDataSectionIdOrDefault && item.answeredCount > 0)
     })
-  }, [filteredDataSessions, selectedDataSectionIdOrDefault, selectedDataSessionIdOrDefault])
+  }, [scopedDataSessions, selectedDataScope, selectedDataSectionIdOrDefault])
 
   useEffect(() => {
     void loadTemplateList()
@@ -647,6 +702,7 @@ export default function DiscoveryPage() {
           themeId: selectedDataSectionIdOrDefault === 'all' ? null : selectedDataSectionIdOrDefault,
           lens: selectedAnalysisLens,
           query: dataQuery,
+          customerKey: selectedDataScope.startsWith('customer:') ? selectedDataScope.replace(/^customer:/, '') : null,
           regenerate,
         }),
       })
@@ -1619,8 +1675,8 @@ export default function DiscoveryPage() {
               overview={dataOverview}
               themeCards={dataThemeCards}
               rawSessions={rawDataSessions}
-              submittedSessions={submittedDataSessions}
-              selectedSessionId={selectedDataSessionIdOrDefault}
+              customerGroups={customerGroups}
+              selectedSessionId={selectedDataScope}
               onSelectSession={setSelectedDataSessionId}
               selectedSectionId={selectedDataSectionIdOrDefault}
               onSelectSection={setSelectedDataSectionId}
@@ -1919,7 +1975,7 @@ function DiscoveryDataCanvas({
   overview,
   themeCards,
   rawSessions,
-  submittedSessions,
+  customerGroups,
   selectedSessionId,
   onSelectSession,
   selectedSectionId,
@@ -1973,20 +2029,27 @@ function DiscoveryDataCanvas({
       excerpts: string[]
     }>
   }>
-  submittedSessions: Array<{
-    id: string
-    clientName: string
-    clientEmail: string
-    clientOrganisation: string | null
-    responseMode?: DiscoveryResponseMode
-    respondentCount?: number
-    status: 'pending' | 'submitted'
-    createdAt: string
-    submittedAt: string | null
-    sectionResponses: Array<{
-      sectionId: string
-      answeredCount: number
-      excerpts: string[]
+  customerGroups: Array<{
+    key: string
+    label: string
+    respondentCount: number
+    latestSubmittedAt: string | null
+    responseMode: DiscoveryResponseMode | 'mixed'
+    sessions: Array<{
+      id: string
+      clientName: string
+      clientEmail: string
+      clientOrganisation: string | null
+      responseMode?: DiscoveryResponseMode
+      respondentCount?: number
+      status: 'pending' | 'submitted'
+      createdAt: string
+      submittedAt: string | null
+      sectionResponses: Array<{
+        sectionId: string
+        answeredCount: number
+        excerpts: string[]
+      }>
     }>
   }>
   selectedSessionId: string
@@ -2058,7 +2121,7 @@ function DiscoveryDataCanvas({
             <section style={dataPanelStyle}>
               <div style={dataSectionLabelStyle}>När svar börjar komma in</div>
               <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
-                Här kommer du kunna växla mellan överblick och enskilda svarande, se tematiska signaler och generera AI-analys på det material som faktiskt har besvarats.
+                Här kommer du kunna växla mellan överblick och kundspår, se tematiska signaler och generera AI-analys på det material som faktiskt har besvarats.
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
                 <div style={inactiveDataTabStyle}>Överblick</div>
@@ -2105,21 +2168,21 @@ function DiscoveryDataCanvas({
                 </button>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-                  {submittedSessions.map(session => (
+                  {customerGroups.map(group => (
                     <button
-                      key={session.id}
+                      key={group.key}
                       type="button"
-                      onClick={() => onSelectSession(session.id)}
+                      onClick={() => onSelectSession(`customer:${group.key}`)}
                       style={dataCustomerCardStyle}
                     >
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
-                          {session.clientOrganisation || session.clientName}
+                          {group.label}
                         </div>
                         <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
-                          {session.responseMode === 'anonymous'
-                            ? `${session.respondentCount || 0} anonyma svar`
-                            : (session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : 'Besvarad')}
+                          {group.responseMode === 'anonymous'
+                            ? `${group.respondentCount} anonyma svar`
+                            : `${group.respondentCount} svar · ${group.latestSubmittedAt ? `senast ${formatDataDateTime(group.latestSubmittedAt)}` : 'besvarat'}`}
                         </div>
                       </div>
                     </button>
@@ -2165,8 +2228,7 @@ function DiscoveryDataCanvas({
 
             {selectedSessionId !== 'overview' && (
               <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                {submittedSessions.find(session => session.id === selectedSessionId)?.clientOrganisation
-                  || submittedSessions.find(session => session.id === selectedSessionId)?.clientName
+                {customerGroups.find(group => `customer:${group.key}` === selectedSessionId)?.label
                   || 'Vald kund'}
               </div>
             )}
@@ -2180,14 +2242,14 @@ function DiscoveryDataCanvas({
             >
               Överblick
             </button>
-            {submittedSessions.map(session => (
+            {customerGroups.map(group => (
               <button
-                key={session.id}
+                key={group.key}
                 type="button"
-                onClick={() => onSelectSession(session.id)}
-                style={selectedSessionId === session.id ? activeDataTabStyle : inactiveDataTabButtonStyle}
+                onClick={() => onSelectSession(`customer:${group.key}`)}
+                style={selectedSessionId === `customer:${group.key}` ? activeDataTabStyle : inactiveDataTabButtonStyle}
               >
-                {session.clientOrganisation || session.clientName}
+                {group.label}
               </button>
             ))}
           </div>
@@ -2243,7 +2305,7 @@ function DiscoveryDataCanvas({
                           </div>
                         </div>
                         <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                          {card.respondentCount} personer har svarat · {card.coveragePercent}% täckning
+                          {card.respondentCount} svar i urvalet · {card.coveragePercent}% täckning
                         </div>
                         <div style={{ height: 5, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
                           <div style={{ width: `${card.coveragePercent}%`, height: '100%', borderRadius: 999, background: card.signalLabel === 'Tydlig signal' ? '#166534' : 'var(--accent)' }} />
