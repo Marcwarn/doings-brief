@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding:36px 34px 32px;background:radial-gradient(circle at top right,rgba(198,35,104,0.22) 0%,rgba(198,35,104,0.08) 22%,rgba(17,16,15,0) 48%),linear-gradient(180deg,#171413 0%,#11100f 100%);">
-                  <p style="margin:0 0 10px;font-size:11px;color:rgba(255,255,255,0.48);font-weight:700;letter-spacing:.10em;text-transform:uppercase;">Kort brief från ${escHtml(senderName)}</p>
+                  <p style="margin:0 0 10px;font-size:11px;color:rgba(255,255,255,0.48);font-weight:700;letter-spacing:.10em;text-transform:uppercase;">Kort brief från Doings</p>
                   <h1 style="margin:0;font-size:34px;line-height:1.02;font-weight:700;letter-spacing:-0.04em;color:#ffffff;">Hej ${escHtml(clientName)}</h1>
                   <p style="margin:16px 0 0;font-size:15px;line-height:1.7;color:rgba(255,255,255,0.72);max-width:470px;">
                     Vi vill samla in några korta perspektiv från dig inför nästa steg i dialogen. Det ger oss en bättre utgångspunkt för det fortsatta arbetet tillsammans.
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
           <td style="padding:32px 34px 34px;background:#fffdfb;">
             <div style="padding:18px 18px 16px;border:1px solid rgba(26,23,21,0.08);border-radius:18px;background:#f8f4ef;margin-bottom:24px;">
               <p style="margin:0;font-size:14px;color:#5b5450;line-height:1.72;">
-                ${escHtml(senderName)} vill få en snabbare och mer träffsäker bild innan arbetet går vidare. Svara i lugn och ro när det passar dig.
+                Doings vill få en snabbare och mer träffsäker bild innan arbetet går vidare. Svara i lugn och ro när det passar dig.
               </p>
             </div>
             <p style="margin:0 0 22px;font-size:15px;color:#332e2b;line-height:1.8;">
