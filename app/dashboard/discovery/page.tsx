@@ -1994,24 +1994,40 @@ function DiscoveryDataCanvas({
               <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
                 Välj `Överblick` om du vill se det samlade läget, eller öppna en person direkt om du vill läsa det som redan har besvarats.
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+              <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
                 <button
                   type="button"
                   onClick={() => onSelectSession('overview')}
-                  style={inactiveDataTabButtonStyle}
+                  style={dataCustomerCardStyle}
                 >
-                  Överblick
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>Överblick</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
+                      Se det samlade läget över alla besvarade svar i discoveryt.
+                    </div>
+                  </div>
                 </button>
-                {submittedSessions.map(session => (
-                  <button
-                    key={session.id}
-                    type="button"
-                    onClick={() => onSelectSession(session.id)}
-                    style={inactiveDataTabButtonStyle}
-                  >
-                    {session.clientName}
-                  </button>
-                ))}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                  {submittedSessions.map(session => (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={() => onSelectSession(session.id)}
+                      style={dataCustomerCardStyle}
+                    >
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
+                          {session.clientName}
+                          {session.clientOrganisation ? ` · ${session.clientOrganisation}` : ''}
+                        </div>
+                        <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
+                          {session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : 'Besvarad'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </section>
           </div>
@@ -2041,6 +2057,22 @@ function DiscoveryDataCanvas({
         </div>
 
         <div style={{ padding: '22px 24px 26px', display: 'grid', gap: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => onSelectSession('none')}
+              style={inactiveDataTabButtonStyle}
+            >
+              ← Tillbaka till kunder
+            </button>
+
+            {selectedSessionId !== 'overview' && (
+              <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+                {submittedSessions.find(session => session.id === selectedSessionId)?.clientName || 'Vald person'}
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -2625,6 +2657,17 @@ const inactiveDataTabStyle: React.CSSProperties = {
   color: 'var(--text-3)',
   fontSize: 12.5,
   fontWeight: 700,
+}
+
+const dataCustomerCardStyle: React.CSSProperties = {
+  textAlign: 'left',
+  borderRadius: 16,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  padding: '15px 16px',
+  display: 'grid',
+  gap: 8,
+  cursor: 'pointer',
 }
 
 const templateRowStyle: React.CSSProperties = {
