@@ -28,7 +28,9 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Länk till sessionsdetalj, frågeuppsättningar, kunder, utskicksflöde
 - AI-sammanfattning per session (genereras via `/api/briefs/summarize`)
 - Word-export av brief + sammanfattning
-- `/dashboard/send` har nu ett lugnare formulärspråk med mjukare kort, neutralare CTA:er och samma visuella riktning som den uppdaterade loginvyn
+- `/dashboard/send` är nu en lätt split-workspace med vänster redigering och höger mottagarpreview
+- `Brief`-workspace är nu uppdelad i `Frågor`, `Upplägg` och `Skicka`
+- högerpanelen i `Brief` förhandsvisar nu intro, rytm, progress och första frågan så som mottagaren möter briefen
 - mottagarimport i `/dashboard/send` är nu begränsad till `.csv` och `.txt` för att undvika osäkert Excel-beroende
 - Brief-subnaven är nu förenklad till `Nytt utskick`, `Översikt` och `Frågebatterier`, medan kunder och utskick fångas upp under översikten
 

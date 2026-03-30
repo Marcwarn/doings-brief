@@ -13,7 +13,7 @@ Operational facts that are easy to forget and critical to get right.
 | **Submission-notis** | Konsulten får mail med hela Q&A + dashboardlänk direkt när klienten skickar in | — |
 | **Dashboard** | Pending/submitted-counts per kund och dispatch, "Needs attention"-panel, länk till sessionsdetalj, manuell påminnelseknapp | Ingen overdue-indikator eller automatisk påminnelsekörning |
 | **Discovery** `/dashboard/discovery` | Split-view med redigering till vänster och kundförhandsvisning eller data till höger. Har persistens, publik tokenroute, send/submit-kedja, påminnelser och första versionen av `Data` med AI-analyslinser. | Ingen mer avancerad dispatch-gruppering eller djupare analys ännu |
-| **Brief workspace** `/dashboard/send` | Lugnat formspråk och tydligare handlingsfokus. Dokumenterad riktning finns nu för att göra ytan till en lätt split-workspace med vänster edit och höger preview. | Split-workspace med riktig mottagarpreview är ännu inte byggd |
+| **Brief workspace** `/dashboard/send` | Lätt split-workspace med vänster edit och höger mottagarpreview. Flikar för `Frågor`, `Upplägg` och `Skicka`, samt en tydligare känsla av kort debrief till en eller några få personer. | Ingen mer avancerad preview av hela flödet ännu, bara intro, rytm och första fråga |
 | **Påminnelser** | `/api/briefs/remind` skickar manuella påminnelsemail för väntande sessions och tillåter bara konsultens egna utskick | Ingen automatik eller schemalagd retry |
 | **AI-sammanfattning** | Llama-3.3-70B genererar summary, key signals, risks, follow-up questions, next steps. Cachas i settings-tabellen. | — |
 | **Word-export** | Exporterar brief + sammanfattning till .docx | PDF-export saknas |

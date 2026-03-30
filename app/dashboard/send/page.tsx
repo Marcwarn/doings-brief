@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type QuestionSet, type Question } from '@/lib/supabase'
@@ -33,6 +33,8 @@ type SentSession = Recipient & {
 type QuestionDraft = {
   text: string
 }
+
+type BriefWorkspaceTab = 'questions' | 'setup' | 'send'
 
 function titleCaseFromEmail(email: string) {
   return email
@@ -255,6 +257,11 @@ function SendBriefInner() {
   const [sent, setSent]               = useState<SentSession[] | null>(null)
   const [error, setError]             = useState('')
   const [importMessage, setImportMessage] = useState('')
+  const [activeTab, setActiveTab] = useState<BriefWorkspaceTab>('questions')
+  const [introTitle, setIntroTitle] = useState('Några korta frågor')
+  const [introText, setIntroText] = useState('Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.')
+  const [internalLabel, setInternalLabel] = useState('')
+  const [contextNote, setContextNote] = useState('')
 
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
@@ -291,6 +298,12 @@ function SendBriefInner() {
     }
   }, [clientOrg, customSetName])
 
+  useEffect(() => {
+    if (!internalLabel.trim() && clientOrg.trim()) {
+      setInternalLabel(formatBatchLabel(clientOrg))
+    }
+  }, [clientOrg, internalLabel])
+
   const customerSuggestions = storedCustomers
     .filter(customer => {
       if (!clientOrg.trim()) return false
@@ -299,6 +312,12 @@ function SendBriefInner() {
     .slice(0, 6)
 
   const selectedSetRecord = sets.find(set => set.id === selectedSet) || null
+  const parsedRecipientsPreview = useMemo(() => {
+    const { recipients } = parseRecipients(recipientsInput)
+    return recipients
+  }, [recipientsInput])
+  const firstPreviewRecipient = parsedRecipientsPreview[0] || null
+  const activeQuestions = customQuestions.map(question => question.text.trim()).filter(Boolean)
   const filteredSets = sets.filter(set => {
     if (!questionSetQuery.trim()) return true
     const query = questionSetQuery.trim().toLowerCase()
@@ -424,9 +443,12 @@ function SendBriefInner() {
       .insert({
         user_id: currentUser?.id,
         name: customSetName.trim(),
-        description: selectedSet
-          ? `Importerad och justerad från ${selectedSetRecord?.name || 'befintligt frågebatteri'}`
-          : 'Skapad direkt i utskicksflödet',
+        description: [
+          selectedSet
+            ? `Importerad och justerad från ${selectedSetRecord?.name || 'befintligt frågebatteri'}`
+            : 'Skapad direkt i utskicksflödet',
+          contextNote.trim() ? `Kontext: ${contextNote.trim()}` : '',
+        ].filter(Boolean).join(' · '),
       })
       .select()
       .single()
@@ -528,7 +550,7 @@ function SendBriefInner() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         dispatchId,
-        label: formatBatchLabel(clientOrg.trim()),
+        label: internalLabel.trim() || formatBatchLabel(clientOrg.trim()),
         organisation: clientOrg.trim() || null,
         questionSetId,
         sessionIds: sessions.map(session => session.id),
@@ -625,343 +647,423 @@ function SendBriefInner() {
           Nytt utskick
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 10, lineHeight: 1.7, maxWidth: 620 }}>
-          Välj företag, frågor och mottagare. Skicka sedan briefen och följ svaren i utskicket.
+          Skicka ett kort underlag till en eller flera personer inför nästa steg.
         </p>
       </div>
 
       <BriefSubnav active="send" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 20 }}>
-        {[
-          ['1', 'Företag och mottagare', 'Välj företag och ange vilka som ska svara.'],
-          ['2', 'Frågor', 'Skriv egna frågor eller utgå från ett befintligt batteri.'],
-          ['3', 'Skicka', 'Skicka briefen och följ svarsläget i utskicket.'],
-        ].map(([step, title, text]) => (
-          <div key={step} style={{ ...panelStyle, padding: '18px 18px 16px' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(198,35,104,0.10)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
-              {step}
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{title}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.6 }}>{text}</div>
-          </div>
-        ))}
+      <div style={briefStatsRowStyle}>
+        <BriefStatCard label="Frågor" value={`${activeQuestions.length}`} text={activeQuestions.length === 1 ? 'fråga i utskicket' : 'frågor i utskicket'} />
+        <BriefStatCard label="Kund" value={clientOrg.trim() || 'Ingen vald'} text={clientOrg.trim() ? 'kopplad till utskicket' : 'lägg till i upplägget'} />
+        <BriefStatCard label="Mottagare" value={`${parsedRecipientsPreview.length}`} text={parsedRecipientsPreview.length === 1 ? 'person i listan' : 'personer i listan'} />
       </div>
 
-      <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-        <div style={{ ...panelStyle, padding: '22px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <StepBadge value="1" />
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-              Kunddialog och mottagare
-            </div>
+      <form onSubmit={send} style={briefWorkspaceStyle}>
+        <section style={{ ...panelStyle, padding: '22px 24px', minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
+            {[
+              { key: 'questions' as const, label: 'Frågor' },
+              { key: 'setup' as const, label: 'Upplägg' },
+              { key: 'send' as const, label: 'Skicka' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  ...briefTabButtonStyle,
+                  color: activeTab === tab.key ? 'var(--text)' : 'var(--text-2)',
+                  background: activeTab === tab.key ? 'rgba(14,14,12,0.06)' : 'rgba(255,255,255,0.88)',
+                  borderColor: activeTab === tab.key ? 'rgba(14,14,12,0.12)' : 'var(--border)',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={fieldLabelStyle}>Företag</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  value={clientOrg}
-                  onChange={e => {
-                    setClientOrg(e.target.value)
-                    setShowCustomerSuggestions(true)
-                  }}
-                  placeholder="Skriv företagsnamn"
-                  style={F}
-                  onFocus={e => {
-                    setShowCustomerSuggestions(true)
-                    e.target.style.borderColor = 'rgba(198,35,104,0.45)'
-                    e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
-                  }}
-                  onBlur={e => {
-                    window.setTimeout(() => setShowCustomerSuggestions(false), 120)
-                    e.target.style.borderColor = 'var(--border)'
-                    e.target.style.boxShadow = 'none'
-                  }}
-                />
-                {showCustomerSuggestions && customerSuggestions.length > 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 6px)',
-                    left: 0,
-                    right: 0,
-                    zIndex: 20,
-                    background: 'rgba(255,255,255,0.98)',
-                    border: '1px solid rgba(14,14,12,0.08)',
-                    borderRadius: 14,
-                    boxShadow: '0 18px 40px rgba(14,14,12,0.10)',
-                    overflow: 'hidden',
-                  }}>
-                    {customerSuggestions.map(customer => (
-                      <button
-                        key={customer.id}
-                        type="button"
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => {
-                          setClientOrg(customer.label)
-                          setShowCustomerSuggestions(false)
-                        }}
-                        style={{
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '11px 14px',
-                          border: 'none',
-                          borderBottom: '1px solid var(--border-sub)',
-                          background: 'rgba(255,255,255,0.98)',
-                          color: 'var(--text)',
-                          fontSize: 13,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {customer.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <label style={fieldLabelStyle}>Vilka ska svara? *</label>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".csv,.txt"
-                onChange={importRecipientsFile}
-                style={{ display: 'none' }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
-                <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
-                  Klistra in flera rader eller importera en fil med mottagare.
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Link
-                    href="/api/briefs/recipients-template"
-                    style={{ ...secondaryLinkStyle }}
-                  >
-                    Ladda ner mall
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    style={secondaryButtonStyle}
-                  >
-                    Importera CSV/TXT
-                  </button>
+
+          {activeTab === 'questions' && (
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  Frågor och ton
                 </div>
-              </div>
-              <textarea
-                value={recipientsInput}
-                onChange={e => setRecipientsInput(e.target.value)}
-                placeholder={'Namn, e-post\nNamn <e-post>\ne-post'}
-                required
-                rows={6}
-                style={{ ...F, minHeight: 148, resize: 'vertical', lineHeight: 1.55 }}
-                onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
-                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
-              />
-              <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: '10px 0 0', lineHeight: 1.7 }}>
-                En person per rad. Du kan skriva <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
-              </p>
-              {importMessage && (
-                <p style={{ fontSize: 12.5, color: '#166534', margin: '10px 0 0', padding: '12px 14px', background: '#f4fbf6', border: '1px solid #ccefd5', borderRadius: 12 }}>
-                  {importMessage}
+                <p style={{ fontSize: 13.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.65 }}>
+                  Håll det kort, tydligt och lätt att svara på. Briefen ska kännas som en snabb debrief, inte som en större behovsanalys.
                 </p>
-              )}
-            </div>
-          </div>
-        </div>
+              </div>
 
-        <div style={{ ...panelStyle, padding: '22px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <StepBadge value="2" />
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-              Frågor att skicka
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>
-              Börja med egna frågor. Om du redan har ett frågebatteri kan du hämta in det och justera här.
-            </p>
-          </div>
-          <div style={{ ...eyebrowLabelStyle, marginBottom: 14 }}>
-            Egna frågor *
-          </div>
-          {sets.length === 0 ? (
-            <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: '0 0 14px' }}>
-              Inga batterier ännu.{' '}
-              <Link href="/dashboard/question-sets/new" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Skapa ett →</Link>
-            </p>
-          ) : (
-            <div style={{ ...subtlePanelStyle, marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
+              <div style={{ display: 'grid', gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.5 }}>
-                    Välj ett befintligt batteri om du vill använda det som startpunkt.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowQuestionSetPicker(prev => !prev)}
-                  style={ghostActionStyle}
-                >
-                  {selectedSetRecord ? 'Byt källa' : 'Välj frågebatteri'}
-                </button>
-              </div>
-              {selectedSetRecord && !showQuestionSetPicker && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: 12,
-                  marginTop: 10,
-                  padding: '13px 15px',
-                  borderRadius: 12,
-                  border: '1px solid rgba(14,14,12,0.08)',
-                  background: 'rgba(255,255,255,0.85)',
-                }}>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedSetRecord.name}</div>
-                    {selectedSetRecord.description && (
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{selectedSetRecord.description}</div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    Aktiv källa
-                  </div>
-                </div>
-              )}
-              {showQuestionSetPicker && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={fieldLabelStyle}>Rubrik i introduktionen</label>
                   <input
-                    value={questionSetQuery}
-                    onChange={e => setQuestionSetQuery(e.target.value)}
-                    placeholder="Sök frågebatteri"
+                    value={introTitle}
+                    onChange={e => setIntroTitle(e.target.value)}
+                    placeholder="Några korta frågor"
                     style={F}
                     onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
                   />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
-                    {visibleSets.map(s => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => { void selectQuestionSetSource(s.id) }}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 12,
-                          width: '100%',
-                          textAlign: 'left',
-                          padding: '13px 15px', borderRadius: 12, cursor: 'pointer',
-                          border: `1.5px solid ${selectedSet === s.id ? 'rgba(198,35,104,0.4)' : 'rgba(14,14,12,0.08)'}`,
-                          background: selectedSet === s.id ? 'rgba(198,35,104,0.08)' : 'rgba(255,255,255,0.82)',
-                          transition: 'border-color 0.15s, background 0.15s',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
-                          {s.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.description}</div>}
-                        </div>
-                      </button>
-                    ))}
-                    {visibleSets.length === 0 && (
-                      <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(14,14,12,0.08)', fontSize: 12.5, color: 'var(--text-3)' }}>
-                        Inga frågebatterier matchar din sökning.
-                      </div>
-                    )}
-                  </div>
-                  {filteredSets.length > visibleSets.length && (
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>
-                      Visar {visibleSets.length} av {filteredSets.length} träffar. Skriv fler tecken för att smalna av listan.
-                    </p>
-                  )}
                 </div>
-              )}
-            </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div>
-              <label style={fieldLabelStyle}>
-                Namn på frågebatteri
-              </label>
-              <input
-                value={customSetName}
-                onChange={e => setCustomSetName(e.target.value)}
-                placeholder="Till exempel Workshop kickoff frågor"
-                style={F}
-                onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
-                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <div style={eyebrowLabelStyle}>
-                Egna frågor
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {selectedSetRecord && (
-                  <button type="button" onClick={importSelectedSetIntoCustomQuestions} style={ghostActionStyle}>
-                    Hämta in källan igen
-                  </button>
-                )}
-                <button type="button" onClick={addCustomQuestion} style={ghostActionStyle}>
-                  Lägg till fråga
-                </button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {customQuestions.map((question, index) => (
-                <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <div>
+                  <label style={fieldLabelStyle}>Introduktion</label>
                   <textarea
-                    value={question.text}
-                    onChange={e => updateCustomQuestion(index, e.target.value)}
-                    rows={2}
-                    placeholder={`Fråga ${index + 1}`}
-                    style={{ ...F, resize: 'vertical', minHeight: 72 }}
+                    value={introText}
+                    onChange={e => setIntroText(e.target.value)}
+                    rows={3}
+                    placeholder="Hjälp oss få en snabbare bild inför nästa steg."
+                    style={{ ...F, minHeight: 96, resize: 'vertical' }}
                     onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
                     onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
                   />
-                  <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
-                    Ta bort
-                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-          {customQuestions.some(question => question.text.trim()) && (
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-sub)' }}>
-              <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
-                {customQuestions.filter(question => question.text.trim()).length} frågor i utskicket
+              </div>
+
+              <div style={{ ...eyebrowLabelStyle, marginBottom: -4 }}>
+                Frågebatteri
+              </div>
+              {sets.length === 0 ? (
+                <p style={{ fontSize: 13.5, color: 'var(--text-3)', margin: 0 }}>
+                  Inga batterier ännu.{' '}
+                  <Link href="/dashboard/question-sets/new" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>Skapa ett →</Link>
+                </p>
+              ) : (
+                <div style={{ ...subtlePanelStyle, marginBottom: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
+                    <div>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2, lineHeight: 1.5 }}>
+                        Välj ett befintligt batteri om du vill använda det som startpunkt.
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setShowQuestionSetPicker(prev => !prev)} style={ghostActionStyle}>
+                      {selectedSetRecord ? 'Byt källa' : 'Välj frågebatteri'}
+                    </button>
+                  </div>
+                  {selectedSetRecord && !showQuestionSetPicker && (
+                    <div style={selectedSourceCardStyle}>
+                      <div>
+                        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedSetRecord.name}</div>
+                        {selectedSetRecord.description && (
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{selectedSetRecord.description}</div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        Aktiv källa
+                      </div>
+                    </div>
+                  )}
+                  {showQuestionSetPicker && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <input
+                        value={questionSetQuery}
+                        onChange={e => setQuestionSetQuery(e.target.value)}
+                        placeholder="Sök frågebatteri"
+                        style={F}
+                        onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
+                        {visibleSets.map(s => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => { void selectQuestionSetSource(s.id) }}
+                            style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 12,
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '13px 15px', borderRadius: 12, cursor: 'pointer',
+                              border: `1.5px solid ${selectedSet === s.id ? 'rgba(198,35,104,0.4)' : 'rgba(14,14,12,0.08)'}`,
+                              background: selectedSet === s.id ? 'rgba(198,35,104,0.08)' : 'rgba(255,255,255,0.82)',
+                              transition: 'border-color 0.15s, background 0.15s',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
+                              {s.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{s.description}</div>}
+                            </div>
+                          </button>
+                        ))}
+                        {visibleSets.length === 0 && (
+                          <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.82)', border: '1px solid rgba(14,14,12,0.08)', fontSize: 12.5, color: 'var(--text-3)' }}>
+                            Inga frågebatterier matchar din sökning.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div>
+                  <label style={fieldLabelStyle}>Namn på frågebatteri</label>
+                  <input
+                    value={customSetName}
+                    onChange={e => setCustomSetName(e.target.value)}
+                    placeholder="Till exempel Workshop kickoff frågor"
+                    style={F}
+                    onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                    onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={eyebrowLabelStyle}>Egna frågor</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {selectedSetRecord && (
+                      <button type="button" onClick={importSelectedSetIntoCustomQuestions} style={ghostActionStyle}>
+                        Hämta in källan igen
+                      </button>
+                    )}
+                    <button type="button" onClick={addCustomQuestion} style={ghostActionStyle}>
+                      Lägg till fråga
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {customQuestions.map((question, index) => (
+                    <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <textarea
+                        value={question.text}
+                        onChange={e => updateCustomQuestion(index, e.target.value)}
+                        rows={2}
+                        placeholder={`Fråga ${index + 1}`}
+                        style={{ ...F, resize: 'vertical', minHeight: 72 }}
+                        onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                        onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                      />
+                      <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
+                        Ta bort
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
-        </div>
 
-        {error && (
-          <p style={{ fontSize: 13, color: '#b42318', margin: 0, padding: '12px 14px', background: '#fef3f2', borderRadius: 12, border: '1px solid #fecdca' }}>
-            {error}
-          </p>
-        )}
+          {activeTab === 'setup' && (
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  Upplägg runt utskicket
+                </div>
+                <p style={{ fontSize: 13.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.65 }}>
+                  Lägg den korta kontext som hjälper dig att hitta rätt utskick senare. Detta är internt och syns inte i mottagarens vy.
+                </p>
+              </div>
 
-        <div style={{ ...panelStyle, padding: '22px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <StepBadge value="3" />
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-              Skicka utskicket
+              <div>
+                <label style={fieldLabelStyle}>Kund eller organisation</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={clientOrg}
+                    onChange={e => {
+                      setClientOrg(e.target.value)
+                      setShowCustomerSuggestions(true)
+                    }}
+                    placeholder="Skriv företagsnamn"
+                    style={F}
+                    onFocus={e => {
+                      setShowCustomerSuggestions(true)
+                      e.target.style.borderColor = 'rgba(198,35,104,0.45)'
+                      e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
+                    }}
+                    onBlur={e => {
+                      window.setTimeout(() => setShowCustomerSuggestions(false), 120)
+                      e.target.style.borderColor = 'var(--border)'
+                      e.target.style.boxShadow = 'none'
+                    }}
+                  />
+                  {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                    <div style={suggestionPopoverStyle}>
+                      {customerSuggestions.map(customer => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => {
+                            setClientOrg(customer.label)
+                            setShowCustomerSuggestions(false)
+                          }}
+                          style={suggestionRowStyle}
+                        >
+                          {customer.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Internt namn på utskicket</label>
+                <input
+                  value={internalLabel}
+                  onChange={e => setInternalLabel(e.target.value)}
+                  placeholder="Till exempel Acme · kickoff debrief"
+                  style={F}
+                  onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                  onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Kort intern notering</label>
+                <textarea
+                  value={contextNote}
+                  onChange={e => setContextNote(e.target.value)}
+                  rows={3}
+                  placeholder="Till exempel vad briefen ska ge underlag för."
+                  style={{ ...F, minHeight: 96, resize: 'vertical' }}
+                  onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                  onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'send' && (
+            <div style={{ display: 'grid', gap: 16 }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                  Mottagare och utskick
+                </div>
+                <p style={{ fontSize: 13.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.65 }}>
+                  Klistra in eller importera mottagare. Skicka sedan briefen och följ svaren i översikten.
+                </p>
+              </div>
+
+              <div>
+                <label style={fieldLabelStyle}>Vilka ska svara? *</label>
+                <input ref={fileRef} type="file" accept=".csv,.txt" onChange={importRecipientsFile} style={{ display: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
+                    Klistra in flera rader eller importera en fil med mottagare.
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Link href="/api/briefs/recipients-template" style={{ ...secondaryLinkStyle }}>
+                      Ladda ner mall
+                    </Link>
+                    <button type="button" onClick={() => fileRef.current?.click()} style={secondaryButtonStyle}>
+                      Importera CSV/TXT
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  value={recipientsInput}
+                  onChange={e => setRecipientsInput(e.target.value)}
+                  placeholder={'Namn, e-post\nNamn <e-post>\ne-post'}
+                  required
+                  rows={7}
+                  style={{ ...F, minHeight: 164, resize: 'vertical', lineHeight: 1.55 }}
+                  onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                  onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
+                />
+                <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: '10px 0 0', lineHeight: 1.7 }}>
+                  En person per rad. Du kan skriva <strong style={{ color: 'var(--text)' }}>Namn, e-post</strong>, <strong style={{ color: 'var(--text)' }}>Namn, e-post, roll</strong>, <strong style={{ color: 'var(--text)' }}>Namn &lt;e-post&gt;, roll</strong> eller bara <strong style={{ color: 'var(--text)' }}>e-post</strong>.
+                </p>
+                {importMessage && (
+                  <p style={{ fontSize: 12.5, color: '#166534', margin: '10px 0 0', padding: '12px 14px', background: '#f4fbf6', border: '1px solid #ccefd5', borderRadius: 12 }}>
+                    {importMessage}
+                  </p>
+                )}
+              </div>
+
+              {error && (
+                <p style={{ fontSize: 13, color: '#b42318', margin: 0, padding: '12px 14px', background: '#fef3f2', borderRadius: 12, border: '1px solid #fecdca' }}>
+                  {error}
+                </p>
+              )}
+
+              <div style={{ ...subtlePanelStyle, display: 'grid', gap: 12 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                  När du skickar skapas ett utskick som du sedan följer under <strong style={{ color: 'var(--text)' }}>Översikt</strong>.
+                </div>
+                <button
+                  type="submit"
+                  disabled={sending || sets.length === 0}
+                  style={{
+                    ...primaryButtonStyle,
+                    width: '100%',
+                    justifyContent: 'center',
+                    background: (sending || sets.length === 0) ? '#d78aa5' : 'var(--text)',
+                    cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
+                    boxShadow: (sending || sets.length === 0) ? 'none' : '0 10px 24px rgba(14,14,12,0.12)',
+                  }}
+                >
+                  {sending ? 'Skickar…' : 'Skicka brief →'}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section style={{ ...panelStyle, padding: 0, overflow: 'hidden', minWidth: 0 }}>
+          <div style={briefPreviewShellStyle}>
+            <div style={briefPreviewHeroStyle}>
+              <div style={previewEyebrowStyle}>Mottagarens vy</div>
+              <h2 style={{ margin: '0 0 10px', fontFamily: 'var(--font-display)', fontSize: 36, lineHeight: 1.02, letterSpacing: '-0.03em', color: '#fff', maxWidth: 520 }}>
+                {introTitle.trim() || 'Några korta frågor'}
+              </h2>
+              <p style={{ margin: 0, maxWidth: 560, fontSize: 14.5, lineHeight: 1.75, color: 'rgba(255,255,255,0.76)' }}>
+                {introText.trim() || 'Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.'}
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
+                <PreviewPill>{clientOrg.trim() || 'Ingen kund vald ännu'}</PreviewPill>
+                <PreviewPill>{activeQuestions.length || 0} frågor</PreviewPill>
+                <PreviewPill>{parsedRecipientsPreview.length || 0} mottagare</PreviewPill>
+              </div>
+            </div>
+
+            <div style={briefPreviewContentStyle}>
+              <div style={{ display: 'grid', gap: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
+                      Förhandsvisning
+                    </div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
+                      {firstPreviewRecipient ? `Till ${firstPreviewRecipient.name}` : 'Så här möter briefen mottagaren'}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+                    Fråga {activeQuestions.length > 0 ? '1' : '0'} av {activeQuestions.length || 0}
+                  </div>
+                </div>
+
+                <div style={{ height: 6, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
+                  <div style={{ width: activeQuestions.length > 0 ? `${Math.max(18, Math.round(100 / activeQuestions.length))}%` : '0%', height: '100%', background: 'var(--accent)' }} />
+                </div>
+
+                <div style={previewQuestionCardStyle}>
+                  <div style={previewQuestionBadgeStyle}>Fråga 1</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: 1.18, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+                    {activeQuestions[0] || 'Lägg till minst en fråga för att se hur briefen kommer att kännas för mottagaren.'}
+                  </div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(250,248,246,0.82)', minHeight: 124, padding: '16px 18px', fontSize: 14, lineHeight: 1.7, color: 'var(--text-3)' }}>
+                    Här svarar mottagaren med text eller röst. Frågan visas en i taget, med samma lugna rytm genom hela briefen.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button type="button" style={previewPrimaryButtonStyle}>Börja svara</button>
+                    <button type="button" style={previewSecondaryButtonStyle}>Tillbaka</button>
+                  </div>
+                </div>
+
+                <div style={previewMiniReviewStyle}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 10 }}>
+                    Känslan i slutet
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                    Efter sista frågan kan mottagaren snabbt se över sina svar och skicka in dem. Briefen ska kännas kort, tydlig och respektfull mot tiden.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <p style={{ fontSize: 12.5, color: 'var(--text-2)', margin: '0 0 16px', lineHeight: 1.6 }}>
-            När du skickar skapas ett utskick som du sedan följer under <strong style={{ color: 'var(--text)' }}>Utskick</strong>.
-          </p>
-          <button type="submit" disabled={sending || sets.length === 0} style={{
-            ...primaryButtonStyle,
-            width: '100%',
-            justifyContent: 'center',
-            background: (sending || sets.length === 0) ? '#d78aa5' : 'var(--text)',
-            cursor: (sending || sets.length === 0) ? 'not-allowed' : 'pointer',
-            boxShadow: (sending || sets.length === 0) ? 'none' : '0 10px 24px rgba(14,14,12,0.12)',
-          }}>
-            {sending ? 'Skickar…' : 'Skicka brief →'}
-          </button>
-        </div>
+        </section>
       </form>
     </div>
   )
@@ -991,10 +1093,59 @@ function StepBadge({ value }: { value: string }) {
   )
 }
 
+function BriefStatCard({ label, value, text }: { label: string; value: string; text: string }) {
+  return (
+    <div style={{ ...subtlePanelStyle, minWidth: 0 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 7 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, lineHeight: 1.05, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+        {text}
+      </div>
+    </div>
+  )
+}
+
+function PreviewPill({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '8px 12px',
+      borderRadius: 999,
+      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(255,255,255,0.14)',
+      color: 'rgba(255,255,255,0.84)',
+      fontSize: 12.5,
+      fontWeight: 600,
+      backdropFilter: 'blur(10px)',
+    }}>
+      {children}
+    </div>
+  )
+}
+
 const pageShellStyle: React.CSSProperties = {
   padding: '40px 44px',
-  maxWidth: 760,
+  maxWidth: 1360,
   animation: 'fadeUp 0.35s ease both',
+}
+
+const briefStatsRowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: 14,
+  marginBottom: 18,
+}
+
+const briefWorkspaceStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(360px, 0.92fr) minmax(440px, 1.28fr)',
+  gap: 18,
+  alignItems: 'start',
 }
 
 const panelStyle: React.CSSProperties = {
@@ -1011,6 +1162,43 @@ const subtlePanelStyle: React.CSSProperties = {
   borderRadius: 16,
   border: '1px solid rgba(14,14,12,0.08)',
   background: 'rgba(250,248,246,0.9)',
+}
+
+const selectedSourceCardStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  gap: 12,
+  marginTop: 10,
+  padding: '13px 15px',
+  borderRadius: 12,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.85)',
+}
+
+const suggestionPopoverStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 'calc(100% + 6px)',
+  left: 0,
+  right: 0,
+  zIndex: 20,
+  background: 'rgba(255,255,255,0.98)',
+  border: '1px solid rgba(14,14,12,0.08)',
+  borderRadius: 14,
+  boxShadow: '0 18px 40px rgba(14,14,12,0.10)',
+  overflow: 'hidden',
+}
+
+const suggestionRowStyle: React.CSSProperties = {
+  width: '100%',
+  textAlign: 'left',
+  padding: '11px 14px',
+  border: 'none',
+  borderBottom: '1px solid var(--border-sub)',
+  background: 'rgba(255,255,255,0.98)',
+  color: 'var(--text)',
+  fontSize: 13,
+  cursor: 'pointer',
 }
 
 const fieldLabelStyle: React.CSSProperties = {
@@ -1071,6 +1259,17 @@ const primaryButtonStyle: React.CSSProperties = {
   gap: 8,
 }
 
+const briefTabButtonStyle: React.CSSProperties = {
+  padding: '10px 14px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.88)',
+  fontSize: 12.5,
+  fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'background 0.18s, border-color 0.18s, color 0.18s',
+}
+
 const ghostActionStyle: React.CSSProperties = {
   padding: '9px 13px',
   borderRadius: 10,
@@ -1091,4 +1290,67 @@ const smallDeleteStyle: React.CSSProperties = {
   color: 'var(--text-3)',
   fontSize: 12,
   cursor: 'pointer',
+}
+
+const briefPreviewShellStyle: React.CSSProperties = {
+  display: 'grid',
+  minHeight: 820,
+  background: 'linear-gradient(180deg, #131111 0%, #131111 260px, rgba(247,244,241,0.88) 260px, rgba(247,244,241,0.94) 100%)',
+}
+
+const briefPreviewHeroStyle: React.CSSProperties = {
+  padding: '38px 38px 34px',
+}
+
+const previewEyebrowStyle: React.CSSProperties = {
+  fontSize: 11.5,
+  fontWeight: 700,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'rgba(255,255,255,0.5)',
+  marginBottom: 18,
+}
+
+const briefPreviewContentStyle: React.CSSProperties = {
+  padding: '0 32px 32px',
+}
+
+const previewQuestionCardStyle: React.CSSProperties = {
+  borderRadius: 24,
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 22px 54px rgba(14,14,12,0.08), 0 4px 14px rgba(14,14,12,0.04)',
+  padding: '24px',
+  display: 'grid',
+  gap: 16,
+}
+
+const previewQuestionBadgeStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '6px 10px',
+  borderRadius: 999,
+  background: 'rgba(198,35,104,0.08)',
+  color: 'var(--accent)',
+  fontSize: 11.5,
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+}
+
+const previewPrimaryButtonStyle: React.CSSProperties = {
+  ...primaryButtonStyle,
+  justifyContent: 'center',
+}
+
+const previewSecondaryButtonStyle: React.CSSProperties = {
+  ...secondaryButtonStyle,
+  justifyContent: 'center',
+}
+
+const previewMiniReviewStyle: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.74)',
+  padding: '16px 18px',
 }
