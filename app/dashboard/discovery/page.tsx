@@ -2065,6 +2065,10 @@ function DiscoveryDataCanvas({
   analysisError: string | null
   analysisCached: boolean
 }) {
+  const selectedCustomerGroup = selectedSessionId.startsWith('customer:')
+    ? customerGroups.find(group => `customer:${group.key}` === selectedSessionId) || null
+    : null
+
   if (!currentTemplateId) {
     return (
       <section style={{ minWidth: 0 }}>
@@ -2157,12 +2161,36 @@ function DiscoveryDataCanvas({
                 <button
                   type="button"
                   onClick={() => onSelectSession('overview')}
-                  style={dataCustomerCardStyle}
+                  style={{ ...dataCustomerCardStyle, background: 'linear-gradient(180deg,#fff 0%,#f8f6fb 100%)' }}
                 >
-                  <div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      background: 'rgba(198,35,104,0.08)',
+                      color: 'var(--accent)',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      width: 'fit-content',
+                    }}>
+                      Alla kunder
+                    </div>
                     <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>Överblick</div>
                     <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
                       Se det samlade läget över alla besvarade svar i discoveryt.
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 2 }}>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                        <strong style={{ color: 'var(--text)' }}>{customerGroups.length}</strong> kundspår
+                      </div>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                        <strong style={{ color: 'var(--text)' }}>{overview.submittedCount}</strong> svar
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -2175,7 +2203,29 @@ function DiscoveryDataCanvas({
                       onClick={() => onSelectSession(`customer:${group.key}`)}
                       style={dataCustomerCardStyle}
                     >
-                      <div>
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '6px 10px',
+                            borderRadius: 999,
+                            background: group.responseMode === 'anonymous' ? 'rgba(30,14,46,0.08)' : 'rgba(198,35,104,0.08)',
+                            color: group.responseMode === 'anonymous' ? 'var(--text-2)' : 'var(--accent)',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
+                          }}>
+                            {group.responseMode === 'anonymous' ? 'Anonymt' : group.responseMode === 'mixed' ? 'Blandat' : 'Namnkopplat'}
+                          </div>
+                          {group.latestSubmittedAt && (
+                            <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                              {formatDataDateTime(group.latestSubmittedAt)}
+                            </div>
+                          )}
+                        </div>
                         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
                           {group.label}
                         </div>
@@ -2183,6 +2233,14 @@ function DiscoveryDataCanvas({
                           {group.responseMode === 'anonymous'
                             ? `${group.respondentCount} anonyma svar`
                             : `${group.respondentCount} svar · ${group.latestSubmittedAt ? `senast ${formatDataDateTime(group.latestSubmittedAt)}` : 'besvarat'}`}
+                        </div>
+                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 2 }}>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                            <strong style={{ color: 'var(--text)' }}>{group.sessions.length}</strong> utskicksspår
+                          </div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                            <strong style={{ color: 'var(--text)' }}>{group.respondentCount}</strong> inkomna svar
+                          </div>
                         </div>
                       </div>
                     </button>
@@ -2233,6 +2291,56 @@ function DiscoveryDataCanvas({
               </div>
             )}
           </div>
+
+          {selectedCustomerGroup && (
+            <section style={{
+              ...dataPanelStyle,
+              background: 'linear-gradient(180deg,#fff 0%,#faf8fc 100%)',
+              display: 'grid',
+              gap: 14,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={dataSectionLabelStyle}>Vald kund</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, lineHeight: 1.05, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+                    {selectedCustomerGroup.label}
+                  </div>
+                </div>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 12px',
+                  borderRadius: 999,
+                  background: selectedCustomerGroup.responseMode === 'anonymous' ? 'rgba(30,14,46,0.08)' : 'rgba(198,35,104,0.08)',
+                  color: selectedCustomerGroup.responseMode === 'anonymous' ? 'var(--text-2)' : 'var(--accent)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                }}>
+                  {selectedCustomerGroup.responseMode === 'anonymous' ? 'Anonymt läge' : selectedCustomerGroup.responseMode === 'mixed' ? 'Blandat läge' : 'Namnkopplat läge'}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+                <div style={customerMetricCardStyle}>
+                  <div style={customerMetricLabelStyle}>Inkomna svar</div>
+                  <div style={customerMetricValueStyle}>{selectedCustomerGroup.respondentCount}</div>
+                </div>
+                <div style={customerMetricCardStyle}>
+                  <div style={customerMetricLabelStyle}>Utskicksspår</div>
+                  <div style={customerMetricValueStyle}>{selectedCustomerGroup.sessions.length}</div>
+                </div>
+                <div style={customerMetricCardStyle}>
+                  <div style={customerMetricLabelStyle}>Senaste aktivitet</div>
+                  <div style={{ ...customerMetricValueStyle, fontSize: 17 }}>
+                    {selectedCustomerGroup.latestSubmittedAt ? formatDataDateTime(selectedCustomerGroup.latestSubmittedAt) : 'Ingen ännu'}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
@@ -2287,15 +2395,21 @@ function DiscoveryDataCanvas({
                           textAlign: 'left',
                           borderRadius: 16,
                           border: `1px solid ${active ? 'rgba(198,35,104,0.26)' : 'var(--border)'}`,
-                          background: active ? 'rgba(198,35,104,0.06)' : 'var(--surface)',
-                          padding: '16px 16px 14px',
+                          background: active ? 'linear-gradient(180deg,rgba(198,35,104,0.08) 0%,rgba(198,35,104,0.03) 100%)' : 'linear-gradient(180deg,#fff 0%,#faf8fc 100%)',
+                          padding: '18px 18px 16px',
                           display: 'grid',
-                          gap: 10,
+                          gap: 12,
                           cursor: 'pointer',
+                          boxShadow: active ? '0 10px 24px rgba(198,35,104,0.08)' : '0 1px 0 rgba(15,23,42,0.02)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{card.label}</div>
+                          <div style={{ display: 'grid', gap: 6 }}>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{card.label}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                              {card.questionCount} frågor
+                            </div>
+                          </div>
                           <div style={{
                             fontSize: 11.5,
                             fontWeight: 700,
@@ -2307,7 +2421,7 @@ function DiscoveryDataCanvas({
                         <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
                           {card.respondentCount} svar i urvalet · {card.coveragePercent}% täckning
                         </div>
-                        <div style={{ height: 5, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
+                        <div style={{ height: 6, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
                           <div style={{ width: `${card.coveragePercent}%`, height: '100%', borderRadius: 999, background: card.signalLabel === 'Tydlig signal' ? '#166534' : 'var(--accent)' }} />
                         </div>
                         {card.splitLabel && (
@@ -2825,11 +2939,37 @@ const dataCustomerCardStyle: React.CSSProperties = {
   textAlign: 'left',
   borderRadius: 16,
   border: '1px solid var(--border)',
-  background: 'var(--surface)',
-  padding: '15px 16px',
+  background: 'linear-gradient(180deg,#fff 0%,#faf8fc 100%)',
+  padding: '16px 16px',
   display: 'grid',
-  gap: 8,
+  gap: 10,
   cursor: 'pointer',
+  boxShadow: '0 1px 0 rgba(15,23,42,0.02)',
+}
+
+const customerMetricCardStyle: React.CSSProperties = {
+  borderRadius: 14,
+  border: '1px solid var(--border)',
+  background: '#fff',
+  padding: '14px 15px',
+  display: 'grid',
+  gap: 6,
+}
+
+const customerMetricLabelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.06em',
+}
+
+const customerMetricValueStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-display)',
+  fontSize: 24,
+  lineHeight: 1.05,
+  letterSpacing: '-0.03em',
+  color: 'var(--text)',
 }
 
 const templateRowStyle: React.CSSProperties = {

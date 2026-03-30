@@ -75,6 +75,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/api/discovery/analyze` hämtar eller genererar strukturerad AI-analys för valt Discovery-urval och cachar resultatet i `settings`
 - `Data`-fliken visar nu ett tomt första läge när inga svar finns ännu, i stället för en färdig datavy
 - när svar finns är `Data` nu kundcentrerad i UI:t: man väljer kundspår först och låter sedan teman, råsvar och AI-analys följa samma scope
+- `Data` har nu också en starkare visuell kundöverblick med rikare kundkort, tydligare vald-kund-sammanhang och mer redaktionella temakort
 
 **Saknas**: Eventuell mer avancerad översikt/filtering och dispatch-gruppering för Discovery
 
