@@ -94,6 +94,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 - Dashboardytorna för utvärdering har nu också fått ett lugnare workspace-UI med mjukare kort, tydligare länk/QR-sektioner och mindre tabellkänsla i översikten
 - Utvärdering utgår nu tydligare från egna workshopfrågor och starter-upplägg, medan återanvändning av tidigare frågor bara är en sekundär startpunkt
 - En utvärdering kan nu tas bort från detaljvyn tillsammans med inkomna svar och tillhörande frågeupplägg, men bara om frågorna inte används av någon annan utvärdering
+- Dashboardens huvudlänk för `Utvärdering` går nu direkt till skapaflödet i stället för översikten
 
 ---
 

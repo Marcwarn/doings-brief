@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const nav = [
     { href: '/dashboard/send',          label: 'Debrief',       Icon: HomeIcon },
     { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
-    { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },
+    { href: '/dashboard/evaluations/new',   label: 'Utvärdering',    Icon: ChartIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
 
