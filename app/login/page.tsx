@@ -25,7 +25,7 @@ export default function LoginPage() {
 
       const response = await fetch('/api/brief-access', { cache: 'no-store' })
       if (response.ok) {
-        router.replace('/dashboard')
+        router.replace('/dashboard/evaluations/new')
       } else {
         await createClient().auth.signOut()
       }
@@ -49,7 +49,7 @@ export default function LoginPage() {
       }
 
       setLoginScopeCookie(remember)
-      router.replace('/dashboard')
+      router.replace('/dashboard/evaluations/new')
     }
   }
 

@@ -23,7 +23,7 @@ function CallbackInner() {
           setHasError(true)
           setTimeout(() => router.replace('/login'), 2500)
         } else {
-          router.replace('/dashboard')
+          router.replace('/dashboard/evaluations/new')
         }
       })
   }, []) // eslint-disable-line

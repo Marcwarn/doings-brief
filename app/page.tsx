@@ -17,7 +17,7 @@ export default function RootPage() {
           router.replace('/login')
           return
         }
-        router.replace('/dashboard')
+        router.replace('/dashboard/evaluations/new')
       } else {
         router.replace('/login')
       }
