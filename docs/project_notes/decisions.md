@@ -40,6 +40,14 @@ Running log of significant decisions made during development. For formal archite
 - sparse datasets must produce visibly cautious analysis rather than generic overconfidence
 - the UI must keep AI interpretation close to raw-answer evidence
 
+## 2026-03-30 — Brief Should Move Toward a Lighter Split Workspace
+
+- `Brief` should adopt the same broad internal logic as `Discovery`: internal editing on the left and recipient preview on the right
+- the goal is consistency in how sendable experiences are built, not identical complexity across all formats
+- `Brief` should stay lighter and more direct than `Discovery`, with a smaller header and fewer builder concepts
+- the main candidate for this redesign is `/dashboard/send`
+- `Utvärdering` should not be forced into the same shape until its own workflow is specified more clearly
+
 ## 2026-03-30 — Next.js Was Upgraded to a Patched 14.2.x Release
 
 - the app was upgraded from `next@14.2.5` to `next@14.2.35`
