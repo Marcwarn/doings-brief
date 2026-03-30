@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const dispatchGroups = useMemo(() => groupBriefSessions(sessions, batchLookup), [sessions, batchLookup])
   const customers = useMemo(() => groupCustomers(dispatchGroups, batchLookup), [dispatchGroups, batchLookup])
   const activeDispatches = dispatchGroups.filter(group => group.pendingCount > 0).slice(0, 4)
+  const submittedCount = sessions.filter(session => session.status === 'submitted').length
+  const pendingCount = sessions.filter(session => session.status === 'pending').length
 
   useEffect(() => {
     Promise.all([
@@ -91,14 +93,14 @@ export default function DashboardPage() {
   if (loading) return <Loader />
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
+    <div style={pageShellStyle}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-            Brief
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1, margin: 0 }}>
+            Översikt
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 8, maxWidth: 720 }}>
-            Samla kund, frågor, mottagare och utskick i ett flöde.
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 10, lineHeight: 1.7, maxWidth: 700 }}>
+            Följ aktiva utskick, se var svar saknas och håll ihop kunder, frågebatterier och nästa steg i samma arbetsyta.
           </p>
         </div>
         <Link href="/dashboard/send" style={primaryLinkStyle}>
@@ -108,259 +110,352 @@ export default function DashboardPage() {
 
       <BriefSubnav active="overview" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 30 }}>
-        <StepCard
-          step="1"
-          title="Kunddialog"
-          text="Utgå från företaget du pratar med och se tidigare utskick."
-          href="/dashboard/customers"
-          linkText="Öppna kunder"
-        />
-        <StepCard
-          step="2"
-          title="Frågor"
-          text="Välj eller skapa frågebatteriet som behövs inför utskicket."
-          href="/dashboard/question-sets"
-          linkText="Se frågebatterier"
-        />
-        <StepCard
-          step="3"
-          title="Mottagare"
-          text="Bestäm vilka personer som ska svara från företaget."
+      <div style={statsRowStyle}>
+        <OverviewStatCard label="Utskicksgrupper" value={`${dispatchGroups.length}`} text="aktiva och historiska grupper i vyn" />
+        <OverviewStatCard label="Väntar på svar" value={`${pendingCount}`} text="personer som ännu inte har svarat" />
+        <OverviewStatCard label="Svar inkomna" value={`${submittedCount}`} text="briefs som redan är besvarade" />
+        <OverviewStatCard label="Kunder" value={`${customers.length}`} text="organisationer med utskick eller historik" />
+      </div>
+
+      <div style={journeyGridStyle}>
+        <JourneyCard
+          title="Nytt utskick"
+          text="Börja med kund, fråga och mottagare. Bygg briefen och se direkt hur den kommer att landa hos mottagaren."
           href="/dashboard/send"
-          linkText="Nytt utskick"
+          linkText="Öppna arbetsytan"
         />
-        <StepCard
-          step="4"
-          title="Skicka"
-          text="Skicka ut länkar och följ vilka som fortfarande väntar."
-          href="/dashboard/briefs"
-          linkText="Följ utskick"
+        <JourneyCard
+          title="Kunder"
+          text="Fånga upp vilka kunder som redan har utskick, vilka som väntar och var det är naturligt att ta nästa steg."
+          href="/dashboard/customers"
+          linkText="Se kundläget"
         />
-        <StepCard
-          step="5"
-          title="Svaren"
-          text="Gå från utskicket till de enskilda svaren när det behövs."
-          href="/dashboard/briefs"
-          linkText="Se svar"
+        <JourneyCard
+          title="Frågebatterier"
+          text="Utgå från befintliga frågor eller skapa nya batterier som passar den dialog du är i just nu."
+          href="/dashboard/question-sets"
+          linkText="Hantera frågor"
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 20 }}>
-        <Panel title="Kunder att jobba vidare med" href="/dashboard/customers" linkText="Alla kunder">
-          {customers.length === 0
-            ? <BriefEmptyCard title="Inga kunder ännu" text="Skapa en kund genom att börja med ett nytt utskick." />
-            : customers.slice(0, 5).map(customer => (
-              <div key={customer.key} style={rowStyle}>
+      <div style={contentGridStyle}>
+        <SurfacePanel title="Behöver uppmärksamhet" subtitle="Det här är utskick där det fortfarande finns väntande svar." href="/dashboard/briefs" linkText="Alla utskick">
+          {activeDispatches.length === 0 ? (
+            <BriefEmptyCard title="Inga pågående utskick" text="Det finns inga aktiva utskick som väntar på svar just nu." />
+          ) : (
+            activeDispatches.map(group => {
+              const reminded = !!remindedGroups[group.key]
+              const isLoading = remindLoading === group.key
+              const feedback = remindFeedback[group.key]
+              const dispatchHref = batchLookup[group.sessions[0]?.id || '']?.dispatchId
+                ? `/dashboard/dispatches/${batchLookup[group.sessions[0]?.id || '']?.dispatchId}`
+                : '/dashboard/briefs'
+              return (
+                <div key={group.key} style={listCardStyle}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <Link href={dispatchHref} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{group.label}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
+                        {group.pendingCount} väntar · senaste utskick {formatDate(group.lastSentAt)}
+                      </div>
+                    </Link>
+                    {feedback && (
+                      <div style={{ fontSize: 12, color: reminded ? '#15803d' : '#92400e', marginTop: 8 }}>
+                        {feedback}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => handleRemind(group)}
+                      disabled={reminded || isLoading}
+                      style={{
+                        ...secondaryActionStyle,
+                        background: reminded ? '#f0fdf4' : 'rgba(255,255,255,0.88)',
+                        color: reminded ? '#16a34a' : 'var(--text)',
+                        cursor: reminded || isLoading ? 'default' : 'pointer',
+                        opacity: isLoading ? 0.6 : 1,
+                      }}
+                    >
+                      {isLoading ? '...' : reminded ? 'Skickat' : 'Påminn'}
+                    </button>
+                    <Pill ok={group.pendingCount === 0} />
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </SurfacePanel>
+
+        <SurfacePanel title="Kunder att jobba vidare med" subtitle="Utgå från kunden när du vill se nästa naturliga brief eller följa historiken." href="/dashboard/customers" linkText="Alla kunder">
+          {customers.length === 0 ? (
+            <BriefEmptyCard title="Inga kunder ännu" text="Skapa en kund genom att börja med ett nytt utskick." />
+          ) : (
+            customers.slice(0, 5).map(customer => (
+              <div key={customer.key} style={listCardStyle}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{customer.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{customer.label}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
                     {customer.dispatchCount} utskick · {customer.submittedCount} svarade · {customer.pendingCount} väntar
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={smallGhostLink}>
+                  <Link href={`/dashboard/send?organisation=${encodeURIComponent(customer.label)}`} style={secondaryActionLinkStyle}>
                     Nytt utskick
                   </Link>
-                  <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={smallGhostLink}>
+                  <Link href={`/dashboard/customers/${encodeURIComponent(customer.label.trim().toLowerCase())}`} style={secondaryActionLinkStyle}>
                     Kund
-                  </Link>
-                  <Link href={customer.latestDispatchId ? `/dashboard/dispatches/${customer.latestDispatchId}` : '/dashboard/briefs'} style={smallLink}>
-                    Se senaste
                   </Link>
                 </div>
               </div>
-            ))}
-        </Panel>
+            ))
+          )}
+        </SurfacePanel>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <Panel title="Behöver uppmärksamhet" href="/dashboard/briefs" linkText="Alla utskick">
-            {activeDispatches.length === 0
-              ? <BriefEmptyCard title="Inga pågående utskick" text="Det finns inga aktiva utskick som väntar på svar just nu." />
-              : activeDispatches.map(group => {
-                const reminded = !!remindedGroups[group.key]
-                const isLoading = remindLoading === group.key
-                const feedback = remindFeedback[group.key]
-                const dispatchHref = batchLookup[group.sessions[0]?.id || '']?.dispatchId
-                  ? `/dashboard/dispatches/${batchLookup[group.sessions[0]?.id || '']?.dispatchId}`
-                  : '/dashboard/briefs'
-                return (
-                  <div key={group.key} style={{ ...rowStyle, alignItems: 'flex-start' }}>
-                    <Link href={dispatchHref} style={{ minWidth: 0, textDecoration: 'none', flex: 1 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{group.label}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
-                        {group.pendingCount} väntar · senaste utskick {formatDate(group.lastSentAt)}
-                      </div>
-                      {feedback && (
-                        <div style={{ fontSize: 11.5, color: reminded ? '#15803d' : '#92400e', marginTop: 6 }}>
-                          {feedback}
-                        </div>
-                      )}
-                    </Link>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      <button
-                        onClick={() => handleRemind(group)}
-                        disabled={reminded || isLoading}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          border: '1px solid var(--border)',
-                          background: reminded ? '#f0fdf4' : 'var(--surface)',
-                          color: reminded ? '#16a34a' : 'var(--text-2)',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: reminded || isLoading ? 'default' : 'pointer',
-                          opacity: isLoading ? 0.6 : 1,
-                        }}
-                      >
-                        {isLoading ? '...' : reminded ? 'Skickat' : 'Påminn'}
-                      </button>
-                      <Pill ok={group.pendingCount === 0} />
-                    </div>
+        <SurfacePanel title="Frågebatterier att använda" subtitle="Det senaste du kan utgå från när du skickar en ny brief." href="/dashboard/question-sets" linkText="Hantera">
+          {questionSets.length === 0 ? (
+            <BriefEmptyCard title="Inga frågebatterier ännu" text="Skapa ditt första frågebatteri för att komma igång med briefs." />
+          ) : (
+            questionSets.slice(0, 4).map(qs => (
+              <div key={qs.id} style={listCardStyle}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{qs.name}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4 }}>
+                    Uppdaterad {formatDate(qs.updated_at)}
                   </div>
-                )
-              })}
-          </Panel>
-
-          <Panel title="Frågebatterier att använda" href="/dashboard/question-sets" linkText="Hantera">
-            {questionSets.length === 0
-              ? <BriefEmptyCard title="Inga frågebatterier ännu" text="Skapa ditt första frågebatteri för att komma igång med briefs." />
-              : questionSets.slice(0, 4).map(qs => (
-                <Link key={qs.id} href={`/dashboard/send?set=${qs.id}`} style={{ ...rowStyle, textDecoration: 'none' }}>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{qs.name}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
-                      Uppdaterad {formatDate(qs.updated_at)}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 12, color: 'var(--accent)' }}>Använd</span>
-                </Link>
-              ))}
-          </Panel>
-        </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <Link href={`/dashboard/send?set=${qs.id}`} style={secondaryActionLinkStyle}>
+                    Använd
+                  </Link>
+                  <Link href={`/dashboard/question-sets/${qs.id}`} style={secondaryActionLinkStyle}>
+                    Redigera
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </SurfacePanel>
       </div>
     </div>
   )
 }
 
-function StepCard({
-  step,
+function JourneyCard({
   title,
   text,
   href,
   linkText,
 }: {
-  step: string
   title: string
   text: string
   href: string
   linkText: string
 }) {
   return (
-    <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', padding: '18px 16px', minHeight: 178 }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, marginBottom: 14 }}>
-        {step}
-      </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
+    <div style={journeyCardStyle}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.02em' }}>
         {title}
       </div>
-      <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55, minHeight: 58 }}>
+      <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.72, marginBottom: 20 }}>
         {text}
       </div>
-      <Link href={href} style={{ display: 'inline-block', marginTop: 14, fontSize: 12.5, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+      <Link href={href} style={{ fontSize: 12.5, color: 'var(--text)', textDecoration: 'none', fontWeight: 700 }}>
         {linkText} →
       </Link>
     </div>
   )
 }
 
-const primaryLinkStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  padding: '10px 18px',
-  borderRadius: 8,
-  background: 'var(--surface)',
-  color: 'var(--text)',
-  border: '1px solid var(--border)',
-  fontFamily: 'var(--font-display)',
-  fontSize: 13,
-  fontWeight: 700,
-  textDecoration: 'none',
-}
-
-function Panel({ title, href, linkText, children }: { title: string; href: string; linkText: string; children: React.ReactNode }) {
+function OverviewStatCard({ label, value, text }: { label: string; value: string; text: string }) {
   return (
-    <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)' }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>{title}</span>
-        <Link href={href} style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>{linkText} →</Link>
+    <div style={statCardStyle}>
+      <div style={eyebrowStyle}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, lineHeight: 1.02, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 8 }}>
+        {value}
       </div>
-      <div style={{ padding: '0 18px 6px' }}>{children}</div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        {text}
+      </div>
     </div>
   )
 }
 
-function Pill({ ok }: { ok: boolean }) {
+function SurfacePanel({
+  title,
+  subtitle,
+  href,
+  linkText,
+  children,
+}: {
+  title: string
+  subtitle: string
+  href: string
+  linkText: string
+  children: React.ReactNode
+}) {
   return (
-    <span style={{
-      fontSize: 10.5, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-      letterSpacing: '0.01em',
-      background: ok ? '#f0fdf4' : '#f5f5f4',
-      color: ok ? '#16a34a' : '#a8a29e',
-      flexShrink: 0, marginLeft: 10,
-    }}>
-      {ok ? 'Klart' : 'Pågår'}
-    </span>
+    <section style={panelStyle}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginBottom: 6 }}>
+            {title}
+          </div>
+          <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65, maxWidth: 620 }}>
+            {subtitle}
+          </div>
+        </div>
+        <Link href={href} style={{ fontSize: 12.5, color: 'var(--text)', textDecoration: 'none', fontWeight: 700 }}>
+          {linkText} →
+        </Link>
+      </div>
+      <div style={{ display: 'grid', gap: 12 }}>
+        {children}
+      </div>
+    </section>
   )
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('sv-SE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  padding: '12px 0',
-  borderBottom: '1px solid var(--border-sub)',
-}
-
-const smallLink: React.CSSProperties = {
-  padding: '6px 10px',
-  borderRadius: 6,
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'var(--text)',
-  fontSize: 12,
-  fontWeight: 700,
-  textDecoration: 'none',
-  fontFamily: 'var(--font-display)',
-}
-
-const smallGhostLink: React.CSSProperties = {
-  padding: '6px 10px',
-  borderRadius: 6,
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'var(--text-2)',
-  fontSize: 12,
-  textDecoration: 'none',
 }
 
 function Loader() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '70vh' }}>
       <div style={{ display: 'flex', gap: 5 }}>
-        {[0, 1, 2].map(i => (
+        {[0,1,2].map(i => (
           <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
     </div>
   )
+}
+
+function Pill({ ok }: { ok: boolean }) {
+  return (
+    <div style={{
+      padding: '5px 8px',
+      borderRadius: 999,
+      background: ok ? '#f0fdf4' : '#fff7ed',
+      border: `1px solid ${ok ? '#bbf7d0' : '#fed7aa'}`,
+      fontSize: 11.5,
+      fontWeight: 700,
+      color: ok ? '#15803d' : '#c2410c',
+    }}>
+      {ok ? 'Klart' : 'Aktivt'}
+    </div>
+  )
+}
+
+function formatDate(value: string | null) {
+  if (!value) return 'okänt datum'
+  return new Date(value).toLocaleDateString('sv-SE', {
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
+const pageShellStyle: React.CSSProperties = {
+  padding: '40px 44px',
+  maxWidth: 1320,
+  animation: 'fadeUp 0.35s ease both',
+}
+
+const statsRowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: 14,
+  marginBottom: 18,
+}
+
+const journeyGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: 14,
+  marginBottom: 18,
+}
+
+const contentGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1.05fr 1.05fr 0.9fr',
+  gap: 18,
+  alignItems: 'start',
+}
+
+const statCardStyle: React.CSSProperties = {
+  background: 'rgba(250,248,246,0.9)',
+  borderRadius: 18,
+  border: '1px solid rgba(14,14,12,0.08)',
+  padding: '18px 18px 16px',
+}
+
+const journeyCardStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.9)',
+  borderRadius: 24,
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 18px 44px rgba(14,14,12,0.06), 0 4px 14px rgba(14,14,12,0.03)',
+  padding: '22px 22px 20px',
+}
+
+const panelStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.9)',
+  borderRadius: 24,
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 18px 44px rgba(14,14,12,0.06), 0 4px 14px rgba(14,14,12,0.03)',
+  padding: '22px',
+}
+
+const listCardStyle: React.CSSProperties = {
+  background: 'rgba(250,248,246,0.82)',
+  borderRadius: 18,
+  border: '1px solid rgba(14,14,12,0.08)',
+  padding: '16px 16px 15px',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  gap: 14,
+}
+
+const eyebrowStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  marginBottom: 8,
+}
+
+const primaryLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '12px 18px',
+  borderRadius: 14,
+  background: 'var(--text)',
+  color: '#fff',
+  fontFamily: 'var(--font-display)',
+  fontSize: 14,
+  fontWeight: 700,
+  letterSpacing: '0.01em',
+  textDecoration: 'none',
+  boxShadow: '0 10px 24px rgba(14,14,12,0.12)',
+}
+
+const secondaryActionStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 12,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.88)',
+  color: 'var(--text)',
+  fontSize: 12.5,
+  fontWeight: 700,
+}
+
+const secondaryActionLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '8px 12px',
+  borderRadius: 12,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.88)',
+  color: 'var(--text)',
+  textDecoration: 'none',
+  fontSize: 12.5,
+  fontWeight: 700,
 }

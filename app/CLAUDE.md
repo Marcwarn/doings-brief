@@ -33,6 +33,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/dashboard/send` är nu en lätt split-workspace med vänster redigering och höger mottagarpreview
 - `Brief`-workspace är nu uppdelad i `Frågor`, `Upplägg` och `Skicka`
 - högerpanelen i `Brief` förhandsvisar nu intro, rytm, progress och första frågan så som mottagaren möter briefen
+- `/dashboard` och `/dashboard/question-sets` har nu samma lugnare workspace-UI som `Nytt utskick`, med mjukare paneler, tydligare hierarki och mindre adminkänsla
 - mottagarimport i `/dashboard/send` är nu begränsad till `.csv` och `.txt` för att undvika osäkert Excel-beroende
 - Brief-subnaven är nu förenklad till `Nytt utskick`, `Översikt` och `Frågebatterier`, medan kunder och utskick fångas upp under översikten
 
