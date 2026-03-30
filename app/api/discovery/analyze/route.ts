@@ -246,7 +246,7 @@ export async function POST(req: NextRequest) {
     const queryLower = query.toLowerCase()
     let sessionsQuery = admin
       .from('discovery_sessions')
-      .select('id, client_name, client_email, client_organisation, status, submitted_at')
+      .select('id, response_mode, client_name, client_email, client_organisation, status, submitted_at')
       .eq('consultant_id', user.id)
       .eq('template_id', templateId)
       .eq('status', 'submitted')
@@ -291,11 +291,23 @@ export async function POST(req: NextRequest) {
     const questionIds = (questions || []).map(question => question.id)
     const sessionIds = filteredSessions.map(session => session.id)
 
+    const { data: submissionEntries, error: submissionEntriesError } = sessionIds.length > 0
+      ? await admin
+          .from('discovery_submission_entries')
+          .select('id, session_id, respondent_label, demographic_role, demographic_team')
+          .in('session_id', sessionIds)
+      : { data: [], error: null }
+
+    if (submissionEntriesError) {
+      console.error('discovery analyze submission entries error:', submissionEntriesError)
+      return NextResponse.json({ error: 'Kunde inte läsa svaren.' }, { status: 500 })
+    }
+
     const [{ data: responses, error: responsesError }, { data: responseOptions, error: responseOptionsError }] = await Promise.all([
       questionIds.length > 0
         ? admin
             .from('discovery_responses')
-            .select('id, session_id, question_id, response_type, text_value, scale_value')
+            .select('id, session_id, submission_entry_id, question_id, response_type, text_value, scale_value')
             .in('session_id', sessionIds)
             .in('question_id', questionIds)
         : Promise.resolve({ data: [], error: null }),
@@ -326,6 +338,7 @@ export async function POST(req: NextRequest) {
     const questionById = new Map((questions || []).map(question => [question.id, question]))
     const sectionById = new Map((relevantSections || []).map(section => [section.id, section]))
     const sessionById = new Map(filteredSessions.map(session => [session.id, session]))
+    const submissionEntryById = new Map((submissionEntries || []).map(entry => [entry.id, entry]))
 
     const grouped = new Map<string, Array<{
       respondentLabel: string
@@ -354,8 +367,12 @@ export async function POST(req: NextRequest) {
       if (!answer) continue
 
       const bucket = grouped.get(section.id) || []
+      const submissionEntry = response.submission_entry_id ? submissionEntryById.get(response.submission_entry_id) : null
       bucket.push({
-        respondentLabel: session.client_name || session.client_email,
+        respondentLabel:
+          submissionEntry?.respondent_label
+          || [submissionEntry?.demographic_role, submissionEntry?.demographic_team].filter(Boolean).join(' · ')
+          || (session.response_mode === 'anonymous' ? 'Anonymt svar' : (session.client_name || session.client_email)),
         questionLabel: `Fråga ${question.order_index + 1}`,
         questionText: question.text,
         answer,
@@ -374,12 +391,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Det finns inte tillräckligt med svar i urvalet för analys ännu.' }, { status: 400 })
     }
 
+    const respondentCount = Math.max((submissionEntries || []).length, filteredSessions.length)
+
     const scopeHash = buildScopeHash({
       templateId,
       themeId,
       lens,
       query,
-      sessionIds: filteredSessions.map(session => session.id).sort(),
+      entryIds: (submissionEntries || []).map(entry => entry.id).sort(),
     })
     const cacheKey = buildAnalysisKey(templateId, themeId, lens, scopeHash)
 
@@ -403,7 +422,7 @@ export async function POST(req: NextRequest) {
     const scopeText = [
       `Upplägg: ${template.name}`,
       `Målgrupp: ${template.audience_mode}`,
-      `Respondenter: ${filteredSessions.length}`,
+      `Respondenter: ${respondentCount}`,
       `Tema: ${themeId ? sectionById.get(themeId)?.label || 'Okänt tema' : 'Alla teman'}`,
       query ? `Urval: filtrerat på "${query}"` : 'Urval: alla besvarade svar i scope',
     ].join('\n')
@@ -466,7 +485,7 @@ export async function POST(req: NextRequest) {
               `Template ID: ${templateId}`,
               `Theme ID: ${themeId || ''}`,
               `Audience mode: ${template.audience_mode}`,
-              `Respondent count: ${filteredSessions.length}`,
+              `Respondent count: ${respondentCount}`,
             ].join('\n'),
           },
         ],

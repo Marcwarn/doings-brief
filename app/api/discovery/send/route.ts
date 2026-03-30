@@ -8,6 +8,8 @@ type RawRecipient = {
   role?: unknown
 }
 
+type ResponseMode = 'named' | 'anonymous'
+
 function asTrimmedString(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -69,10 +71,17 @@ export async function POST(req: NextRequest) {
 
     const templateId = asTrimmedString(body.templateId)
     const organisation = asTrimmedString(body.organisation) || null
-    const { recipients, error: recipientError } = normalizeRecipients(body.recipients)
+    const responseMode: ResponseMode = body.responseMode === 'anonymous' ? 'anonymous' : 'named'
+    const { recipients, error: recipientError } = responseMode === 'named'
+      ? normalizeRecipients(body.recipients)
+      : { recipients: [] as Array<{ name: string; email: string; role: string | null }>, error: null }
 
     if (!templateId) {
       return NextResponse.json({ error: 'Välj ett upplägg innan du skickar.' }, { status: 400 })
+    }
+
+    if (responseMode === 'anonymous' && !organisation) {
+      return NextResponse.json({ error: 'Ange kund eller organisation för den anonyma länken.' }, { status: 400 })
     }
 
     if (recipientError) {
@@ -100,17 +109,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Obehörig' }, { status: 403 })
     }
 
+    const sessionRows = responseMode === 'anonymous'
+      ? [{
+          consultant_id: user.id,
+          consultant_email: user.email || null,
+          template_id: templateId,
+          response_mode: 'anonymous' as const,
+          client_name: organisation || 'Anonymt svar',
+          client_email: user.email || 'anonymous@doings.invalid',
+          client_organisation: organisation,
+        }]
+      : recipients.map(recipient => ({
+          consultant_id: user.id,
+          consultant_email: user.email || null,
+          template_id: templateId,
+          response_mode: 'named' as const,
+          client_name: recipient.name,
+          client_email: recipient.email,
+          client_organisation: organisation,
+        }))
+
     const { data: sessions, error: sessionInsertError } = await admin
       .from('discovery_sessions')
-      .insert(recipients.map(recipient => ({
-        consultant_id: user.id,
-        consultant_email: user.email || null,
-        template_id: templateId,
-        client_name: recipient.name,
-        client_email: recipient.email,
-        client_organisation: organisation,
-      })))
-      .select('id, client_name, client_email, token')
+      .insert(sessionRows)
+      .select('id, client_name, client_email, response_mode, token')
 
     if (sessionInsertError || !sessions || sessions.length === 0) {
       console.error('discovery session insert error:', sessionInsertError)
@@ -120,6 +142,25 @@ export async function POST(req: NextRequest) {
     const fromEmail = process.env.FROM_EMAIL || 'brief@doingsclients.se'
     const senderName = profile?.full_name || 'Doings'
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://doings-brief.vercel.app'
+
+    if (responseMode === 'anonymous') {
+      const session = sessions[0]
+      const discoveryUrl = `${baseUrl}/discovery/${session.token}`
+
+      return NextResponse.json({
+        ok: true,
+        sent: 1,
+        failed: 0,
+        results: [{
+          sessionId: session.id,
+          email: organisation || 'Anonym länk',
+          ok: true,
+          token: session.token,
+          url: discoveryUrl,
+          label: 'Anonym länk',
+        }],
+      })
+    }
 
     const results = await Promise.all(
       sessions.map(async session => {
@@ -210,6 +251,7 @@ export async function POST(req: NextRequest) {
           ok: true,
           token: session.token,
           url: discoveryUrl,
+          label: session.client_name,
         }
       })
     )

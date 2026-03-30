@@ -14,7 +14,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     const { data: session, error: sessionError } = await admin
       .from('discovery_sessions')
-      .select('id, template_id, client_name, client_email, client_organisation, status, submitted_at')
+      .select('id, template_id, response_mode, client_name, client_email, client_organisation, status, submitted_at')
       .eq('token', token)
       .single()
 
@@ -123,6 +123,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     return NextResponse.json({
       session: {
+        responseMode: session.response_mode,
         clientName: session.client_name,
         clientEmail: session.client_email,
         clientOrganisation: session.client_organisation,

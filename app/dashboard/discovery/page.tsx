@@ -18,6 +18,7 @@ type DiscoveryCategory = {
 }
 
 type AudienceMode = 'shared' | 'leaders' | 'mixed'
+type DiscoveryResponseMode = 'named' | 'anonymous'
 
 type DiscoveryTemplateSummary = {
   id: string
@@ -35,6 +36,7 @@ type DiscoverySendResult = {
   ok: boolean
   token?: string
   url?: string
+  label?: string
   reason?: string
 }
 
@@ -98,6 +100,8 @@ type DiscoveryDataPayload = {
     clientName: string
     clientEmail: string
     clientOrganisation: string | null
+    responseMode?: DiscoveryResponseMode
+    respondentCount?: number
     status: 'pending' | 'submitted'
     createdAt: string
     submittedAt: string | null
@@ -390,6 +394,7 @@ export default function DiscoveryPage() {
   const [sendError, setSendError] = useState<string | null>(null)
   const [clientOrganisation, setClientOrganisation] = useState('')
   const [recipientsInput, setRecipientsInput] = useState('')
+  const [responseMode, setResponseMode] = useState<DiscoveryResponseMode>('named')
   const [sendResults, setSendResults] = useState<DiscoverySendResult[] | null>(null)
   const [builderCategories, setBuilderCategories] = useState(() => buildDefaultCategories(defaultAudienceMode))
   const [activeId, setActiveId] = useState(() => buildDefaultCategories(defaultAudienceMode)[0].id)
@@ -489,7 +494,12 @@ export default function DiscoveryPage() {
 
   const dataOverview = useMemo(() => {
     const invitedCount = filteredDataSessions.length
-    const submittedCount = filteredDataSessions.filter(session => session.status === 'submitted').length
+    const submittedCount = filteredDataSessions.reduce((sum, session) => {
+      if (session.responseMode === 'anonymous') {
+        return sum + (session.respondentCount || 0)
+      }
+      return sum + (session.status === 'submitted' ? 1 : 0)
+    }, 0)
     const pendingCount = filteredDataSessions.filter(session => session.status === 'pending').length
     const latestSubmittedAt = filteredDataSessions
       .map(session => session.submittedAt)
@@ -501,7 +511,7 @@ export default function DiscoveryPage() {
       invitedCount,
       submittedCount,
       pendingCount,
-      responseRate: invitedCount > 0 ? Math.round((submittedCount / invitedCount) * 100) : 0,
+      responseRate: invitedCount > 0 ? Math.min(100, Math.round((submittedCount / invitedCount) * 100)) : 0,
       latestSubmittedAt,
       strongSignalCount: dataThemeCards.filter(card => card.signalLabel === 'Tydlig signal').length,
       splitCount: dataThemeCards.filter(card => card.splitLabel).length,
@@ -578,6 +588,7 @@ export default function DiscoveryPage() {
     setIntroTitle(defaultIntroTitle)
     setIntroText(defaultIntroText)
     setAudienceMode(defaultAudienceMode)
+    setResponseMode('named')
     const nextCategories = buildDefaultCategories(defaultAudienceMode)
     setBuilderCategories(nextCategories)
     setActiveId(nextCategories[0].id)
@@ -771,6 +782,7 @@ export default function DiscoveryPage() {
       setIntroTitle(template.introTitle)
       setIntroText(template.introText)
       setAudienceMode(template.audienceMode || defaultAudienceMode)
+      setResponseMode('named')
       const fallbackCategories = buildDefaultCategories(template.audienceMode || defaultAudienceMode)
       const loadedCategories = nextCategories.length > 0 ? nextCategories : fallbackCategories
       setBuilderCategories(loadedCategories)
@@ -869,7 +881,9 @@ export default function DiscoveryPage() {
       return
     }
 
-    const { recipients, error: recipientError } = parseRecipients(recipientsInput)
+    const { recipients, error: recipientError } = responseMode === 'named'
+      ? parseRecipients(recipientsInput)
+      : { recipients: [] as Array<{ name: string; email: string; role: string | null }>, error: null }
     if (recipientError) {
       setSendError(recipientError)
       return
@@ -884,6 +898,7 @@ export default function DiscoveryPage() {
         body: JSON.stringify({
           templateId: currentTemplateId,
           organisation: clientOrganisation,
+          responseMode,
           recipients,
         }),
       })
@@ -901,8 +916,10 @@ export default function DiscoveryPage() {
       } else if (payload?.failed > 0) {
         setSendError(`${payload.failed} mottagare kunde inte få mejlet. Övriga skickades.`)
       } else {
-        setRecipientsInput('')
-        setClientOrganisation('')
+        if (responseMode === 'named') {
+          setRecipientsInput('')
+          setClientOrganisation('')
+        }
       }
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'Kunde inte skicka utskicket.')
@@ -1298,6 +1315,43 @@ export default function DiscoveryPage() {
                     Skicka underlag
                   </div>
 
+                  <Field label="Svarsläge">
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {([
+                        { id: 'named', label: 'Personliga länkar', desc: 'En länk per person och namn i datan.' },
+                        { id: 'anonymous', label: 'Anonym länk', desc: 'En delbar länk utan namn i datan.' },
+                      ] as Array<{ id: DiscoveryResponseMode; label: string; desc: string }>).map(option => {
+                        const active = responseMode === option.id
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setResponseMode(option.id)}
+                            style={{
+                              borderRadius: 999,
+                              border: '1px solid var(--border)',
+                              borderColor: active ? 'var(--accent)' : 'var(--border)',
+                              background: active ? 'var(--accent-dim)' : 'var(--surface)',
+                              color: active ? 'var(--accent)' : 'var(--text-2)',
+                              padding: '9px 14px',
+                              fontSize: 12.5,
+                              fontWeight: 600,
+                              lineHeight: 1.4,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {option.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                      {responseMode === 'anonymous'
+                        ? 'Skapar en delbar länk som flera personer kan besvara anonymt. I den publika sidan kan de frivilligt ange roll och team/enhet.'
+                        : 'Skapar personliga länkar till varje mottagare och visar namn i svarsflödet.'}
+                    </div>
+                  </Field>
+
                   <Field label="Organisation eller kund">
                     <input
                       value={clientOrganisation}
@@ -1307,15 +1361,33 @@ export default function DiscoveryPage() {
                     />
                   </Field>
 
-                  <Field label="Mottagare och kontaktpersoner">
-                    <textarea
-                      value={recipientsInput}
-                      onChange={event => setRecipientsInput(event.target.value)}
-                      rows={6}
-                      placeholder={'Anna Andersson, anna@bolag.se\nErik Eriksson <erik@bolag.se>'}
-                      style={{ ...editorInputStyle, minHeight: 128, resize: 'vertical' }}
-                    />
-                  </Field>
+                  {responseMode === 'named' ? (
+                    <Field label="Mottagare och kontaktpersoner">
+                      <textarea
+                        value={recipientsInput}
+                        onChange={event => setRecipientsInput(event.target.value)}
+                        rows={6}
+                        placeholder={'Anna Andersson, anna@bolag.se\nErik Eriksson <erik@bolag.se>'}
+                        style={{ ...editorInputStyle, minHeight: 128, resize: 'vertical' }}
+                      />
+                    </Field>
+                  ) : (
+                    <div style={{
+                      borderRadius: 12,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      padding: '14px 16px',
+                      display: 'grid',
+                      gap: 6,
+                    }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
+                        Delbar anonym länk
+                      </div>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--text-3)' }}>
+                        När du skickar skapas en länk som kan delas vidare inom kunden. Varje person som svarar kommer in som ett eget anonymt svar i datan.
+                      </div>
+                    </div>
+                  )}
 
                   <button
                     type="button"
@@ -1323,7 +1395,7 @@ export default function DiscoveryPage() {
                     disabled={sending}
                     style={primaryButtonStyle(sending)}
                   >
-                    {sending ? 'Skickar…' : 'Skicka underlag'}
+                    {sending ? 'Skickar…' : responseMode === 'anonymous' ? 'Skapa anonym länk' : 'Skicka underlag'}
                   </button>
 
                   {sendResults && sendResults.length > 0 && sendSuccessCount > 0 && (
@@ -1336,12 +1408,16 @@ export default function DiscoveryPage() {
                       gap: 4,
                     }}>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: sendFailureCount > 0 ? '#9a3412' : '#166534' }}>
-                        {sendFailureCount > 0
+                        {responseMode === 'anonymous'
+                          ? 'Den anonyma länken är klar'
+                          : sendFailureCount > 0
                           ? `${sendSuccessCount} skickades, ${sendFailureCount} gick inte fram`
                           : `${sendSuccessCount} mottagare fick utskicket`}
                       </div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: sendFailureCount > 0 ? '#9a3412' : '#166534' }}>
-                        {sendFailureCount > 0
+                        {responseMode === 'anonymous'
+                          ? 'Kopiera länken nedan och dela den med gruppen eller kunden.'
+                          : sendFailureCount > 0
                           ? 'Se status per mottagare nedan och försök igen för dem som inte fick mejlet.'
                           : 'Discovery-länkarna är nu utskickade och du kan följa svaren under inkomna svar.'}
                       </div>
@@ -1351,14 +1427,30 @@ export default function DiscoveryPage() {
                   {sendResults && sendResults.length > 0 && (
                     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', display: 'grid', gap: 8 }}>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Status per mottagare
+                        {responseMode === 'anonymous' ? 'Länk och status' : 'Status per mottagare'}
                       </div>
                       {sendResults.map(result => (
-                        <div key={result.sessionId} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12.5 }}>
-                          <span style={{ color: 'var(--text)' }}>{result.email}</span>
-                          <span style={{ color: result.ok ? '#166534' : '#8e244c' }}>
-                            {result.ok ? 'Skickat' : (result.reason || 'Misslyckades')}
-                          </span>
+                        <div key={result.sessionId} style={{ display: 'grid', gap: 6, fontSize: 12.5 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                            <span style={{ color: 'var(--text)' }}>{result.label || result.email}</span>
+                            <span style={{ color: result.ok ? '#166534' : '#8e244c' }}>
+                              {result.ok ? (responseMode === 'anonymous' ? 'Klar' : 'Skickat') : (result.reason || 'Misslyckades')}
+                            </span>
+                          </div>
+                          {responseMode === 'anonymous' && result.url && (
+                            <div style={{
+                              borderRadius: 10,
+                              border: '1px solid var(--border)',
+                              background: '#fff',
+                              padding: '10px 12px',
+                              fontSize: 12,
+                              lineHeight: 1.5,
+                              color: 'var(--text-2)',
+                              wordBreak: 'break-all',
+                            }}>
+                              {result.url}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1870,6 +1962,8 @@ function DiscoveryDataCanvas({
     clientName: string
     clientEmail: string
     clientOrganisation: string | null
+    responseMode?: DiscoveryResponseMode
+    respondentCount?: number
     status: 'pending' | 'submitted'
     createdAt: string
     submittedAt: string | null
@@ -1884,6 +1978,8 @@ function DiscoveryDataCanvas({
     clientName: string
     clientEmail: string
     clientOrganisation: string | null
+    responseMode?: DiscoveryResponseMode
+    respondentCount?: number
     status: 'pending' | 'submitted'
     createdAt: string
     submittedAt: string | null
@@ -1984,7 +2080,7 @@ function DiscoveryDataCanvas({
             </div>
             <h2 style={dataHeroTitleStyle}>Välj ett kundspår</h2>
             <p style={dataHeroTextStyle}>
-              Data är kopplat till faktiska svar. Välj först en besvarad person eller gå in i en samlad överblick för att börja läsa materialet.
+              Data är kopplat till faktiska kundsvar. Välj först en kund eller gå in i en samlad överblick för att börja läsa materialet.
             </p>
           </div>
 
@@ -1992,7 +2088,7 @@ function DiscoveryDataCanvas({
             <section style={dataPanelStyle}>
               <div style={dataSectionLabelStyle}>Öppna data för</div>
               <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
-                Välj `Överblick` om du vill se det samlade läget, eller öppna en person direkt om du vill läsa det som redan har besvarats.
+                Välj `Överblick` om du vill se det samlade läget, eller öppna en kund direkt om du vill läsa det som redan har kommit in därifrån.
               </div>
               <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
                 <button
@@ -2018,11 +2114,12 @@ function DiscoveryDataCanvas({
                     >
                       <div>
                         <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
-                          {session.clientName}
-                          {session.clientOrganisation ? ` · ${session.clientOrganisation}` : ''}
+                          {session.clientOrganisation || session.clientName}
                         </div>
                         <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
-                          {session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : 'Besvarad'}
+                          {session.responseMode === 'anonymous'
+                            ? `${session.respondentCount || 0} anonyma svar`
+                            : (session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : 'Besvarad')}
                         </div>
                       </div>
                     </button>
@@ -2068,7 +2165,9 @@ function DiscoveryDataCanvas({
 
             {selectedSessionId !== 'overview' && (
               <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                {submittedSessions.find(session => session.id === selectedSessionId)?.clientName || 'Vald person'}
+                {submittedSessions.find(session => session.id === selectedSessionId)?.clientOrganisation
+                  || submittedSessions.find(session => session.id === selectedSessionId)?.clientName
+                  || 'Vald kund'}
               </div>
             )}
           </div>
@@ -2088,7 +2187,7 @@ function DiscoveryDataCanvas({
                 onClick={() => onSelectSession(session.id)}
                 style={selectedSessionId === session.id ? activeDataTabStyle : inactiveDataTabButtonStyle}
               >
-                {session.clientName}
+                {session.clientOrganisation || session.clientName}
               </button>
             ))}
           </div>
@@ -2195,11 +2294,12 @@ function DiscoveryDataCanvas({
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                           <div>
                             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-                              {session.clientName}
-                              {session.clientOrganisation ? ` · ${session.clientOrganisation}` : ''}
+                              {session.clientOrganisation || session.clientName}
                             </div>
                             <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                              {session.clientEmail} · {session.status === 'submitted' && session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : `Skickad ${formatDataDateTime(session.createdAt)}`}
+                              {session.responseMode === 'anonymous'
+                                ? `${session.respondentCount || 0} anonyma svar · ${session.status === 'submitted' && session.submittedAt ? `Senaste svar ${formatDataDateTime(session.submittedAt)}` : `Skapad ${formatDataDateTime(session.createdAt)}`}`
+                                : `${session.clientEmail} · ${session.status === 'submitted' && session.submittedAt ? `Besvarad ${formatDataDateTime(session.submittedAt)}` : `Skickad ${formatDataDateTime(session.createdAt)}`}`}
                             </div>
                           </div>
                           <div style={{

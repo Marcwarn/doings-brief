@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 
 type PublicDiscoveryPayload = {
   session: {
+    responseMode: 'named' | 'anonymous'
     clientName: string
     clientEmail: string
     clientOrganisation: string | null
@@ -66,6 +67,8 @@ export default function DiscoveryPublicPage() {
   const [answers, setAnswers] = useState<AnswerState>({})
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [demographicRole, setDemographicRole] = useState('')
+  const [demographicTeam, setDemographicTeam] = useState('')
 
   useEffect(() => {
     fetch(`/api/discovery/public/${token}`, { cache: 'no-store' })
@@ -79,7 +82,11 @@ export default function DiscoveryPublicPage() {
         setPayload(nextPayload as PublicDiscoveryPayload)
         setActiveSectionId(nextPayload.template.sections[0]?.id || '')
         setAnswers({})
-        setStatus(nextPayload.session.status === 'submitted' ? 'done' : 'intro')
+        setDemographicRole('')
+        setDemographicTeam('')
+        setStatus(nextPayload.session.responseMode === 'anonymous'
+          ? 'intro'
+          : (nextPayload.session.status === 'submitted' ? 'done' : 'intro'))
       })
       .catch(() => setStatus('notfound'))
   }, [token])
@@ -140,6 +147,8 @@ export default function DiscoveryPublicPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token,
+        demographicRole: payload.session.responseMode === 'anonymous' ? demographicRole : null,
+        demographicTeam: payload.session.responseMode === 'anonymous' ? demographicTeam : null,
         responses: payload.template.sections.flatMap(section => section.questions.map(question => {
           const value = answers[question.id]
 
@@ -210,7 +219,9 @@ export default function DiscoveryPublicPage() {
       <Shell>
         <SimpleCard
           title={payload.template.introTitle}
-          description={`${payload.session.clientOrganisation || payload.session.clientName}, tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.`}
+          description={payload.session.responseMode === 'anonymous'
+            ? `${payload.session.clientOrganisation || 'Tack för dialogen hittills'}. Här vill vi samla in några fördjupande perspektiv anonymt för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.`
+            : `${payload.session.clientOrganisation || payload.session.clientName}, tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.`}
         >
           <button
             type="button"
@@ -234,7 +245,7 @@ export default function DiscoveryPublicPage() {
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1, color: '#fff' }}>Discovery</div>
             </div>
             <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
-              Underlag inför nästa steg
+              {payload.session.responseMode === 'anonymous' ? 'Anonymt underlag inför nästa steg' : 'Underlag inför nästa steg'}
             </div>
           </div>
 
@@ -271,6 +282,38 @@ export default function DiscoveryPublicPage() {
             }}>
               {payload.template.introText}
             </p>
+            {payload.session.responseMode === 'anonymous' && (
+              <div style={{
+                marginTop: 18,
+                maxWidth: 560,
+                padding: '14px 16px',
+                borderRadius: 14,
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                position: 'relative',
+                zIndex: 1,
+                display: 'grid',
+                gap: 12,
+              }}>
+                <div style={{ fontSize: 12, lineHeight: 1.6, color: 'rgba(255,255,255,0.78)' }}>
+                  Svaren skickas in anonymt. Om du vill kan du lägga till lite bakgrund innan du svarar.
+                </div>
+                <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                  <input
+                    value={demographicRole}
+                    onChange={event => setDemographicRole(event.target.value)}
+                    placeholder="Roll, till exempel Ledare"
+                    style={anonymousInputStyle}
+                  />
+                  <input
+                    value={demographicTeam}
+                    onChange={event => setDemographicTeam(event.target.value)}
+                    placeholder="Team eller enhet"
+                    style={anonymousInputStyle}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -554,4 +597,16 @@ const primaryButtonStyle: React.CSSProperties = {
   letterSpacing: '0.01em',
   cursor: 'pointer',
   boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+}
+
+const anonymousInputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 12,
+  border: '1px solid rgba(255,255,255,0.18)',
+  background: 'rgba(255,255,255,0.12)',
+  color: '#fff',
+  padding: '12px 14px',
+  fontSize: 13.5,
+  lineHeight: 1.5,
+  outline: 'none',
 }

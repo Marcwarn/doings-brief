@@ -8,6 +8,8 @@ type DiscoverySessionListItem = {
   id: string
   templateId: string
   templateName: string
+  responseMode?: 'named' | 'anonymous'
+  respondentCount?: number
   clientName: string
   clientEmail: string
   clientOrganisation: string | null
@@ -99,8 +101,14 @@ export default function DiscoveryResponsesPage() {
           {sessions.map(session => (
             <div key={session.id} style={tableRowStyle}>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{session.clientName}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{session.clientEmail}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>
+                  {session.responseMode === 'anonymous' ? 'Anonym länk' : session.clientName}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
+                  {session.responseMode === 'anonymous'
+                    ? `${session.respondentCount || 0} svar hittills`
+                    : session.clientEmail}
+                </div>
               </div>
               <div style={{ fontSize: 13, color: 'var(--text)' }}>{session.clientOrganisation || 'Ej angiven'}</div>
               <div style={{ fontSize: 13, color: 'var(--text)' }}>{session.templateName}</div>
@@ -119,9 +127,15 @@ export default function DiscoveryResponsesPage() {
                     {remindLoading === session.id ? '...' : remindedSessions[session.id] ? 'Skickat' : 'Påminn'}
                   </button>
                 )}
-                <Link href={`/dashboard/discovery/responses/${session.id}`} style={secondaryLinkStyle}>
-                  Öppna
-                </Link>
+                {session.responseMode === 'anonymous' ? (
+                  <Link href="/dashboard/discovery" style={secondaryLinkStyle}>
+                    Öppna data
+                  </Link>
+                ) : (
+                  <Link href={`/dashboard/discovery/responses/${session.id}`} style={secondaryLinkStyle}>
+                    Öppna
+                  </Link>
+                )}
               </div>
               {remindFeedback[session.id] && (
                 <div style={{ gridColumn: '1 / -1', paddingTop: 8, fontSize: 11.5, color: remindedSessions[session.id] ? '#15803d' : '#92400e' }}>

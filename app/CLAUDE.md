@@ -59,7 +59,10 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Buildern kan nu ladda rekommenderade standardfrågor utifrån vald målgrupp, främst för Ledarskap, Change management, AI readiness och Vision & mål
 - Publik route `/discovery/[token]` och token-API finns nu för att visa och skicka in Discovery-svar
 - `/api/discovery/send` kan nu skapa sessions och skicka Discovery-mejl, och buildern kan trigga utskicket
+- `Discovery` kan nu också skickas i anonymt läge via en delbar länk i stället för personliga mottagare
+- den publika `Discovery`-sidan stödjer nu frivilliga bakgrundsfält för roll och team/enhet i anonymt läge
 - `/api/discovery/submit` skickar nu notismail till konsulten när ett Discovery-svar kommer in
+- Discovery-svar sparas nu via en separat submissionsnivå under sessionen, så att flera anonyma svar kan komma in bakom samma länk
 - `/dashboard/discovery/responses` och `/api/discovery/sessions*` finns nu för att följa Discovery-sessions och öppna enskilda svar
 - `/api/discovery/remind` och knappar i responses-vyn kan nu skicka manuella påminnelser till väntande Discovery-mottagare
 - `Discovery` har nu dokumenterad riktlinje för målgruppsanpassning: vissa teman ska vara gemensamma, medan andra senare bör få varianter för ledare kontra blandade grupper
@@ -67,6 +70,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `Discovery` har nu en separat AI-spec för `Data` som definierar analyslinser, JSON-output, promptregler och hur observation ska skiljas från tolkning
 - `Data`-fliken visar nu en första riktig datavy med filter, översiktskort, temakort och råsvar för det sparade discovery-upplägget
 - `/api/discovery/data/[id]` aggregerar sessions, sektionstäckning och råsvar för datavyn
+- `Data` och AI-analysen i Discovery tar nu hänsyn till anonymt läge och grupperar fortsatt kund först
 - `Data`-fliken kan nu generera AI-analys från fasta analyslinser direkt i discoveryytan
 - `/api/discovery/analyze` hämtar eller genererar strukturerad AI-analys för valt Discovery-urval och cachar resultatet i `settings`
 - `Data`-fliken visar nu ett tomt första läge när inga svar finns ännu, i stället för en färdig datavy

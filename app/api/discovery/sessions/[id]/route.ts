@@ -21,7 +21,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
     const { data: session, error: sessionError } = await admin
       .from('discovery_sessions')
-      .select('id, consultant_id, template_id, client_name, client_email, client_organisation, status, created_at, submitted_at')
+      .select('id, consultant_id, template_id, response_mode, client_name, client_email, client_organisation, status, created_at, submitted_at')
       .eq('id', sessionId)
       .single()
 
@@ -31,6 +31,10 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
     if (session.consultant_id !== user.id) {
       return NextResponse.json({ error: 'Obehörig' }, { status: 403 })
+    }
+
+    if (session.response_mode === 'anonymous') {
+      return NextResponse.json({ error: 'Anonyma Discovery-svar öppnas i Data-fliken under kundens discovery.' }, { status: 409 })
     }
 
     const [{ data: template, error: templateError }, { data: sections, error: sectionsError }] = await Promise.all([

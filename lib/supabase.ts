@@ -130,6 +130,7 @@ export type DiscoverySession = {
   consultant_id: string
   consultant_email: string | null
   template_id: string
+  response_mode: 'named' | 'anonymous'
   client_name: string
   client_email: string
   client_organisation: string | null
@@ -139,9 +140,21 @@ export type DiscoverySession = {
   submitted_at: string | null
 }
 
+export type DiscoverySubmissionEntry = {
+  id: string
+  session_id: string
+  respondent_label: string | null
+  respondent_email: string | null
+  demographic_role: string | null
+  demographic_team: string | null
+  created_at: string
+  submitted_at: string
+}
+
 export type DiscoveryResponse = {
   id: string
   session_id: string
+  submission_entry_id: string
   question_id: string
   response_type: 'open' | 'choice' | 'scale'
   text_value: string | null

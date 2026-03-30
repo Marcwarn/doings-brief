@@ -15,13 +15,13 @@ This directory contains 14 API route groups. All routes are Next.js 14 App Route
 | `briefs/delete/` | Supabase session | Delete a brief session |
 | `briefs/dispatches/` | Supabase session | CRUD for dispatch records |
 | `discovery/analyze/` | Supabase session | Generate or fetch cached AI analysis for Discovery Data using fixed analysis lenses |
-| `discovery/send/` | Supabase session | Create Discovery sessions and send token-based invite emails |
+| `discovery/send/` | Supabase session | Create Discovery sessions and either send personal invite emails or generate a shareable anonymous link |
 | `discovery/data/[id]/` | Supabase session | Aggregate Discovery response status, theme coverage, and raw-answer snippets for the internal Data tab |
 | `discovery/remind/` | Supabase session | Send manual reminder emails for pending Discovery sessions |
 | `discovery/sessions/` | Supabase session | List Discovery sessions owned by the consultant |
 | `discovery/sessions/[id]/` | Supabase session | Read one Discovery session with grouped answers |
-| `discovery/public/[token]/` | Token (no session) | Fetch public Discovery payload for one recipient |
-| `discovery/submit/` | Token (no session) | Save Discovery answers, mark the session submitted, and notify the consultant by email |
+| `discovery/public/[token]/` | Token (no session) | Fetch public Discovery payload for one recipient or one shared anonymous Discovery link |
+| `discovery/submit/` | Token (no session) | Save Discovery answers, create a submission entry, and notify the consultant by email |
 | `discovery/templates/` | Supabase session | Create, update, and list Discovery templates |
 | `discovery/templates/[id]/` | Supabase session | Fetch one full Discovery template with sections and questions |
 | `briefs/recipients-template/` | Supabase session | Download recipients CSV template |
@@ -70,3 +70,14 @@ Never use `createClient()` (the browser client from `lib/supabase.ts`) in API ro
 - `mixed`
 
 In v1 this is editorial metadata used by the builder and future template branching. It does not yet generate alternate question sets automatically.
+
+## Discovery Response Mode Contract Notes
+
+`discovery_sessions` now also carries `response_mode`:
+
+- `named`
+- `anonymous`
+
+Named mode uses one personal link per recipient.
+
+Anonymous mode uses one shared link and stores each answer set as a separate row in `discovery_submission_entries`, with optional demographic metadata such as role and team.
