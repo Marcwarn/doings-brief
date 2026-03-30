@@ -516,14 +516,14 @@ export default function DiscoveryPage() {
   }, [filteredDataSessions])
 
   const selectedDataScope = useMemo(() => {
-    if (selectedDataSessionId === 'none' || selectedDataSessionId === 'overview') return selectedDataSessionId
+    if (selectedDataSessionId === 'none') return 'none'
     return customerGroups.some(group => `customer:${group.key}` === selectedDataSessionId)
       ? selectedDataSessionId
       : 'none'
   }, [customerGroups, selectedDataSessionId])
 
   const scopedDataSessions = useMemo(() => {
-    if (selectedDataScope === 'none' || selectedDataScope === 'overview') return filteredDataSessions
+    if (selectedDataScope === 'none') return []
     const customerKey = selectedDataScope.replace(/^customer:/, '')
     return filteredDataSessions.filter(session => customerKeyForSession(session) === customerKey)
   }, [filteredDataSessions, selectedDataScope])
@@ -2214,10 +2214,7 @@ function DiscoveryDataCanvas({
             <section style={dataPanelStyle}>
               <div style={dataSectionLabelStyle}>När svar börjar komma in</div>
               <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
-                Här kommer du kunna växla mellan överblick och kundspår, se tematiska signaler och generera AI-analys på det material som faktiskt har besvarats.
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-                <div style={inactiveDataTabStyle}>Överblick</div>
+                Här kommer du kunna välja kundspår, se tematiska signaler och generera AI-analys på det material som faktiskt har besvarats.
               </div>
             </section>
           </div>
@@ -2236,7 +2233,7 @@ function DiscoveryDataCanvas({
             </div>
             <h2 style={dataHeroTitleStyle}>Välj ett kundspår</h2>
             <p style={dataHeroTextStyle}>
-              Data är kopplat till faktiska kundsvar. Välj först en kund eller gå in i en samlad överblick för att börja läsa materialet.
+              Data är kopplat till faktiska kundsvar. Välj först en kund för att läsa just det material som har kommit in därifrån.
             </p>
           </div>
 
@@ -2244,46 +2241,9 @@ function DiscoveryDataCanvas({
             <section style={dataPanelStyle}>
               <div style={dataSectionLabelStyle}>Öppna data för</div>
               <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
-                Välj `Överblick` om du vill se det samlade läget, eller öppna en kund direkt om du vill läsa det som redan har kommit in därifrån.
+                Varje discovery ska läsas separat per kundspår. Välj den kund du vill analysera i stället för att blanda ihop flera spår i samma vy.
               </div>
               <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
-                <button
-                  type="button"
-                  onClick={() => onSelectSession('overview')}
-                  style={{ ...dataCustomerCardStyle, background: 'linear-gradient(180deg,#fff 0%,#f8f6fb 100%)' }}
-                >
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 10px',
-                      borderRadius: 999,
-                      background: 'rgba(198,35,104,0.08)',
-                      color: 'var(--accent)',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      width: 'fit-content',
-                    }}>
-                      Alla kunder
-                    </div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>Överblick</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.6 }}>
-                      Se det samlade läget över alla besvarade svar i discoveryt.
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 2 }}>
-                      <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
-                        <strong style={{ color: 'var(--text)' }}>{customerGroups.length}</strong> kundspår
-                      </div>
-                      <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
-                        <strong style={{ color: 'var(--text)' }}>{overview.submittedCount}</strong> svar
-                      </div>
-                    </div>
-                  </div>
-                </button>
-
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
                   {customerGroups.map(group => (
                     <button
@@ -2354,7 +2314,7 @@ function DiscoveryDataCanvas({
               </div>
               <h2 style={dataHeroTitleStyle}>{templateName}</h2>
               <p style={dataHeroTextStyle}>
-                En första överblick över svarsläge, tematiska signaler och råsvar från discoveryt.
+                Läs svarsläge, tematiska signaler och råsvar för ett valt kundspår i discoveryt.
               </p>
             </div>
             <Link href="/dashboard/discovery/responses" style={{ ...responsesLinkStyle, background: 'rgba(255,255,255,0.08)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
@@ -2372,13 +2332,10 @@ function DiscoveryDataCanvas({
             >
               ← Tillbaka till kunder
             </button>
-
-            {selectedSessionId !== 'overview' && (
-              <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                {customerGroups.find(group => `customer:${group.key}` === selectedSessionId)?.label
-                  || 'Vald kund'}
-              </div>
-            )}
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+              {customerGroups.find(group => `customer:${group.key}` === selectedSessionId)?.label
+                || 'Vald kund'}
+            </div>
           </div>
 
           {selectedCustomerGroup && (
@@ -2432,13 +2389,6 @@ function DiscoveryDataCanvas({
           )}
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => onSelectSession('overview')}
-              style={selectedSessionId === 'overview' ? activeDataTabStyle : inactiveDataTabButtonStyle}
-            >
-              Överblick
-            </button>
             {customerGroups.map(group => (
               <button
                 key={group.key}
@@ -2452,8 +2402,8 @@ function DiscoveryDataCanvas({
           </div>
 
           <div style={summaryGridStyle}>
-            <DataSummaryCard label="Inbjudna" value={`${overview.invitedCount}`} sublabel="I aktuellt urval" />
-            <DataSummaryCard label="Svar inkomna" value={`${overview.submittedCount}`} sublabel="Besvarade discovery" />
+            <DataSummaryCard label="Inbjudna" value={`${overview.invitedCount}`} sublabel="För vald kund" />
+            <DataSummaryCard label="Svar inkomna" value={`${overview.submittedCount}`} sublabel="För vald kund" />
             <DataSummaryCard label="Svarsfrekvens" value={`${overview.responseRate}%`} sublabel={overview.pendingCount > 0 ? `${overview.pendingCount} väntar fortfarande` : 'Alla har svarat'} />
             <DataSummaryCard label="Senaste svar" value={overview.latestSubmittedAt ? formatDataDateTime(overview.latestSubmittedAt) : 'Inga ännu'} sublabel="Senaste aktivitet" />
             <DataSummaryCard label="Tydliga teman" value={`${overview.strongSignalCount}`} sublabel="Med stark signal" />
@@ -2464,12 +2414,12 @@ function DiscoveryDataCanvas({
             <div style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={dataSectionLabelStyle}>Teman</div>
-                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                      Temakorten hjälper dig hitta var discoveryt ger tydliga signaler och var det fortfarande finns olika perspektiv.
+                    <div>
+                      <div style={dataSectionLabelStyle}>Teman</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Temakorten hjälper dig hitta var just den här kundens discovery ger tydliga signaler och var det fortfarande finns olika perspektiv.
+                      </div>
                     </div>
-                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -2529,12 +2479,12 @@ function DiscoveryDataCanvas({
 
               <section style={dataPanelStyle}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={dataSectionLabelStyle}>Råsvar</div>
-                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                      Råsvaren är bevislagret bakom sammanfattningen. Börja i överblicken och borra sedan ner här.
+                    <div>
+                      <div style={dataSectionLabelStyle}>Råsvar</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Råsvaren är bevislagret bakom sammanfattningen för den valda kunden.
+                      </div>
                     </div>
-                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gap: 10 }}>
