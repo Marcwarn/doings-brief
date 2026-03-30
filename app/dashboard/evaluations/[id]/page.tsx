@@ -150,7 +150,7 @@ export default function EvaluationDetailPage() {
   })
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
+    <div style={{ padding: '40px 44px', maxWidth: 1120, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 12.5 }}>
         <Link href="/dashboard/evaluations" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Utvärdering</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
@@ -301,11 +301,11 @@ export default function EvaluationDetailPage() {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+    <div style={{ background: 'var(--surface)', borderRadius: 18, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 12px 32px rgba(16,24,40,0.04)' }}>
+      <div style={{ padding: '16px 20px 13px', borderBottom: '1px solid var(--border-sub)', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
         {title}
       </div>
-      <div style={{ padding: '16px 18px' }}>
+      <div style={{ padding: '18px 20px' }}>
         {children}
       </div>
     </div>
@@ -364,8 +364,8 @@ function slugify(value: string) {
 }
 
 const ghostButtonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 8,
+  padding: '9px 12px',
+  borderRadius: 10,
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
@@ -379,7 +379,7 @@ function pickerButtonStyle(active: boolean): React.CSSProperties {
     padding: '8px 12px',
     borderRadius: 999,
     border: '1px solid var(--border)',
-    background: active ? 'var(--accent-dim)' : 'var(--surface)',
+    background: active ? 'rgba(198,35,104,0.08)' : 'rgba(14,14,12,0.03)',
     color: active ? 'var(--accent)' : 'var(--text-2)',
     fontSize: 12.5,
     fontWeight: active ? 700 : 500,

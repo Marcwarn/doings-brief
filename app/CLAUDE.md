@@ -90,6 +90,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 Separat flöde från brief — används för att samla in feedback från klienter.
 
 - Den publika utvärderingssidan har nu ett lugnare skal med mörk topp, ljus huvudyta och tydligare "tack för idag"-ton för workshopdeltagare
+- Dashboardytorna för utvärdering har nu också fått ett lugnare workspace-UI med mjukare kort, tydligare länk/QR-sektioner och mindre tabellkänsla i översikten
 
 ---
 

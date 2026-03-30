@@ -207,7 +207,7 @@ export default function NewEvaluationPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
+    <div style={{ padding: '40px 44px', maxWidth: 1140, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
           Skapa utvärdering
@@ -221,8 +221,8 @@ export default function NewEvaluationPage() {
 
       {error && <InlineError text={error} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: created ? '1fr 0.9fr' : '1fr', gap: 20 }}>
-        <form onSubmit={createEvaluation} style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: created ? '1.05fr 0.95fr' : '1fr', gap: 20, alignItems: 'start' }}>
+        <form onSubmit={createEvaluation} style={{ background: 'var(--surface)', borderRadius: 18, border: '1px solid var(--border)', padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 12px 32px rgba(16,24,40,0.04)' }}>
           <Field label="Kund">
             <>
               <input
@@ -261,10 +261,10 @@ export default function NewEvaluationPage() {
                         <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{selectedQuestionSet.description}</div>
                       )}
                     </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      Aktiv källa
-                    </div>
-                  </div>
+                          <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            Aktiv källa
+                          </div>
+                        </div>
                 )}
 
                 {showQuestionSetPicker && (
@@ -401,13 +401,13 @@ export default function NewEvaluationPage() {
           )}
 
           <button type="submit" disabled={saving} style={submitButtonStyle(saving)}>
-            {saving ? 'Skapar…' : 'Skapa länk och QR-kod'}
+            {saving ? 'Skapar…' : 'Skapa länk och QR'}
           </button>
         </form>
 
         {created && (
-          <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', padding: '22px 24px' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 18, border: '1px solid var(--border)', padding: '24px 26px', boxShadow: '0 12px 32px rgba(16,24,40,0.04)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 21, fontWeight: 700, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.02em' }}>
               {created.evaluation.label}
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 16 }}>
@@ -417,13 +417,13 @@ export default function NewEvaluationPage() {
               </span>
             </div>
             <div style={{ display: 'grid', gap: 14 }}>
-              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 14px 12px' }}>
+              <div style={{ background: 'rgba(14,14,12,0.03)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px 12px' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6 }}>
                   Länk till deltagarna
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--text)', wordBreak: 'break-all' }}>{created.publicUrl}</div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px', background: 'rgba(14,14,12,0.03)', border: '1px solid var(--border)', borderRadius: 14 }}>
                 <img src={qrUrl} alt="QR-kod för utvärdering" style={{ width: 220, height: 220, objectFit: 'contain' }} />
               </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -464,8 +464,8 @@ function slugify(value: string) {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px 14px',
-  borderRadius: 7,
+  padding: '12px 14px',
+  borderRadius: 10,
   border: '1px solid var(--border)',
   background: 'var(--bg)',
   fontSize: 13.5,
@@ -477,11 +477,11 @@ const inputStyle: React.CSSProperties = {
 function submitButtonStyle(disabled: boolean): React.CSSProperties {
   return {
     width: '100%',
-    padding: '12px 0',
-    borderRadius: 8,
+    padding: '13px 0',
+    borderRadius: 10,
     border: '1px solid var(--border)',
-    background: disabled ? 'var(--bg)' : 'var(--surface)',
-    color: disabled ? 'var(--text-3)' : 'var(--text)',
+    background: disabled ? 'rgba(14,14,12,0.08)' : 'var(--text)',
+    color: disabled ? 'var(--text-3)' : '#fff',
     fontFamily: 'var(--font-display)',
     fontSize: 14,
     fontWeight: 700,
@@ -490,8 +490,8 @@ function submitButtonStyle(disabled: boolean): React.CSSProperties {
 }
 
 const ghostButtonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 7,
+  padding: '9px 12px',
+  borderRadius: 8,
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
@@ -513,8 +513,8 @@ const smallDeleteStyle: React.CSSProperties = {
 }
 
 const secondaryLinkStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 7,
+  padding: '9px 12px',
+  borderRadius: 8,
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
