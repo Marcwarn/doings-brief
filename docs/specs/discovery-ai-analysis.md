@@ -240,6 +240,7 @@ The analysis must:
 - avoid broad generalizations
 - emphasize that the picture is preliminary
 - focus more on specific observations and open questions
+- prefer a limited "early signals" mode over a full synthesis
 
 ### 4 to 8 responses
 
@@ -264,6 +265,17 @@ A theme-level prompt should ask for:
 - up to two meaningful differences
 - up to three follow-up questions
 - two to four supporting excerpts
+
+## Evidence Contract
+
+The analysis should be treated as invalid unless the important points can be traced back to explicit evidence in the current scope.
+
+- observations must carry evidence references
+- differences must carry evidence references
+- uncertainties may carry evidence references when the uncertainty is itself grounded in the material
+- if explicit support is missing, the point should be omitted rather than inferred
+
+The product should prefer understatement over plausible invention.
 
 ## Overall Analysis Prompt Contract
 

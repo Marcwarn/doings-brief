@@ -13,6 +13,8 @@ type DiscoveryAnalysisLens =
 
 type DiscoveryAnalysisPayload = {
   lens: DiscoveryAnalysisLens
+  preliminary: boolean
+  caution: string | null
   scope: {
     template_id: string
     theme_id: string | null
@@ -24,18 +26,22 @@ type DiscoveryAnalysisPayload = {
     title: string
     detail: string
     confidence: 'high' | 'medium' | 'low'
+    evidence_ids: string[]
   }>
   differences: Array<{
     title: string
     detail: string
     confidence: 'high' | 'medium' | 'low'
+    evidence_ids: string[]
   }>
   uncertainties: Array<{
     title: string
     detail: string
+    evidence_ids: string[]
   }>
   next_questions: string[]
   evidence: Array<{
+    id: string
     theme_id: string
     respondent_label: string
     excerpt: string
@@ -64,12 +70,22 @@ function normalizeList<T>(value: unknown, mapItem: (item: unknown) => T | null, 
     .slice(0, limit)
 }
 
-function parseDiscoveryAnalysisPayload(value: unknown): DiscoveryAnalysisPayload | null {
+function normalizeEvidenceIds(value: unknown, validEvidenceIds: Set<string>) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(item => normalizeString(item))
+    .filter(item => validEvidenceIds.has(item))
+    .slice(0, 3)
+}
+
+function parseDiscoveryAnalysisPayload(value: unknown, validEvidenceIds: Set<string>): DiscoveryAnalysisPayload | null {
   if (!value || typeof value !== 'object') return null
 
   const candidate = value as Record<string, unknown>
   const lens = normalizeString(candidate.lens) as DiscoveryAnalysisLens
   const summary = normalizeString(candidate.summary)
+  const preliminary = candidate.preliminary === true
+  const caution = normalizeString(candidate.caution) || null
   const scope = candidate.scope && typeof candidate.scope === 'object'
     ? candidate.scope as Record<string, unknown>
     : null
@@ -89,6 +105,8 @@ function parseDiscoveryAnalysisPayload(value: unknown): DiscoveryAnalysisPayload
 
   return {
     lens,
+    preliminary,
+    caution,
     scope: {
       template_id: templateId,
       theme_id: themeId,
@@ -101,11 +119,14 @@ function parseDiscoveryAnalysisPayload(value: unknown): DiscoveryAnalysisPayload
       const next = item as Record<string, unknown>
       const title = normalizeString(next.title)
       const detail = normalizeString(next.detail)
+      const evidenceIds = normalizeEvidenceIds(next.evidence_ids, validEvidenceIds)
+      if (!title || !detail || evidenceIds.length === 0) return null
       if (!title || !detail) return null
       return {
         title,
         detail,
         confidence: normalizeConfidence(next.confidence),
+        evidence_ids: evidenceIds,
       }
     }),
     differences: normalizeList(candidate.differences, item => {
@@ -113,11 +134,13 @@ function parseDiscoveryAnalysisPayload(value: unknown): DiscoveryAnalysisPayload
       const next = item as Record<string, unknown>
       const title = normalizeString(next.title)
       const detail = normalizeString(next.detail)
-      if (!title || !detail) return null
+      const evidenceIds = normalizeEvidenceIds(next.evidence_ids, validEvidenceIds)
+      if (!title || !detail || evidenceIds.length === 0) return null
       return {
         title,
         detail,
         confidence: normalizeConfidence(next.confidence),
+        evidence_ids: evidenceIds,
       }
     }),
     uncertainties: normalizeList(candidate.uncertainties, item => {
@@ -125,8 +148,9 @@ function parseDiscoveryAnalysisPayload(value: unknown): DiscoveryAnalysisPayload
       const next = item as Record<string, unknown>
       const title = normalizeString(next.title)
       const detail = normalizeString(next.detail)
+      const evidenceIds = normalizeEvidenceIds(next.evidence_ids, validEvidenceIds)
       if (!title || !detail) return null
-      return { title, detail }
+      return { title, detail, evidence_ids: evidenceIds }
     }),
     next_questions: normalizeList(candidate.next_questions, item => {
       const next = normalizeString(item)
@@ -135,10 +159,12 @@ function parseDiscoveryAnalysisPayload(value: unknown): DiscoveryAnalysisPayload
     evidence: normalizeList(candidate.evidence, item => {
       if (!item || typeof item !== 'object') return null
       const next = item as Record<string, unknown>
+      const id = normalizeString(next.id)
       const themeId = normalizeString(next.theme_id)
       const excerpt = normalizeString(next.excerpt)
-      if (!themeId || !excerpt) return null
+      if (!id || !validEvidenceIds.has(id) || !themeId || !excerpt) return null
       return {
+        id,
         theme_id: themeId,
         respondent_label: normalizeString(next.respondent_label) || 'Respondent',
         excerpt,
@@ -151,10 +177,8 @@ function parseStoredDiscoveryAnalysis(raw: string | null | undefined) {
   if (!raw) return null
   try {
     const parsed = JSON.parse(raw) as StoredDiscoveryAnalysis
-    const analysis = parseDiscoveryAnalysisPayload(parsed.analysis)
-    if (!analysis) return null
     return {
-      analysis,
+      analysis: parsed.analysis,
       updatedAt: parsed.updatedAt || new Date().toISOString(),
     }
   } catch {
@@ -182,6 +206,44 @@ function lensPrompt(lens: DiscoveryAnalysisLens) {
     default:
       return 'Fokusera främst på det som återkommer tydligast i materialet och vilka behov eller signaler som flera respondenter verkar peka mot.'
   }
+}
+
+function buildPreliminaryAnalysis(args: {
+  lens: DiscoveryAnalysisLens
+  templateId: string
+  themeId: string | null
+  audienceMode: 'shared' | 'leaders' | 'mixed'
+  respondentCount: number
+  evidence: DiscoveryAnalysisPayload['evidence']
+}) {
+  const themeScope = args.themeId ? 'det valda temat' : 'hela materialet'
+  return {
+    lens: args.lens,
+    preliminary: true,
+    caution: `Underlaget är fortfarande tunt. Analysen bygger just nu på ${args.respondentCount} svar och bör läsas som tidiga signaler, inte som en stabil bild.`,
+    scope: {
+      template_id: args.templateId,
+      theme_id: args.themeId,
+      respondent_count: args.respondentCount,
+      audience_mode: args.audienceMode,
+    },
+    summary: `Det har kommit in ${args.respondentCount} svar i ${themeScope}. Det räcker för att se några tidiga signaler, men inte för att dra säkra slutsatser ännu.`,
+    observations: [],
+    differences: [],
+    uncertainties: [
+      {
+        title: 'För tidigt för tydlig tolkning',
+        detail: 'Det finns ännu inte tillräckligt många svar för att avgöra vad som verkligen återkommer, vad som bara är enskilda perspektiv och var det finns stabil samsyn eller faktisk splittring.',
+        evidence_ids: args.evidence.slice(0, 2).map(item => item.id),
+      },
+    ],
+    next_questions: [
+      'Vilka signaler återkommer även när fler svar har kommit in?',
+      'Finns det någon skillnad mellan roller, team eller delar av organisationen?',
+      'Vad behöver vi fråga vidare om innan vi drar slutsatser?'
+    ],
+    evidence: args.evidence.slice(0, 4),
+  } satisfies DiscoveryAnalysisPayload
 }
 
 export async function POST(req: NextRequest) {
@@ -395,6 +457,15 @@ export async function POST(req: NextRequest) {
     }
 
     const respondentCount = Math.max((submissionEntries || []).length, filteredSessions.length)
+    const evidenceCatalog = groupedResponses.flatMap(section =>
+      section.responses.map((item, index) => ({
+        id: `E${section.sectionId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6)}${index + 1}`,
+        theme_id: section.sectionId,
+        respondent_label: item.respondentLabel,
+        excerpt: item.answer.slice(0, 220),
+      }))
+    ).slice(0, 24)
+    const validEvidenceIds = new Set(evidenceCatalog.map(item => item.id))
 
     const scopeHash = buildScopeHash({
       templateId,
@@ -418,9 +489,22 @@ export async function POST(req: NextRequest) {
       }
 
       const cached = parseStoredDiscoveryAnalysis(cachedRow?.value)
-      if (cached) {
-        return NextResponse.json({ analysis: cached.analysis, updatedAt: cached.updatedAt, cached: true })
+      const cachedAnalysis = cached ? parseDiscoveryAnalysisPayload(cached.analysis, validEvidenceIds) : null
+      if (cached && cachedAnalysis) {
+        return NextResponse.json({ analysis: cachedAnalysis, updatedAt: cached.updatedAt, cached: true })
       }
+    }
+
+    if (respondentCount < 3) {
+      const preliminary = buildPreliminaryAnalysis({
+        lens,
+        templateId,
+        themeId,
+        audienceMode: template.audience_mode,
+        respondentCount,
+        evidence: evidenceCatalog,
+      })
+      return NextResponse.json({ analysis: preliminary, updatedAt: new Date().toISOString(), cached: false })
     }
 
     const scopeText = [
@@ -447,21 +531,33 @@ export async function POST(req: NextRequest) {
       ].join('\n')
     }).join('\n\n')
 
+    const evidenceBody = evidenceCatalog.map(item => [
+      `ID: ${item.id}`,
+      `Tema: ${sectionById.get(item.theme_id)?.label || item.theme_id}`,
+      `Respondent: ${item.respondent_label}`,
+      `Utdrag: ${item.excerpt}`,
+    ].join('\n')).join('\n\n')
+
     const systemPrompt = [
       'Du ar en senior konsult som analyserar Discovery-svar.',
       'Du far bara anvanda information som finns i det givna materialet.',
       'Du maste vara specifik, nykter och aterhallsam.',
       'Du maste skilja pa observationer, skillnader, osakerheter och fragor att ta vidare.',
       'Du far inte hitta pa citat eller overdriva samstammighet.',
-      'Om underlaget ar tunt ska du uttryckligen skriva det.',
+      'Du far inte skriva en observation eller skillnad utan att koppla den till minst ett evidence_id som finns i underlaget.',
+      'Om stod saknas ska du utelamna punkten och i stallet lyfta osakerheten.',
+      'Du far inte pasta samsyn om inte flera svar tydligt pekar at samma hall.',
+      'Du far inte formulera tolkningar som fakta.',
       'Skriv pa svenska.',
       'Returnera ENDAST JSON med exakt dessa nycklar:',
-      'lens, scope, summary, observations, differences, uncertainties, next_questions, evidence.',
+      'lens, preliminary, caution, scope, summary, observations, differences, uncertainties, next_questions, evidence.',
+      'preliminary ska vara false.',
+      'caution ska vara null eller en kort svensk varning om underlaget ar ojamt.',
       'scope maste innehalla template_id, theme_id, respondent_count och audience_mode.',
-      'observations och differences ska innehalla title, detail och confidence.',
-      'uncertainties ska innehalla title och detail.',
+      'observations och differences ska innehalla title, detail, confidence och evidence_ids.',
+      'uncertainties ska innehalla title, detail och evidence_ids om det finns stod i underlaget.',
       'next_questions ska vara korta svenska punkter.',
-      'evidence ska innehalla theme_id, respondent_label och excerpt.',
+      'evidence ska vara ett urval av poster ur evidence-katalogen och varje post maste innehalla id, theme_id, respondent_label och excerpt exakt som i katalogen.',
       lensPrompt(lens),
     ].join(' ')
 
@@ -486,6 +582,9 @@ export async function POST(req: NextRequest) {
               'Material att analysera:',
               responseBody,
               '',
+              'Evidence-katalog att referera till:',
+              evidenceBody,
+              '',
               `Lins: ${lens}`,
               `Template ID: ${templateId}`,
               `Theme ID: ${themeId || ''}`,
@@ -508,7 +607,7 @@ export async function POST(req: NextRequest) {
 
     let parsed: DiscoveryAnalysisPayload | null = null
     try {
-      parsed = parseDiscoveryAnalysisPayload(JSON.parse(raw))
+      parsed = parseDiscoveryAnalysisPayload(JSON.parse(raw), validEvidenceIds)
     } catch {
       parsed = null
     }

@@ -74,6 +74,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `Data` och AI-analysen i Discovery tar nu hänsyn till anonymt läge och grupperar fortsatt kund först
 - `Data`-fliken kan nu generera AI-analys från fasta analyslinser direkt i discoveryytan
 - `/api/discovery/analyze` hämtar eller genererar strukturerad AI-analys för valt Discovery-urval och cachar resultatet i `settings`
+- `Discovery`-analysen har nu hårdare sanningsspärrar: tunt underlag ger bara en preliminär läsning, och observationer måste bära konkret underlag från aktuella svar
 - `Data`-fliken visar nu ett tomt första läge när inga svar finns ännu, i stället för en färdig datavy
 - när svar finns är `Data` nu kundcentrerad i UI:t: man väljer kundspår först och låter sedan teman, råsvar och AI-analys följa samma scope
 - `Data` har nu också en starkare visuell kundöverblick med rikare kundkort, tydligare vald-kund-sammanhang och mer redaktionella temakort

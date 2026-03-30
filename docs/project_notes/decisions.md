@@ -40,6 +40,13 @@ Running log of significant decisions made during development. For formal archite
 - sparse datasets must produce visibly cautious analysis rather than generic overconfidence
 - the UI must keep AI interpretation close to raw-answer evidence
 
+## 2026-03-30 — Discovery AI Must Prefer Caution Over Coverage
+
+- `Discovery` analysis should rather say too little than too much
+- thin response sets should not produce a polished full analysis
+- every important observation should carry explicit evidence from the current scope
+- unsupported synthesis should be downgraded into uncertainty or omitted entirely
+
 ## 2026-03-30 — Discovery Data Should Be Customer-First and Support Anonymous Mode
 
 - `Discovery Data` should start from customer or organisation, not from a flat list of people

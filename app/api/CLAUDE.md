@@ -81,3 +81,12 @@ In v1 this is editorial metadata used by the builder and future template branchi
 Named mode uses one personal link per recipient.
 
 Anonymous mode uses one shared link and stores each answer set as a separate row in `discovery_submission_entries`, with optional demographic metadata such as role and team.
+
+## Discovery Analysis Guardrails
+
+`/api/discovery/analyze` is intentionally stricter than a generic summary endpoint.
+
+- Full AI analysis should not run on very thin material. Under small response counts, the route returns a visibly preliminary reading instead of a confident synthesis.
+- Observations and differences must be tied to explicit evidence references from the current response scope.
+- Cached analysis should only be reused if it still validates against the current evidence catalogue for that scope.
+- The API should favor omission over invention: unsupported conclusions should become uncertainties, not polished claims.

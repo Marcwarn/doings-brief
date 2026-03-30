@@ -121,6 +121,8 @@ type DiscoveryAnalysisLens =
 
 type DiscoveryAnalysisPayload = {
   lens: DiscoveryAnalysisLens
+  preliminary: boolean
+  caution: string | null
   scope: {
     template_id: string
     theme_id: string | null
@@ -132,18 +134,22 @@ type DiscoveryAnalysisPayload = {
     title: string
     detail: string
     confidence: 'high' | 'medium' | 'low'
+    evidence_ids: string[]
   }>
   differences: Array<{
     title: string
     detail: string
     confidence: 'high' | 'medium' | 'low'
+    evidence_ids: string[]
   }>
   uncertainties: Array<{
     title: string
     detail: string
+    evidence_ids: string[]
   }>
   next_questions: string[]
   evidence: Array<{
+    id: string
     theme_id: string
     respondent_label: string
     excerpt: string
@@ -2615,28 +2621,43 @@ function DiscoveryDataCanvas({
                     <div style={{ padding: '14px 14px 12px', borderRadius: 14, border: '1px solid var(--border)', background: 'rgba(14,14,12,0.03)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-                          Kort läsning
+                          {analysisPayload.preliminary ? 'Tidiga signaler' : 'AI-tolkning'}
                         </div>
                         <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
                           {analysisCached ? 'Från cache' : 'Nygenererad'}
                           {analysisUpdatedAt ? ` · ${formatDataDateTime(analysisUpdatedAt)}` : ''}
+                          {` · ${analysisPayload.scope.respondent_count} svar`}
                         </div>
                       </div>
+                      {analysisPayload.caution && (
+                        <div style={{
+                          marginBottom: 10,
+                          padding: '10px 12px',
+                          borderRadius: 12,
+                          border: '1px solid #fed7aa',
+                          background: '#fff7ed',
+                          fontSize: 12.5,
+                          lineHeight: 1.55,
+                          color: '#9a3412',
+                        }}>
+                          {analysisPayload.caution}
+                        </div>
+                      )}
                       <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--text-2)' }}>
                         {analysisPayload.summary}
                       </div>
                     </div>
 
                     {analysisPayload.observations.length > 0 && (
-                      <AnalysisGroup title="Det som återkommer" items={analysisPayload.observations} />
+                      <AnalysisGroup title="Det som återkommer" items={analysisPayload.observations} evidence={analysisPayload.evidence} />
                     )}
 
                     {analysisPayload.differences.length > 0 && (
-                      <AnalysisGroup title="Det som skiljer sig" items={analysisPayload.differences} />
+                      <AnalysisGroup title="Det som skiljer sig" items={analysisPayload.differences} evidence={analysisPayload.evidence} />
                     )}
 
                     {analysisPayload.uncertainties.length > 0 && (
-                      <AnalysisQuestionGroup title="Det vi inte vet ännu" items={analysisPayload.uncertainties} />
+                      <AnalysisQuestionGroup title="Det vi inte vet ännu" items={analysisPayload.uncertainties} evidence={analysisPayload.evidence} />
                     )}
 
                     {analysisPayload.next_questions.length > 0 && (
@@ -2715,12 +2736,45 @@ function DataSummaryCard({ label, value, sublabel }: { label: string; value: str
   )
 }
 
+function AnalysisEvidence({
+  ids,
+  evidence,
+}: {
+  ids: string[]
+  evidence: DiscoveryAnalysisPayload['evidence']
+}) {
+  const relevantEvidence = evidence.filter(item => ids.includes(item.id))
+  if (relevantEvidence.length === 0) return null
+
+  return (
+    <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+      {relevantEvidence.map(item => (
+        <div key={item.id} style={{
+          borderRadius: 12,
+          border: '1px solid rgba(14,14,12,0.08)',
+          background: 'rgba(14,14,12,0.03)',
+          padding: '10px 11px',
+        }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', marginBottom: 4 }}>
+            {item.respondent_label}
+          </div>
+          <div style={{ fontSize: 12.75, lineHeight: 1.6, color: 'var(--text-2)' }}>
+            {item.excerpt}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AnalysisGroup({
   title,
   items,
+  evidence,
 }: {
   title: string
-  items: Array<{ title: string; detail: string; confidence: 'high' | 'medium' | 'low' }>
+  items: Array<{ title: string; detail: string; confidence: 'high' | 'medium' | 'low'; evidence_ids: string[] }>
+  evidence: DiscoveryAnalysisPayload['evidence']
 }) {
   return (
     <section style={analysisBlockStyle}>
@@ -2735,6 +2789,7 @@ function AnalysisGroup({
               </div>
             </div>
             <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{item.detail}</div>
+            <AnalysisEvidence ids={item.evidence_ids} evidence={evidence} />
           </div>
         ))}
       </div>
@@ -2745,9 +2800,11 @@ function AnalysisGroup({
 function AnalysisQuestionGroup({
   title,
   items,
+  evidence,
 }: {
   title: string
-  items: Array<{ title: string; detail: string }>
+  items: Array<{ title: string; detail: string; evidence_ids: string[] }>
+  evidence: DiscoveryAnalysisPayload['evidence']
 }) {
   return (
     <section style={analysisBlockStyle}>
@@ -2757,6 +2814,7 @@ function AnalysisQuestionGroup({
           <div key={`${item.title}-${item.detail}`} style={analysisRowStyle}>
             <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{item.title}</div>
             <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{item.detail}</div>
+            <AnalysisEvidence ids={item.evidence_ids} evidence={evidence} />
           </div>
         ))}
       </div>
