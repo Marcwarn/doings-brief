@@ -156,6 +156,17 @@ type DiscoveryAnalysisPayload = {
   }>
 }
 
+type DiscoveryAiStatus = {
+  configured: {
+    berget: boolean
+    openai: boolean
+    anthropic: boolean
+  }
+  currentProvider: 'berget' | null
+  preferredProvider: 'berget' | 'openai' | 'anthropic' | null
+  ready: boolean
+}
+
 const sharedCategories: DiscoveryCategory[] = [
   { id: 'team', label: 'Teamutveckling', desc: 'Utforska hur samarbetet fungerar i teamet och vad som skulle hjälpa er framåt.', questions: [
     { type: 'open', text: 'Vad fungerar riktigt bra i teamet idag, och var märks det att ni fortfarande har något att lösa?' },
@@ -436,6 +447,7 @@ export default function DiscoveryPage() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisCached, setAnalysisCached] = useState(false)
+  const [analysisStatus, setAnalysisStatus] = useState<DiscoveryAiStatus | null>(null)
 
   const enabledCategories = builderCategories.filter(category => category.enabled)
   const activeCategory = enabledCategories.find(category => category.id === activeId) || enabledCategories[0] || builderCategories[0]
@@ -694,6 +706,17 @@ export default function DiscoveryPage() {
     }
   }
 
+  async function loadAnalysisStatus() {
+    try {
+      const response = await fetch('/api/discovery/analyze', { cache: 'no-store' })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || !payload) return
+      setAnalysisStatus(payload as DiscoveryAiStatus)
+    } catch {
+      // Keep this silent; the analysis panel will still work off explicit errors.
+    }
+  }
+
   async function runAnalysis(regenerate = false) {
     if (!currentTemplateId) return
 
@@ -731,6 +754,10 @@ export default function DiscoveryPage() {
       setAnalysisLoading(false)
     }
   }
+
+  useEffect(() => {
+    void loadAnalysisStatus()
+  }, [])
 
   function parseRecipients(input: string) {
     const lines = input
@@ -1747,6 +1774,7 @@ export default function DiscoveryPage() {
               analysisLoading={analysisLoading}
               analysisError={analysisError}
               analysisCached={analysisCached}
+              analysisStatus={analysisStatus}
             />
           ) : (
           <section style={{ minWidth: 0 }}>
@@ -2047,6 +2075,7 @@ function DiscoveryDataCanvas({
   analysisLoading,
   analysisError,
   analysisCached,
+  analysisStatus,
 }: {
   currentTemplateId: string | null
   loading: boolean
@@ -2123,6 +2152,7 @@ function DiscoveryDataCanvas({
   analysisLoading: boolean
   analysisError: string | null
   analysisCached: boolean
+  analysisStatus: DiscoveryAiStatus | null
 }) {
   const selectedCustomerGroup = selectedSessionId.startsWith('customer:')
     ? customerGroups.find(group => `customer:${group.key}` === selectedSessionId) || null
@@ -2603,6 +2633,29 @@ function DiscoveryDataCanvas({
                       </button>
                     )
                   })}
+                </div>
+
+                <div style={{
+                  borderRadius: 14,
+                  border: '1px solid var(--border)',
+                  background: 'rgba(14,14,12,0.03)',
+                  padding: '12px 13px',
+                  display: 'grid',
+                  gap: 6,
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+                    AI-status
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.55 }}>
+                    {analysisStatus?.configured.openai
+                      ? 'OPENAI_API_KEY finns i miljön. Discovery är förberett för att växla till OpenAI när vi kopplar in routen.'
+                      : analysisStatus?.configured.anthropic
+                        ? 'ANTHROPIC_API_KEY finns i miljön. Discovery är förberett för att växla till Anthropic när vi kopplar in routen.'
+                        : 'Nästa analysmotor är inte konfigurerad ännu. Lägg in OPENAI_API_KEY eller ANTHROPIC_API_KEY i Vercel när ni vill aktivera den.'}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
+                    Nuvarande route använder {analysisStatus?.currentProvider === 'berget' ? 'Berget' : 'ingen aktiv analysprovider'}.
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

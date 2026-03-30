@@ -5,6 +5,8 @@ import { getSupabaseAdminClient } from '@/lib/server-clients'
 
 const BERGET_BASE = 'https://api.berget.ai/v1'
 
+type DiscoveryAiProvider = 'berget' | 'openai' | 'anthropic' | null
+
 type DiscoveryAnalysisLens =
   | 'Gemensamma behov'
   | 'Skillnader i perspektiv'
@@ -208,6 +210,28 @@ function lensPrompt(lens: DiscoveryAnalysisLens) {
   }
 }
 
+function getDiscoveryAiProviderStatus() {
+  const configured = {
+    berget: Boolean(process.env.BERGET_API_KEY),
+    openai: Boolean(process.env.OPENAI_API_KEY),
+    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+  }
+
+  const preferredProvider: DiscoveryAiProvider = configured.openai
+    ? 'openai'
+    : configured.anthropic
+      ? 'anthropic'
+      : configured.berget
+        ? 'berget'
+        : null
+
+  return {
+    configured,
+    preferredProvider,
+    currentProvider: configured.berget ? 'berget' : null,
+  }
+}
+
 function buildPreliminaryAnalysis(args: {
   lens: DiscoveryAnalysisLens
   templateId: string
@@ -247,9 +271,13 @@ function buildPreliminaryAnalysis(args: {
 }
 
 export async function POST(req: NextRequest) {
+  const { currentProvider, configured, preferredProvider } = getDiscoveryAiProviderStatus()
   const key = process.env.BERGET_API_KEY
   if (!key) {
-    return NextResponse.json({ error: 'BERGET_API_KEY not configured' }, { status: 500 })
+    return NextResponse.json({
+      error: 'AI-analys är inte aktiverad ännu. Lägg in OPENAI_API_KEY eller ANTHROPIC_API_KEY i Vercel när ni vill koppla nästa analysmotor.',
+      providerStatus: { currentProvider, preferredProvider, configured },
+    }, { status: 503 })
   }
 
   try {
@@ -635,6 +663,16 @@ export async function POST(req: NextRequest) {
     console.error('discovery analyze fatal:', error)
     return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 })
   }
+}
+
+export async function GET() {
+  const { configured, currentProvider, preferredProvider } = getDiscoveryAiProviderStatus()
+  return NextResponse.json({
+    configured,
+    currentProvider,
+    preferredProvider,
+    ready: Boolean(currentProvider),
+  })
 }
 
 export const maxDuration = 30

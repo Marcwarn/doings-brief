@@ -90,3 +90,4 @@ Anonymous mode uses one shared link and stores each answer set as a separate row
 - Observations and differences must be tied to explicit evidence references from the current response scope.
 - Cached analysis should only be reused if it still validates against the current evidence catalogue for that scope.
 - The API should favor omission over invention: unsupported conclusions should become uncertainties, not polished claims.
+- The route also exposes a `GET` status endpoint so the Discovery UI can show whether current and future AI providers are configured in Vercel.

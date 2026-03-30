@@ -47,6 +47,12 @@ Running log of significant decisions made during development. For formal archite
 - every important observation should carry explicit evidence from the current scope
 - unsupported synthesis should be downgraded into uncertainty or omitted entirely
 
+## 2026-03-30 — Discovery Should Be Ready for OpenAI or Anthropic in Vercel
+
+- `Discovery` should expose whether current and future AI providers are configured, so the UI can reflect real readiness instead of guessing
+- future provider keys should live in Vercel env vars under `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`
+- preparation for those providers should not leak secrets to the client; only server routes may read them
+
 ## 2026-03-30 — Discovery Data Should Be Customer-First and Support Anonymous Mode
 
 - `Discovery Data` should start from customer or organisation, not from a flat list of people
