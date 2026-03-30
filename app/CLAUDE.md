@@ -69,6 +69,8 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/api/discovery/data/[id]` aggregerar sessions, sektionstäckning och råsvar för datavyn
 - `Data`-fliken kan nu generera AI-analys från fasta analyslinser direkt i discoveryytan
 - `/api/discovery/analyze` hämtar eller genererar strukturerad AI-analys för valt Discovery-urval och cachar resultatet i `settings`
+- `Data`-fliken visar nu ett tomt första läge när inga svar finns ännu, i stället för en färdig datavy
+- när svar finns kan man nu växla mellan `Överblick` och enskilda besvarade personer via flikar ovanför datan
 
 **Saknas**: Eventuell mer avancerad översikt/filtering och dispatch-gruppering för Discovery
 

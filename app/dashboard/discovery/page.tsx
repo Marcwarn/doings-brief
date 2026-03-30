@@ -403,6 +403,7 @@ export default function DiscoveryPage() {
   const [dataStatusFilter, setDataStatusFilter] = useState<'all' | 'submitted' | 'pending'>('all')
   const [dataQuery, setDataQuery] = useState('')
   const [selectedDataSectionId, setSelectedDataSectionId] = useState<string>('all')
+  const [selectedDataSessionId, setSelectedDataSessionId] = useState<string>('overview')
   const [selectedAnalysisLens, setSelectedAnalysisLens] = useState<DiscoveryAnalysisLens>('Gemensamma behov')
   const [analysisPayload, setAnalysisPayload] = useState<DiscoveryAnalysisPayload | null>(null)
   const [analysisUpdatedAt, setAnalysisUpdatedAt] = useState<string | null>(null)
@@ -507,12 +508,27 @@ export default function DiscoveryPage() {
     }
   }, [dataThemeCards, filteredDataSessions])
 
+  const submittedDataSessions = useMemo(() => {
+    return filteredDataSessions.filter(session => session.status === 'submitted')
+  }, [filteredDataSessions])
+
+  const selectedDataSessionIdOrDefault = useMemo(() => {
+    if (selectedDataSessionId === 'overview') return 'overview'
+    return submittedDataSessions.some(session => session.id === selectedDataSessionId)
+      ? selectedDataSessionId
+      : 'overview'
+  }, [selectedDataSessionId, submittedDataSessions])
+
   const rawDataSessions = useMemo(() => {
-    return filteredDataSessions.filter(session => {
+    const baseSessions = selectedDataSessionIdOrDefault === 'overview'
+      ? filteredDataSessions
+      : filteredDataSessions.filter(session => session.id === selectedDataSessionIdOrDefault)
+
+    return baseSessions.filter(session => {
       if (selectedDataSectionIdOrDefault === 'all') return true
       return session.sectionResponses.some(item => item.sectionId === selectedDataSectionIdOrDefault && item.answeredCount > 0)
     })
-  }, [filteredDataSessions, selectedDataSectionIdOrDefault])
+  }, [filteredDataSessions, selectedDataSectionIdOrDefault, selectedDataSessionIdOrDefault])
 
   useEffect(() => {
     void loadTemplateList()
@@ -573,6 +589,7 @@ export default function DiscoveryPage() {
     setDataStatusFilter('all')
     setDataQuery('')
     setSelectedDataSectionId('all')
+    setSelectedDataSessionId('overview')
     setSelectedAnalysisLens('Gemensamma behov')
     setAnalysisPayload(null)
     setAnalysisUpdatedAt(null)
@@ -593,6 +610,7 @@ export default function DiscoveryPage() {
       }
 
       setDataPayload(payload as DiscoveryDataPayload)
+      setSelectedDataSessionId('overview')
     } catch (err) {
       setDataError(err instanceof Error ? err.message : 'Kunde inte läsa datavyn.')
       setDataPayload(null)
@@ -765,6 +783,7 @@ export default function DiscoveryPage() {
       setDataStatusFilter('all')
       setDataQuery('')
       setSelectedDataSectionId('all')
+      setSelectedDataSessionId('overview')
       setSelectedAnalysisLens('Gemensamma behov')
       setAnalysisPayload(null)
       setAnalysisUpdatedAt(null)
@@ -1506,6 +1525,9 @@ export default function DiscoveryPage() {
               overview={dataOverview}
               themeCards={dataThemeCards}
               rawSessions={rawDataSessions}
+              submittedSessions={submittedDataSessions}
+              selectedSessionId={selectedDataSessionIdOrDefault}
+              onSelectSession={setSelectedDataSessionId}
               selectedSectionId={selectedDataSectionIdOrDefault}
               onSelectSection={setSelectedDataSectionId}
               selectedAnalysisLens={selectedAnalysisLens}
@@ -1803,6 +1825,9 @@ function DiscoveryDataCanvas({
   overview,
   themeCards,
   rawSessions,
+  submittedSessions,
+  selectedSessionId,
+  onSelectSession,
   selectedSectionId,
   onSelectSection,
   selectedAnalysisLens,
@@ -1852,6 +1877,22 @@ function DiscoveryDataCanvas({
       excerpts: string[]
     }>
   }>
+  submittedSessions: Array<{
+    id: string
+    clientName: string
+    clientEmail: string
+    clientOrganisation: string | null
+    status: 'pending' | 'submitted'
+    createdAt: string
+    submittedAt: string | null
+    sectionResponses: Array<{
+      sectionId: string
+      answeredCount: number
+      excerpts: string[]
+    }>
+  }>
+  selectedSessionId: string
+  onSelectSession: (value: string) => void
   selectedSectionId: string
   onSelectSection: (value: string) => void
   selectedAnalysisLens: DiscoveryAnalysisLens
@@ -1901,6 +1942,36 @@ function DiscoveryDataCanvas({
     )
   }
 
+  if (overview.submittedCount === 0) {
+    return (
+      <section style={{ minWidth: 0 }}>
+        <div style={dataCanvasShellStyle}>
+          <div style={dataHeroStyle}>
+            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.62)', fontWeight: 600 }}>
+              Data
+            </div>
+            <h2 style={dataHeroTitleStyle}>Inga svar ännu</h2>
+            <p style={dataHeroTextStyle}>
+              Datavyn fylls först när discoveryt har skickats ut och minst en person har svarat. Tills dess är det här en tom arbetsyta.
+            </p>
+          </div>
+
+          <div style={{ padding: '22px 24px 26px', display: 'grid', gap: 18 }}>
+            <section style={dataPanelStyle}>
+              <div style={dataSectionLabelStyle}>När svar börjar komma in</div>
+              <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>
+                Här kommer du kunna växla mellan överblick och enskilda svarande, se tematiska signaler och generera AI-analys på det material som faktiskt har besvarats.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+                <div style={inactiveDataTabStyle}>Överblick</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section style={{ minWidth: 0 }}>
       <div style={dataCanvasShellStyle}>
@@ -1922,6 +1993,26 @@ function DiscoveryDataCanvas({
         </div>
 
         <div style={{ padding: '22px 24px 26px', display: 'grid', gap: 18 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => onSelectSession('overview')}
+              style={selectedSessionId === 'overview' ? activeDataTabStyle : inactiveDataTabButtonStyle}
+            >
+              Överblick
+            </button>
+            {submittedSessions.map(session => (
+              <button
+                key={session.id}
+                type="button"
+                onClick={() => onSelectSession(session.id)}
+                style={selectedSessionId === session.id ? activeDataTabStyle : inactiveDataTabButtonStyle}
+              >
+                {session.clientName}
+              </button>
+            ))}
+          </div>
+
           <div style={summaryGridStyle}>
             <DataSummaryCard label="Inbjudna" value={`${overview.invitedCount}`} sublabel="I aktuellt urval" />
             <DataSummaryCard label="Svar inkomna" value={`${overview.submittedCount}`} sublabel="Besvarade discovery" />
@@ -2454,6 +2545,38 @@ const analysisRowStyle: React.CSSProperties = {
   border: '1px solid rgba(14,14,12,0.08)',
   background: 'var(--surface)',
   padding: '12px 13px',
+}
+
+const activeDataTabStyle: React.CSSProperties = {
+  padding: '9px 14px',
+  borderRadius: 999,
+  border: '1px solid rgba(198,35,104,0.26)',
+  background: 'rgba(198,35,104,0.08)',
+  color: 'var(--accent)',
+  fontSize: 12.5,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const inactiveDataTabButtonStyle: React.CSSProperties = {
+  padding: '9px 14px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.88)',
+  color: 'var(--text-2)',
+  fontSize: 12.5,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const inactiveDataTabStyle: React.CSSProperties = {
+  padding: '9px 14px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'rgba(250,248,246,0.88)',
+  color: 'var(--text-3)',
+  fontSize: 12.5,
+  fontWeight: 700,
 }
 
 const templateRowStyle: React.CSSProperties = {
