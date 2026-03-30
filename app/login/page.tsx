@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { hasLoginScopeCookie, setLoginScopeCookie } from '@/lib/auth-persistence'
 
 export default function LoginPage() {
   const router  = useRouter()
@@ -12,10 +13,15 @@ export default function LoginPage() {
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState('')
   const [sent,     setSent]     = useState(false)
+  const [remember, setRemember] = useState(true)
 
   useEffect(() => {
     createClient().auth.getSession().then(async ({ data }) => {
       if (!data.session) return
+      if (!hasLoginScopeCookie()) {
+        await createClient().auth.signOut()
+        return
+      }
 
       const response = await fetch('/api/brief-access', { cache: 'no-store' })
       if (response.ok) {
@@ -42,6 +48,7 @@ export default function LoginPage() {
         return
       }
 
+      setLoginScopeCookie(remember)
       router.replace('/dashboard')
     }
   }
@@ -168,6 +175,31 @@ export default function LoginPage() {
                            e.target.style.boxShadow = 'none'
                          }} />
                 </Field>
+
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13.5,
+                  color: 'var(--text-2)',
+                  fontFamily: 'var(--font-sans)',
+                  userSelect: 'none',
+                  cursor: 'pointer',
+                  marginTop: 2,
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={e => setRemember(e.target.checked)}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      accentColor: 'var(--accent)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                  Håll mig inloggad
+                </label>
 
                 {error && <p style={{ color: '#a22d5f', fontSize: 12.5, margin: 0, fontFamily: 'var(--font-sans)' }}>{error}</p>}
 

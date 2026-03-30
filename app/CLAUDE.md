@@ -112,6 +112,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 - Password reset-flöde
 - Callback-route för OAuth
 - Loginvyn är nu nedtonad visuellt med ljusare shell, mörk primärknapp och mindre skrikig accentanvändning
+- Login har nu `Håll mig inloggad`, där ocheckat läge bara håller sessionen under aktuell browsersession
 
 ---
 

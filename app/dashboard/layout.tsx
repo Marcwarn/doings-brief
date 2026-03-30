@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type Profile } from '@/lib/supabase'
+import { clearLoginScopeCookie, hasLoginScopeCookie } from '@/lib/auth-persistence'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
@@ -14,10 +15,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     sb.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.replace('/login'); return }
+      if (!hasLoginScopeCookie()) {
+        await sb.auth.signOut()
+        router.replace('/login')
+        return
+      }
 
       const response = await fetch('/api/brief-access', { cache: 'no-store' })
       if (!response.ok) {
         await sb.auth.signOut()
+        clearLoginScopeCookie()
         router.replace('/login')
         return
       }
@@ -29,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   async function signOut() {
     await sb.auth.signOut()
+    clearLoginScopeCookie()
     router.replace('/login')
   }
 
