@@ -1032,11 +1032,7 @@ function SendBriefInner() {
             <div style={briefPreviewContentStyle}>
               <div style={{ display: 'grid', gap: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', paddingTop: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>
-                      {firstPreviewRecipient ? `Till ${firstPreviewRecipient.name}` : 'Så här möter briefen mottagaren'}
-                    </div>
-                  </div>
+                  <div />
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.2, paddingBottom: 2 }}>
                     Fråga {activeQuestions.length > 0 ? `${previewQuestionIndex + 1}` : '0'} av {activeQuestions.length || 0}
                   </div>
