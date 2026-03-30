@@ -8,8 +8,8 @@ export function BriefSubnav({ active }: { active: BriefSubnavKey | BriefSubnavDi
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
       {[
         { href: '/dashboard/send', label: 'Nytt utskick', key: 'send' },
-        { href: '/dashboard', label: 'Översikt', key: 'overview' },
         { href: '/dashboard/question-sets', label: 'Frågebatterier', key: 'question-sets' },
+        { href: '/dashboard', label: 'Översikt', key: 'overview' },
       ].map(item => (
         <Link
           key={item.href}
