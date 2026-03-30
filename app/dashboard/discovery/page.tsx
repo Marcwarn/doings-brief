@@ -109,6 +109,43 @@ type DiscoveryDataPayload = {
   }>
 }
 
+type DiscoveryAnalysisLens =
+  | 'Gemensamma behov'
+  | 'Skillnader i perspektiv'
+  | 'Beredskap för nästa steg'
+  | 'Vad bör utforskas vidare'
+
+type DiscoveryAnalysisPayload = {
+  lens: DiscoveryAnalysisLens
+  scope: {
+    template_id: string
+    theme_id: string | null
+    respondent_count: number
+    audience_mode: AudienceMode
+  }
+  summary: string
+  observations: Array<{
+    title: string
+    detail: string
+    confidence: 'high' | 'medium' | 'low'
+  }>
+  differences: Array<{
+    title: string
+    detail: string
+    confidence: 'high' | 'medium' | 'low'
+  }>
+  uncertainties: Array<{
+    title: string
+    detail: string
+  }>
+  next_questions: string[]
+  evidence: Array<{
+    theme_id: string
+    respondent_label: string
+    excerpt: string
+  }>
+}
+
 const sharedCategories: DiscoveryCategory[] = [
   { id: 'team', label: 'Teamutveckling', desc: 'Utforska hur samarbetet fungerar i teamet och vad som skulle hjälpa er framåt.', questions: [
     { type: 'open', text: 'Vad fungerar riktigt bra i teamet idag, och var märks det att ni fortfarande har något att lösa?' },
@@ -194,6 +231,12 @@ const sharedCategories: DiscoveryCategory[] = [
 const defaultIntroTitle = 'Perspektiv'
 const defaultIntroText = 'Tack för dialogen hittills. Här vill vi samla in några fördjupande perspektiv från er för att förstå nuläge, behov och riktning bättre. Era svar hjälper oss att skapa en första utgångspunkt tillsammans.'
 const defaultAudienceMode: AudienceMode = 'shared'
+const discoveryAnalysisLenses: DiscoveryAnalysisLens[] = [
+  'Gemensamma behov',
+  'Skillnader i perspektiv',
+  'Beredskap för nästa steg',
+  'Vad bör utforskas vidare',
+]
 
 const audienceCategoryOverrides: Partial<Record<AudienceMode, Partial<Record<string, Partial<DiscoveryCategory>>>>> = {
   leaders: {
@@ -360,6 +403,12 @@ export default function DiscoveryPage() {
   const [dataStatusFilter, setDataStatusFilter] = useState<'all' | 'submitted' | 'pending'>('all')
   const [dataQuery, setDataQuery] = useState('')
   const [selectedDataSectionId, setSelectedDataSectionId] = useState<string>('all')
+  const [selectedAnalysisLens, setSelectedAnalysisLens] = useState<DiscoveryAnalysisLens>('Gemensamma behov')
+  const [analysisPayload, setAnalysisPayload] = useState<DiscoveryAnalysisPayload | null>(null)
+  const [analysisUpdatedAt, setAnalysisUpdatedAt] = useState<string | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [analysisCached, setAnalysisCached] = useState(false)
 
   const enabledCategories = builderCategories.filter(category => category.enabled)
   const activeCategory = enabledCategories.find(category => category.id === activeId) || enabledCategories[0] || builderCategories[0]
@@ -524,6 +573,11 @@ export default function DiscoveryPage() {
     setDataStatusFilter('all')
     setDataQuery('')
     setSelectedDataSectionId('all')
+    setSelectedAnalysisLens('Gemensamma behov')
+    setAnalysisPayload(null)
+    setAnalysisUpdatedAt(null)
+    setAnalysisError(null)
+    setAnalysisCached(false)
   }
 
   async function loadData(templateId: string) {
@@ -544,6 +598,43 @@ export default function DiscoveryPage() {
       setDataPayload(null)
     } finally {
       setDataLoading(false)
+    }
+  }
+
+  async function runAnalysis(regenerate = false) {
+    if (!currentTemplateId) return
+
+    setAnalysisLoading(true)
+    setAnalysisError(null)
+
+    try {
+      const response = await fetch('/api/discovery/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: currentTemplateId,
+          themeId: selectedDataSectionIdOrDefault === 'all' ? null : selectedDataSectionIdOrDefault,
+          lens: selectedAnalysisLens,
+          query: dataQuery,
+          regenerate,
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Kunde inte analysera svaren.')
+      }
+
+      setAnalysisPayload(payload.analysis as DiscoveryAnalysisPayload)
+      setAnalysisUpdatedAt(typeof payload.updatedAt === 'string' ? payload.updatedAt : null)
+      setAnalysisCached(payload.cached === true)
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : 'Kunde inte analysera svaren.')
+      setAnalysisPayload(null)
+      setAnalysisUpdatedAt(null)
+      setAnalysisCached(false)
+    } finally {
+      setAnalysisLoading(false)
     }
   }
 
@@ -674,6 +765,11 @@ export default function DiscoveryPage() {
       setDataStatusFilter('all')
       setDataQuery('')
       setSelectedDataSectionId('all')
+      setSelectedAnalysisLens('Gemensamma behov')
+      setAnalysisPayload(null)
+      setAnalysisUpdatedAt(null)
+      setAnalysisError(null)
+      setAnalysisCached(false)
 
       if (knownTemplates) {
         setTemplates(knownTemplates)
@@ -1412,6 +1508,14 @@ export default function DiscoveryPage() {
               rawSessions={rawDataSessions}
               selectedSectionId={selectedDataSectionIdOrDefault}
               onSelectSection={setSelectedDataSectionId}
+              selectedAnalysisLens={selectedAnalysisLens}
+              onSelectAnalysisLens={setSelectedAnalysisLens}
+              onRunAnalysis={runAnalysis}
+              analysisPayload={analysisPayload}
+              analysisUpdatedAt={analysisUpdatedAt}
+              analysisLoading={analysisLoading}
+              analysisError={analysisError}
+              analysisCached={analysisCached}
             />
           ) : (
           <section style={{ minWidth: 0 }}>
@@ -1701,6 +1805,14 @@ function DiscoveryDataCanvas({
   rawSessions,
   selectedSectionId,
   onSelectSection,
+  selectedAnalysisLens,
+  onSelectAnalysisLens,
+  onRunAnalysis,
+  analysisPayload,
+  analysisUpdatedAt,
+  analysisLoading,
+  analysisError,
+  analysisCached,
 }: {
   currentTemplateId: string | null
   loading: boolean
@@ -1742,6 +1854,14 @@ function DiscoveryDataCanvas({
   }>
   selectedSectionId: string
   onSelectSection: (value: string) => void
+  selectedAnalysisLens: DiscoveryAnalysisLens
+  onSelectAnalysisLens: (value: DiscoveryAnalysisLens) => void
+  onRunAnalysis: (regenerate?: boolean) => void
+  analysisPayload: DiscoveryAnalysisPayload | null
+  analysisUpdatedAt: string | null
+  analysisLoading: boolean
+  analysisError: string | null
+  analysisCached: boolean
 }) {
   if (!currentTemplateId) {
     return (
@@ -1951,28 +2071,106 @@ function DiscoveryDataCanvas({
               <section style={dataPanelStyle}>
                 <div style={dataSectionLabelStyle}>Analysvyer</div>
                 <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6, marginTop: 4 }}>
-                  Nästa steg är att lägga på AI-analys ovanpå samma urval. Då ska den alltid stå nära råsvaren och vara tydlig med vilket perspektiv som används.
+                  AI-analysen använder samma urval som datavyn och ska hjälpa dig läsa materialet ur ett tydligt perspektiv utan att tappa kontakten med råsvaren.
                 </div>
                 <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
-                  {[
-                    'Gemensamma behov',
-                    'Skillnader i perspektiv',
-                    'Beredskap för nästa steg',
-                    'Vad bör utforskas vidare',
-                  ].map(label => (
-                    <div key={label} style={{
-                      borderRadius: 12,
-                      border: '1px solid var(--border)',
-                      background: 'rgba(14,14,12,0.03)',
-                      padding: '12px 13px',
-                      fontSize: 13,
-                      color: 'var(--text)',
-                      fontWeight: 600,
-                    }}>
-                      {label}
-                    </div>
-                  ))}
+                  {discoveryAnalysisLenses.map(label => {
+                    const active = selectedAnalysisLens === label
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => onSelectAnalysisLens(label)}
+                        style={{
+                          textAlign: 'left',
+                          borderRadius: 12,
+                          border: `1px solid ${active ? 'rgba(198,35,104,0.28)' : 'var(--border)'}`,
+                          background: active ? 'rgba(198,35,104,0.06)' : 'rgba(14,14,12,0.03)',
+                          padding: '12px 13px',
+                          fontSize: 13,
+                          color: active ? 'var(--accent)' : 'var(--text)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
                 </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => onRunAnalysis(false)} disabled={analysisLoading} style={primaryButtonStyle(analysisLoading)}>
+                    {analysisLoading ? 'Analyserar…' : 'Generera analys'}
+                  </button>
+                  <button type="button" onClick={() => onRunAnalysis(true)} disabled={analysisLoading} style={secondaryButtonStyle}>
+                    Generera om
+                  </button>
+                </div>
+
+                {analysisError && <InlineError text={analysisError} />}
+
+                {analysisPayload && (
+                  <div style={{ display: 'grid', gap: 14, marginTop: 2 }}>
+                    <div style={{ padding: '14px 14px 12px', borderRadius: 14, border: '1px solid var(--border)', background: 'rgba(14,14,12,0.03)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                          Kort läsning
+                        </div>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+                          {analysisCached ? 'Från cache' : 'Nygenererad'}
+                          {analysisUpdatedAt ? ` · ${formatDataDateTime(analysisUpdatedAt)}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--text-2)' }}>
+                        {analysisPayload.summary}
+                      </div>
+                    </div>
+
+                    {analysisPayload.observations.length > 0 && (
+                      <AnalysisGroup title="Det som återkommer" items={analysisPayload.observations} />
+                    )}
+
+                    {analysisPayload.differences.length > 0 && (
+                      <AnalysisGroup title="Det som skiljer sig" items={analysisPayload.differences} />
+                    )}
+
+                    {analysisPayload.uncertainties.length > 0 && (
+                      <AnalysisQuestionGroup title="Det vi inte vet ännu" items={analysisPayload.uncertainties} />
+                    )}
+
+                    {analysisPayload.next_questions.length > 0 && (
+                      <section style={analysisBlockStyle}>
+                        <div style={dataSectionLabelStyle}>Bra frågor till nästa steg</div>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          {analysisPayload.next_questions.map(item => (
+                            <div key={item} style={analysisRowStyle}>
+                              <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{item}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {analysisPayload.evidence.length > 0 && (
+                      <section style={analysisBlockStyle}>
+                        <div style={dataSectionLabelStyle}>Underlag ur svaren</div>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          {analysisPayload.evidence.map((item, index) => (
+                            <div key={`${item.theme_id}-${index}`} style={analysisRowStyle}>
+                              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', marginBottom: 4 }}>
+                                {item.respondent_label}
+                              </div>
+                              <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                                {item.excerpt}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                )}
               </section>
 
               <section style={dataPanelStyle}>
@@ -2014,6 +2212,55 @@ function DataSummaryCard({ label, value, sublabel }: { label: string; value: str
         {sublabel}
       </div>
     </div>
+  )
+}
+
+function AnalysisGroup({
+  title,
+  items,
+}: {
+  title: string
+  items: Array<{ title: string; detail: string; confidence: 'high' | 'medium' | 'low' }>
+}) {
+  return (
+    <section style={analysisBlockStyle}>
+      <div style={dataSectionLabelStyle}>{title}</div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {items.map(item => (
+          <div key={`${item.title}-${item.detail}`} style={analysisRowStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{item.title}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: item.confidence === 'high' ? '#166534' : item.confidence === 'medium' ? '#9a3412' : 'var(--text-3)' }}>
+                {confidenceLabel(item.confidence)}
+              </div>
+            </div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{item.detail}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function AnalysisQuestionGroup({
+  title,
+  items,
+}: {
+  title: string
+  items: Array<{ title: string; detail: string }>
+}) {
+  return (
+    <section style={analysisBlockStyle}>
+      <div style={dataSectionLabelStyle}>{title}</div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {items.map(item => (
+          <div key={`${item.title}-${item.detail}`} style={analysisRowStyle}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{item.title}</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-2)' }}>{item.detail}</div>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -2068,6 +2315,17 @@ function formatDataDateTime(value: string) {
 function truncate(value: string, length: number) {
   if (value.length <= length) return value
   return `${value.slice(0, length).trim()}…`
+}
+
+function confidenceLabel(value: 'high' | 'medium' | 'low') {
+  switch (value) {
+    case 'high':
+      return 'Hög säkerhet'
+    case 'medium':
+      return 'Viss säkerhet'
+    default:
+      return 'Tunt underlag'
+  }
 }
 
 const editorInputStyle: React.CSSProperties = {
@@ -2180,6 +2438,22 @@ const dataSectionLabelStyle: React.CSSProperties = {
   color: 'var(--accent)',
   letterSpacing: '0.1em',
   textTransform: 'uppercase',
+}
+
+const analysisBlockStyle: React.CSSProperties = {
+  border: '1px solid var(--border)',
+  borderRadius: 14,
+  background: 'rgba(14,14,12,0.03)',
+  padding: '14px',
+  display: 'grid',
+  gap: 10,
+}
+
+const analysisRowStyle: React.CSSProperties = {
+  borderRadius: 12,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'var(--surface)',
+  padding: '12px 13px',
 }
 
 const templateRowStyle: React.CSSProperties = {

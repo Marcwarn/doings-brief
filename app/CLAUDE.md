@@ -62,6 +62,8 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `Discovery` har nu en separat AI-spec för `Data` som definierar analyslinser, JSON-output, promptregler och hur observation ska skiljas från tolkning
 - `Data`-fliken visar nu en första riktig datavy med filter, översiktskort, temakort och råsvar för det sparade discovery-upplägget
 - `/api/discovery/data/[id]` aggregerar sessions, sektionstäckning och råsvar för datavyn
+- `Data`-fliken kan nu generera AI-analys från fasta analyslinser direkt i discoveryytan
+- `/api/discovery/analyze` hämtar eller genererar strukturerad AI-analys för valt Discovery-urval och cachar resultatet i `settings`
 
 **Saknas**: Eventuell mer avancerad översikt/filtering och dispatch-gruppering för Discovery
 
