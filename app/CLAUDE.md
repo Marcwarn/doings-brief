@@ -15,6 +15,8 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Review-screen med all Q&A innan inlämning, redigering möjlig
 - Fungerar på mobil
 - Vid inlämning: sparar svar i `brief_responses`, markerar session som `submitted`, skickar notismail till konsult
+- Klientens briefyta har nu ett lugnare premiumskal med mörk topp, ljus huvudyta och tydligare rytm genom intro, fråga och review
+- Brief-inbjudan via mejl har nu samma lugnare visuella riktning och mer personlig copy
 
 **Saknas**: Autosave/draft (stänger webbläsaren = förlorar alla svar)
 

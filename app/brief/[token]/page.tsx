@@ -60,22 +60,22 @@ const DoingsLogo = () => (
 function Modal({ header, children }: { header: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{
-      width: '100%', maxWidth: 520,
-      background: '#fff', borderRadius: 20, overflow: 'hidden',
-      border: '0.5px solid rgba(198,35,104,0.15)',
-      boxShadow: '0 24px 64px rgba(198,35,104,0.18), 0 4px 20px rgba(0,0,0,0.08)',
+      width: '100%', maxWidth: 620,
+      background: '#fffdfb', borderRadius: 28, overflow: 'hidden',
+      border: '1px solid rgba(26,23,21,0.08)',
+      boxShadow: '0 26px 72px rgba(26,23,21,0.16), 0 8px 24px rgba(26,23,21,0.06)',
     }}>
-      <div style={{ background: '#C62368', padding: '1.6rem 2rem', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', right: -40, top: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
+      <div style={{ background: 'radial-gradient(circle at top right,rgba(198,35,104,0.24) 0%,rgba(198,35,104,0.08) 22%,rgba(17,16,15,0) 44%),linear-gradient(180deg,#171413 0%,#11100f 100%)', padding: '2rem 2.2rem 1.9rem', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', right: -30, top: -42, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem', position: 'relative', zIndex: 1 }}>
           <DoingsLogo />
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.48)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
             Brief
           </span>
         </div>
         {header}
       </div>
-      <div style={{ padding: '1.8rem 2rem 2rem', background: '#fdf5f7' }}>
+      <div style={{ padding: '2rem 2.2rem 2.2rem', background: '#fffdfb' }}>
         {children}
       </div>
     </div>
@@ -84,7 +84,7 @@ function Modal({ header, children }: { header: React.ReactNode; children: React.
 
 const inputStyle: React.CSSProperties = {
   width: '100%', background: '#fff',
-  border: '1.5px solid #f0cdd8', borderRadius: 10,
+  border: '1.5px solid rgba(26,23,21,0.10)', borderRadius: 16,
   padding: '12px 14px', fontFamily: 'var(--font-sans)',
   fontSize: 15, color: '#1a1a1a', outline: 'none',
   transition: 'border-color 0.18s', resize: 'none' as const,
@@ -93,10 +93,10 @@ const inputStyle: React.CSSProperties = {
 
 const primaryBtn: React.CSSProperties = {
   width: '100%', padding: '13px 20px',
-  background: '#C62368', color: '#fff', border: 'none', borderRadius: 10,
+  background: '#161311', color: '#fff', border: 'none', borderRadius: 14,
   fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
   letterSpacing: '0.01em', cursor: 'pointer',
-  boxShadow: '0 4px 16px rgba(198,35,104,0.22)',
+  boxShadow: '0 10px 26px rgba(17,16,15,0.16)',
 }
 
 // Auto-grow textarea helper — call on ref and on change
@@ -252,7 +252,7 @@ export default function BriefPage() {
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (step === 'loading') return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fdf5f7' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f1ec' }}>
       <div style={{ display: 'flex', gap: 5 }}>
         {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#C62368', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i*0.2}s` }} />)}
       </div>
@@ -264,11 +264,11 @@ export default function BriefPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
       <Background index={0} />
       <Modal header={
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: '#fff', margin: 0, position: 'relative', zIndex: 1 }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em', fontWeight: 700, color: '#fff', margin: 0, position: 'relative', zIndex: 1 }}>
           Brief hittades inte
         </h1>
       }>
-        <p style={{ fontSize: 14, color: '#a0607a', fontFamily: 'var(--font-sans)' }}>
+        <p style={{ fontSize: 15, color: '#6f6660', lineHeight: 1.75, fontFamily: 'var(--font-sans)' }}>
           Länken är ogiltig eller har gått ut.
         </p>
       </Modal>
@@ -284,16 +284,16 @@ export default function BriefPage() {
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1.02, fontWeight: 700, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.04em' }}>
             Tack, {clientName}!
           </h1>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(255,255,255,0.65)', margin: 0, fontWeight: 300 }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: 'rgba(255,255,255,0.66)', margin: 0 }}>
             Dina svar har tagits emot.
           </p>
         </div>
       }>
-        <p style={{ fontSize: 13.5, color: '#a0607a', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
-          Vi hör av oss snart!
+        <p style={{ fontSize: 15, color: '#6f6660', fontFamily: 'var(--font-sans)', lineHeight: 1.75, margin: 0 }}>
+          Tack för att du tog dig tid. Vi använder dina svar som underlag inför nästa steg och hör av oss snart.
         </p>
       </Modal>
     </div>
@@ -305,24 +305,29 @@ export default function BriefPage() {
       <Background index={0} />
       <Modal header={
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
-            Hej, {clientName}!
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 38, lineHeight: 1.02, fontWeight: 700, color: '#fff', margin: '0 0 8px', letterSpacing: '-0.04em' }}>
+            Hej {clientName}
           </h1>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(255,255,255,0.65)', margin: 0, fontWeight: 300 }}>
-            {questions.length} frågor — tar bara några minuter.
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14.5, lineHeight: 1.7, color: 'rgba(255,255,255,0.70)', margin: 0, maxWidth: 420 }}>
+            Några korta frågor inför nästa steg. Det tar bara några minuter att svara.
           </p>
         </div>
       }>
-        <p style={{ fontSize: 14, color: '#6b3348', fontFamily: 'var(--font-sans)', lineHeight: 1.65, marginBottom: 20 }}>
-          Här är ett par frågor som du gärna får svara på.
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+          <div style={introPillStyle}>{questions.length} frågor</div>
+          <div style={introPillStyle}>Text eller röst</div>
+          <div style={introPillStyle}>Några minuter</div>
+        </div>
+        <p style={{ fontSize: 15, color: '#544c47', fontFamily: 'var(--font-sans)', lineHeight: 1.8, marginBottom: 24 }}>
+          Svara i lugn och ro. Du kan skriva, spela in med rösten eller hoppa över en fråga om du vill.
         </p>
         <div style={{ display: 'flex', gap: 6, marginBottom: 22 }}>
           {questions.map((_, i) => (
-            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#f0cdd8' }} />
+            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(26,23,21,0.12)' }} />
           ))}
         </div>
         <button onClick={() => setStep('questions')} style={primaryBtn}>
-          Sätt igång →
+          Börja svara
         </button>
       </Modal>
     </div>
@@ -340,21 +345,21 @@ export default function BriefPage() {
 
         {/* Progress bar */}
         <div style={{ width: '100%', maxWidth: 520, marginBottom: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>Fråga {current + 1} av {questions.length}</span>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{Math.round(((current + 1) / questions.length) * 100)}%</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.72)' }}>Fråga {current + 1} av {questions.length}</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.72)' }}>{Math.round(((current + 1) / questions.length) * 100)}%</span>
           </div>
-          <div style={{ height: 3, background: 'rgba(255,255,255,0.2)', borderRadius: 99, overflow: 'hidden' }}>
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.16)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{ height: '100%', background: '#C62368', borderRadius: 99, width: `${((current + 1) / questions.length) * 100}%`, transition: 'width 0.4s ease' }} />
           </div>
         </div>
 
         <Modal header={
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.02em', marginBottom: 8 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.50)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
               Fråga {current + 1}
             </div>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 500, color: '#fff', margin: 0, lineHeight: 1.45 }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: '#fff', margin: 0, lineHeight: 1.15, letterSpacing: '-0.03em', maxWidth: 500 }}>
               {q.text}
             </p>
           </div>
@@ -387,8 +392,8 @@ export default function BriefPage() {
               </button>
               <button onClick={() => updateAnswer(current, { mode: 'text', status: 'idle' })} style={{
                 flex: 1, padding: '14px 0', borderRadius: 10, cursor: 'pointer',
-                border: '1.5px solid #f0cdd8', background: '#fff',
-                fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 500, color: '#6b3348',
+                border: '1.5px solid rgba(26,23,21,0.10)', background: '#fff',
+                fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, color: '#3f3935',
               }}>
                 Skriv svar
               </button>
@@ -410,14 +415,14 @@ export default function BriefPage() {
                 ))}
               </div>
               {/* Timer */}
-              <p style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 600, color: '#3d1a2e', margin: '0 0 18px', letterSpacing: '-0.02em' }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: '#161311', margin: '0 0 18px', letterSpacing: '-0.03em' }}>
                 <span ref={timerDisplayRef}>00:00</span>
               </p>
               <button onClick={() => stopRecording(current)} style={{
                 padding: '12px 32px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: '#3d1a2e', color: '#fff',
+                background: '#161311', color: '#fff',
                 fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(61,26,46,0.25)',
+                boxShadow: '0 10px 22px rgba(17,16,15,0.16)',
                 display: 'inline-flex', alignItems: 'center', gap: 8,
               }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
@@ -432,7 +437,7 @@ export default function BriefPage() {
               <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 12 }}>
                 {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#C62368', animation: 'bounce 0.9s ease-in-out infinite', animationDelay: `${i*0.2}s` }} />)}
               </div>
-              <p style={{ fontSize: 14, color: '#a0607a', fontFamily: 'var(--font-sans)', margin: 0 }}>
+              <p style={{ fontSize: 14, color: '#6f6660', fontFamily: 'var(--font-sans)', margin: 0 }}>
                 Omvandlar till text…
               </p>
             </div>
@@ -450,7 +455,7 @@ export default function BriefPage() {
           {/* ── Voice transcript: auto-growing ── */}
           {a.mode === 'voice' && a.status === 'done' && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 600, color: '#a0607a', letterSpacing: '0.02em', marginBottom: 10 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#8a5d6e', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10 }}>
                 Transkriberat svar — redigera om du vill
               </div>
               <AutoGrowTextarea
@@ -460,7 +465,7 @@ export default function BriefPage() {
               />
               <button
                 onClick={() => { setVoiceError(''); updateAnswer(current, { mode: null, status: 'idle', text: '' }) }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#c4909f', textDecoration: 'underline', fontFamily: 'var(--font-sans)', padding: '6px 0 0', display: 'block' }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#8a5d6e', textDecoration: 'underline', fontFamily: 'var(--font-sans)', padding: '6px 0 0', display: 'block' }}>
                 Spela in igen
               </button>
             </div>
@@ -471,8 +476,8 @@ export default function BriefPage() {
             {current > 0 && (
               <button onClick={() => { setVoiceError(''); setCurrent(c => c - 1) }} style={{
                 padding: '13px 18px', borderRadius: 10, cursor: 'pointer',
-                border: '1.5px solid #f0cdd8', background: '#fff',
-                fontFamily: 'var(--font-sans)', fontSize: 14, color: '#6b3348',
+                border: '1.5px solid rgba(26,23,21,0.10)', background: '#fff',
+                fontFamily: 'var(--font-sans)', fontSize: 14, color: '#3f3935',
               }}>←</button>
             )}
             <button
@@ -495,36 +500,36 @@ export default function BriefPage() {
       <Background index={0} />
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{
-          background: '#fff', borderRadius: 16, overflow: 'hidden',
-          border: '0.5px solid rgba(198,35,104,0.15)',
-          boxShadow: '0 8px 32px rgba(198,35,104,0.12)', marginBottom: 4,
+          background: '#fffdfb', borderRadius: 24, overflow: 'hidden',
+          border: '1px solid rgba(26,23,21,0.08)',
+          boxShadow: '0 18px 48px rgba(26,23,21,0.10)', marginBottom: 8,
         }}>
-          <div style={{ background: '#C62368', padding: '1.2rem 1.6rem', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: 'radial-gradient(circle at top right,rgba(198,35,104,0.24) 0%,rgba(198,35,104,0.08) 22%,rgba(17,16,15,0) 44%),linear-gradient(180deg,#171413 0%,#11100f 100%)', padding: '1.4rem 1.8rem', display: 'flex', alignItems: 'center', gap: 10 }}>
             <DoingsLogo />
             <div>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>Brief</span>
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 10 }}>Granska dina svar</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.10em', textTransform: 'uppercase' }}>Brief</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(255,255,255,0.64)', marginLeft: 10 }}>Granska dina svar</span>
             </div>
           </div>
         </div>
 
         {questions.map((q, i) => (
           <div key={q.id} style={{
-            background: '#fff', borderRadius: 12, padding: '16px 18px',
-            border: '0.5px solid rgba(198,35,104,0.12)',
-            boxShadow: '0 2px 12px rgba(198,35,104,0.07)',
+            background: '#fffdfb', borderRadius: 18, padding: '18px 20px',
+            border: '1px solid rgba(26,23,21,0.08)',
+            boxShadow: '0 10px 28px rgba(26,23,21,0.05)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#c4909f', letterSpacing: '0.02em' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#8a5d6e', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                 Fråga {i + 1}
               </span>
               <button onClick={() => { setCurrent(i); setStep('questions') }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#C62368', fontFamily: 'var(--font-sans)', padding: 0, textDecoration: 'underline' }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#8a5d6e', fontFamily: 'var(--font-sans)', padding: 0, textDecoration: 'underline' }}>
                 Ändra
               </button>
             </div>
-            <p style={{ fontSize: 14, fontWeight: 500, color: '#3d1a2e', margin: '0 0 8px', fontFamily: 'var(--font-sans)' }}>{q.text}</p>
-            <p style={{ fontSize: 14, color: '#a0607a', margin: 0, lineHeight: 1.6, fontFamily: 'var(--font-sans)', whiteSpace: 'pre-wrap' }}>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#1a1715', margin: '0 0 10px', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>{q.text}</p>
+            <p style={{ fontSize: 14, color: '#6f6660', margin: 0, lineHeight: 1.7, fontFamily: 'var(--font-sans)', whiteSpace: 'pre-wrap' }}>
               {answers[i]?.text?.trim() || <em style={{ opacity: 0.5 }}>Inget svar</em>}
             </p>
           </div>
@@ -539,7 +544,7 @@ export default function BriefPage() {
 
   // ── Sending ───────────────────────────────────────────────────────────────
   if (step === 'sending') return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fdf5f7' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f6f1ec' }}>
       <div style={{ display: 'flex', gap: 5 }}>
         {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#C62368', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i*0.2}s` }} />)}
       </div>
@@ -574,7 +579,19 @@ function AutoGrowTextarea({ value, onChange, placeholder }: {
         marginBottom: 8,
       }}
       onFocus={e => (e.target.style.borderColor = '#C62368')}
-      onBlur={e => (e.target.style.borderColor = '#f0cdd8')}
+      onBlur={e => (e.target.style.borderColor = 'rgba(26,23,21,0.10)')}
     />
   )
+}
+
+const introPillStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '8px 12px',
+  borderRadius: 999,
+  background: '#f6f1ec',
+  border: '1px solid rgba(26,23,21,0.08)',
+  color: '#5f5650',
+  fontSize: 12.5,
+  fontWeight: 600,
 }
