@@ -258,6 +258,7 @@ function SendBriefInner() {
   const [error, setError]             = useState('')
   const [importMessage, setImportMessage] = useState('')
   const [activeTab, setActiveTab] = useState<BriefWorkspaceTab>('questions')
+  const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
   const [introTitle, setIntroTitle] = useState('Några korta frågor')
   const [introText, setIntroText] = useState('Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.')
   const [internalLabel, setInternalLabel] = useState('')
@@ -318,6 +319,9 @@ function SendBriefInner() {
   }, [recipientsInput])
   const firstPreviewRecipient = parsedRecipientsPreview[0] || null
   const activeQuestions = customQuestions.map(question => question.text.trim()).filter(Boolean)
+  const previewQuestionIndex = activeQuestions.length === 0
+    ? 0
+    : Math.min(activePreviewQuestionIndex, activeQuestions.length - 1)
   const filteredSets = sets.filter(set => {
     if (!questionSetQuery.trim()) return true
     const query = questionSetQuery.trim().toLowerCase()
@@ -326,16 +330,19 @@ function SendBriefInner() {
   const visibleSets = filteredSets.slice(0, questionSetQuery.trim() ? 12 : 8)
 
   function updateCustomQuestion(index: number, value: string) {
+    setActivePreviewQuestionIndex(index)
     setCustomQuestions(prev => prev.map((question, questionIndex) => (
       questionIndex === index ? { text: value } : question
     )))
   }
 
   function addCustomQuestion() {
+    setActivePreviewQuestionIndex(customQuestions.length)
     setCustomQuestions(prev => [...prev, { text: '' }])
   }
 
   function removeCustomQuestion(index: number) {
+    setActivePreviewQuestionIndex(prev => Math.max(0, prev > index ? prev - 1 : prev === index ? prev - 1 : prev))
     setCustomQuestions(prev => prev.length <= 1 ? prev : prev.filter((_, questionIndex) => questionIndex !== index))
   }
 
@@ -831,7 +838,11 @@ function SendBriefInner() {
                         rows={2}
                         placeholder={`Fråga ${index + 1}`}
                         style={{ ...F, resize: 'vertical', minHeight: 72 }}
-                        onFocus={e => { e.target.style.borderColor = 'rgba(198,35,104,0.45)'; e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)' }}
+                        onFocus={e => {
+                          setActivePreviewQuestionIndex(index)
+                          e.target.style.borderColor = 'rgba(198,35,104,0.45)'
+                          e.target.style.boxShadow = '0 0 0 4px rgba(198,35,104,0.08)'
+                        }}
                         onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none' }}
                       />
                       <button type="button" onClick={() => removeCustomQuestion(index)} style={smallDeleteStyle}>
@@ -1030,18 +1041,38 @@ function SendBriefInner() {
                     </div>
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                    Fråga {activeQuestions.length > 0 ? '1' : '0'} av {activeQuestions.length || 0}
+                    Fråga {activeQuestions.length > 0 ? `${previewQuestionIndex + 1}` : '0'} av {activeQuestions.length || 0}
                   </div>
                 </div>
 
                 <div style={{ height: 6, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
-                  <div style={{ width: activeQuestions.length > 0 ? `${Math.max(18, Math.round(100 / activeQuestions.length))}%` : '0%', height: '100%', background: 'var(--accent)' }} />
+                  <div style={{ width: activeQuestions.length > 0 ? `${Math.max(18, Math.round(((previewQuestionIndex + 1) / activeQuestions.length) * 100))}%` : '0%', height: '100%', background: 'var(--accent)' }} />
                 </div>
 
+                {activeQuestions.length > 1 && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {activeQuestions.map((_, index) => (
+                      <button
+                        key={`preview-step-${index}`}
+                        type="button"
+                        onClick={() => setActivePreviewQuestionIndex(index)}
+                        style={{
+                          ...previewStepButtonStyle,
+                          borderColor: previewQuestionIndex === index ? 'rgba(198,35,104,0.24)' : 'rgba(14,14,12,0.08)',
+                          background: previewQuestionIndex === index ? 'rgba(198,35,104,0.08)' : 'rgba(250,248,246,0.82)',
+                          color: previewQuestionIndex === index ? 'var(--accent)' : 'var(--text-2)',
+                        }}
+                      >
+                        Fråga {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div style={previewQuestionCardStyle}>
-                  <div style={previewQuestionBadgeStyle}>Fråga 1</div>
+                  <div style={previewQuestionBadgeStyle}>Fråga {activeQuestions.length > 0 ? previewQuestionIndex + 1 : 1}</div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: 1.18, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-                    {activeQuestions[0] || 'Lägg till minst en fråga för att se hur briefen kommer att kännas för mottagaren.'}
+                    {activeQuestions[previewQuestionIndex] || 'Lägg till minst en fråga för att se hur briefen kommer att kännas för mottagaren.'}
                   </div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 16, background: 'rgba(250,248,246,0.82)', minHeight: 124, padding: '16px 18px', fontSize: 14, lineHeight: 1.7, color: 'var(--text-3)' }}>
                     Här svarar mottagaren med text eller röst. Frågan visas en i taget, med samma lugna rytm genom hela briefen.
@@ -1336,6 +1367,16 @@ const previewQuestionBadgeStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
+}
+
+const previewStepButtonStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 999,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(250,248,246,0.82)',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
 }
 
 const previewPrimaryButtonStyle: React.CSSProperties = {
