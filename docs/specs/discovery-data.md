@@ -30,6 +30,22 @@ This mirrors the actual consultant workflow:
 3. send the material
 4. interpret what came back
 
+## Customer-First Entry Point
+
+`Data` should default to the customer or organisation level before the respondent level.
+
+The first question is usually not "which person answered?" but "what are we hearing from this customer?"
+
+The landing hierarchy should therefore be:
+
+1. customer
+2. respondent or anonymous answer set
+3. themes, analysis, and raw answers
+
+When named responses exist, people should appear after a customer has been selected.
+
+When anonymous responses exist, the customer view should instead open anonymous answer entries or grouped summaries.
+
 ## Core Principles
 
 1. `Data` must feel editorial and decision-oriented, not like a spreadsheet.
@@ -141,6 +157,7 @@ The first version should support:
 - team or unit when such metadata exists
 - date range
 - response status
+- response mode
 
 Optional later additions:
 
@@ -362,6 +379,23 @@ AI summaries may initially be cached in `settings`, following the existing patte
 - `discovery_analysis:{templateId}:{lens}`
 
 If the volume grows or invalidation becomes complex, this can later move into dedicated summary tables.
+
+## Response Identity Modes
+
+`Data` must work for both named and anonymous `Discovery` sends.
+
+In named mode:
+
+- customer-first grouping still applies
+- named respondents may be shown under the customer
+
+In anonymous mode:
+
+- customer-first grouping still applies
+- respondent identity must not be shown
+- anonymous answer entries or grouped summaries should be used instead
+
+See `docs/specs/discovery-customer-and-anonymous.md` for the dedicated product specification.
 
 ## Analysis Lenses
 

@@ -4,7 +4,7 @@ Status: Draft for implementation
 
 Owner: Doings Brief
 
-Last updated: 2026-03-29
+Last updated: 2026-03-30
 
 ## Purpose
 
@@ -73,6 +73,19 @@ No dedicated Discovery-specific admin workflow is required in the first version.
 The default question language should therefore stay audience-neutral unless a theme clearly benefits from a more specific variant.
 
 See `docs/specs/discovery-audience-guidance.md` for theme-by-theme recommendations on where shared wording is sufficient and where leader-specific or mixed-group variants should be introduced later.
+
+## Response Identity Modes
+
+`Discovery` should support two explicit send modes:
+
+- `named`
+- `anonymous`
+
+Named mode is the default and preserves the current personal-link pattern.
+
+Anonymous mode is intended for situations where more candid input matters more than person-level attribution.
+
+The chosen mode must be explicit in the send flow and must carry through to how `Data` presents incoming answers.
 
 ## Scope
 
@@ -177,6 +190,10 @@ The internal workspace should therefore include a `Data` tab that:
 - supports AI-generated summaries from predefined analytical lenses
 
 See `docs/specs/discovery-data.md` for the dedicated specification of this surface.
+
+The `Data` tab should be customer-first by default, with named people shown only after a customer has been selected.
+
+See `docs/specs/discovery-customer-and-anonymous.md` for the customer-first and anonymous-response rules.
 
 ### FR-0 Audience mode
 
@@ -325,6 +342,7 @@ Discovery gets its own normalized table family.
 | `consultant_id` | `uuid` | owning consultant |
 | `consultant_email` | `text` | copied for operational email use |
 | `template_id` | `uuid` | FK to template |
+| `response_mode` | `text` | `named` or `anonymous` |
 | `client_name` | `text` | recipient name |
 | `client_email` | `text` | recipient email |
 | `client_organisation` | `text` | nullable |
@@ -459,6 +477,7 @@ Request body:
 {
   "templateId": "uuid",
   "organisation": "Acme",
+  "responseMode": "named",
   "recipients": [
     {
       "name": "Anna Andersson",
@@ -477,6 +496,8 @@ Response:
   "sessionIds": ["uuid"]
 }
 ```
+
+Anonymous sends should later use the same route with `responseMode: "anonymous"` and a payload shape adapted to shared or non-personal invite handling.
 
 ### `GET /api/discovery/public/[token]`
 

@@ -40,6 +40,14 @@ Running log of significant decisions made during development. For formal archite
 - sparse datasets must produce visibly cautious analysis rather than generic overconfidence
 - the UI must keep AI interpretation close to raw-answer evidence
 
+## 2026-03-30 — Discovery Data Should Be Customer-First and Support Anonymous Mode
+
+- `Discovery Data` should start from customer or organisation, not from a flat list of people
+- person-level drill-down is secondary and should appear only after a customer has been selected
+- `Discovery` should support explicit `named` and `anonymous` send modes
+- anonymous mode should be treated as a real product mode, not as a hidden workaround
+- data views and AI analysis must respect whether the underlying responses are named or anonymous
+
 ## 2026-03-30 — Brief Should Move Toward a Lighter Split Workspace
 
 - `Brief` should adopt the same broad internal logic as `Discovery`: internal editing on the left and recipient preview on the right
