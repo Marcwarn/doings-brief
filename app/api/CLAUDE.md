@@ -30,6 +30,7 @@ This directory contains 14 API route groups. All routes are Next.js 14 App Route
 | `briefs/summarize/` | Supabase session | Generate AI summary via Berget |
 | `customers/` | Supabase session | Customer record management |
 | `evaluations/` | Supabase session | Evaluation form metadata |
+| `evaluations/[id]/` | Supabase session | Read or delete one evaluation together with its stored responses and unused question setup |
 | `generate-questions/` | None | AI-generated question suggestions |
 | `send-brief-invite/` | Supabase session | Legacy invite route |
 | `send-email/` | None | Legacy direct email (internal use only) |
