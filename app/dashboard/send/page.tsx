@@ -1031,7 +1031,7 @@ function SendBriefInner() {
 
             <div style={briefPreviewContentStyle}>
               <div style={{ display: 'grid', gap: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', paddingTop: 10 }}>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 4 }}>
                       Förhandsvisning
@@ -1040,7 +1040,7 @@ function SendBriefInner() {
                       {firstPreviewRecipient ? `Till ${firstPreviewRecipient.name}` : 'Så här möter briefen mottagaren'}
                     </div>
                   </div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.2, paddingBottom: 2 }}>
                     Fråga {activeQuestions.length > 0 ? `${previewQuestionIndex + 1}` : '0'} av {activeQuestions.length || 0}
                   </div>
                 </div>
