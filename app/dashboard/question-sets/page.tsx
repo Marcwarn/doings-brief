@@ -21,8 +21,12 @@ export default function QuestionSetsPage() {
 
   function load() {
     setLoading(true)
-    sb.from('question_sets').select('*').order('updated_at', { ascending: false })
-      .then(({ data }) => { setSets(data || []); setLoading(false) })
+    fetch('/api/question-sets')
+      .then(async response => {
+        const payload = await response.json().catch(() => null)
+        setSets(payload?.questionSets || [])
+        setLoading(false)
+      })
   }
 
   useEffect(() => { load() }, [])

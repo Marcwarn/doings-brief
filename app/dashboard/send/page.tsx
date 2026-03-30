@@ -267,11 +267,16 @@ function SendBriefInner() {
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      const [questionSetsResult, customersResponse] = await Promise.all([
-        sb.from('question_sets').select('*').order('updated_at', { ascending: false }),
+      const [questionSetsResponse, customersResponse] = await Promise.all([
+        fetch('/api/question-sets'),
         fetch('/api/customers'),
       ])
-      setSets(questionSetsResult.data || [])
+      if (questionSetsResponse.ok) {
+        const payload = await questionSetsResponse.json()
+        setSets(payload.questionSets || [])
+      } else {
+        setSets([])
+      }
       if (customersResponse.ok) {
         const payload = await customersResponse.json()
         setStoredCustomers(payload.customers || [])

@@ -202,6 +202,7 @@ export default function EvaluationDetailPage() {
           <MetricPill label="Frågor" value={questions.length} />
           <MetricPill label="Svar" value={responses.length} tone="ok" />
           <button onClick={() => navigator.clipboard.writeText(publicUrl)} style={ghostButtonStyle}>Kopiera länk</button>
+          <a href={publicUrl} target="_blank" rel="noreferrer" style={ghostLinkStyle}>Öppna deltagarvy</a>
           <button onClick={() => void downloadQrPng()} style={ghostButtonStyle}>Ladda ner QR som PNG</button>
           <button onClick={() => void deleteEvaluation()} disabled={deleting} style={dangerButtonStyle(deleting)}>
             {deleting ? 'Tar bort…' : 'Ta bort'}
@@ -409,6 +410,13 @@ const ghostButtonStyle: React.CSSProperties = {
   fontSize: 12.5,
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+const ghostLinkStyle: React.CSSProperties = {
+  ...ghostButtonStyle,
+  display: 'inline-flex',
+  alignItems: 'center',
+  textDecoration: 'none',
 }
 
 function dangerButtonStyle(disabled: boolean): React.CSSProperties {

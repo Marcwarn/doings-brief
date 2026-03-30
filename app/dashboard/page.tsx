@@ -29,10 +29,11 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(40),
-      sb.from('question_sets').select('*').order('updated_at', { ascending: false }).limit(6),
-    ]).then(([{ data: sess }, { data: qs }]) => {
+      fetch('/api/question-sets'),
+    ]).then(async ([{ data: sess }, questionSetsResponse]) => {
+      const questionSetsPayload = await questionSetsResponse.json().catch(() => null)
       setSessions(sess || [])
-      setQuestionSets(qs || [])
+      setQuestionSets((questionSetsPayload?.questionSets || []).slice(0, 6))
       setLoading(false)
     })
   }, [])
