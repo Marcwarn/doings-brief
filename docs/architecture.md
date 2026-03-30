@@ -109,7 +109,7 @@ Customer and evaluation metadata use their own prefixes — see `lib/customers.t
 | Supabase | Database, Auth | `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
 | Berget AI | Transcription (KB-Whisper) + current text generation routes | `BERGET_API_KEY` |
 | OpenAI | Planned future Discovery analysis provider | `OPENAI_API_KEY` |
-| Anthropic | Planned future Discovery analysis provider | `ANTHROPIC_API_KEY` |
+| Anthropic | Discovery analysis provider when configured | `ANTHROPIC_API_KEY` |
 | Resend | Transactional email | `RESEND_API_KEY` |
 | Vercel | Hosting + serverless functions | Deployment config |
 | GitHub Actions | CI smoke tests | GitHub Secrets |

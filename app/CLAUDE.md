@@ -76,6 +76,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `/api/discovery/analyze` hämtar eller genererar strukturerad AI-analys för valt Discovery-urval och cachar resultatet i `settings`
 - `Discovery`-analysen har nu hårdare sanningsspärrar: tunt underlag ger bara en preliminär läsning, och observationer måste bära konkret underlag från aktuella svar
 - `Discovery` visar nu också AI-status i `Data`, så det blir tydligt om nuvarande eller framtida analysprovider faktiskt är konfigurerad i Vercel
+- `Discovery Data` använder nu Anthropic som aktiv analysprovider när `ANTHROPIC_API_KEY` finns i miljön
 - `Data`-fliken visar nu ett tomt första läge när inga svar finns ännu, i stället för en färdig datavy
 - när svar finns är `Data` nu kundcentrerad i UI:t: man väljer kundspår först och låter sedan teman, råsvar och AI-analys följa samma scope
 - `Data` har nu också en starkare visuell kundöverblick med rikare kundkort, tydligare vald-kund-sammanhang och mer redaktionella temakort

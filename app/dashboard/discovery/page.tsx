@@ -162,7 +162,7 @@ type DiscoveryAiStatus = {
     openai: boolean
     anthropic: boolean
   }
-  currentProvider: 'berget' | null
+  currentProvider: 'berget' | 'anthropic' | null
   preferredProvider: 'berget' | 'openai' | 'anthropic' | null
   ready: boolean
 }
@@ -2649,12 +2649,14 @@ function DiscoveryDataCanvas({
                   <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.55 }}>
                     {analysisStatus?.configured.openai
                       ? 'OPENAI_API_KEY finns i miljön. Discovery är förberett för att växla till OpenAI när vi kopplar in routen.'
-                      : analysisStatus?.configured.anthropic
-                        ? 'ANTHROPIC_API_KEY finns i miljön. Discovery är förberett för att växla till Anthropic när vi kopplar in routen.'
+                      : analysisStatus?.currentProvider === 'anthropic'
+                        ? 'ANTHROPIC_API_KEY finns i miljön och används nu av Discovery-analysen.'
+                        : analysisStatus?.configured.anthropic
+                          ? 'ANTHROPIC_API_KEY finns i miljön. Discovery är förberett för att växla till Anthropic när vi kopplar in routen.'
                         : 'Nästa analysmotor är inte konfigurerad ännu. Lägg in OPENAI_API_KEY eller ANTHROPIC_API_KEY i Vercel när ni vill aktivera den.'}
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
-                    Nuvarande route använder {analysisStatus?.currentProvider === 'berget' ? 'Berget' : 'ingen aktiv analysprovider'}.
+                    Nuvarande route använder {analysisStatus?.currentProvider === 'anthropic' ? 'Anthropic' : analysisStatus?.currentProvider === 'berget' ? 'Berget' : 'ingen aktiv analysprovider'}.
                   </div>
                 </div>
 

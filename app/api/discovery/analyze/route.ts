@@ -4,6 +4,7 @@ import { getSupabaseRequestClient } from '@/lib/server-auth'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
 
 const BERGET_BASE = 'https://api.berget.ai/v1'
+const ANTHROPIC_BASE = 'https://api.anthropic.com/v1'
 
 type DiscoveryAiProvider = 'berget' | 'openai' | 'anthropic' | null
 
@@ -228,7 +229,11 @@ function getDiscoveryAiProviderStatus() {
   return {
     configured,
     preferredProvider,
-    currentProvider: configured.berget ? 'berget' : null,
+    currentProvider: configured.anthropic
+      ? 'anthropic'
+      : configured.berget
+        ? 'berget'
+        : null,
   }
 }
 
@@ -273,7 +278,8 @@ function buildPreliminaryAnalysis(args: {
 export async function POST(req: NextRequest) {
   const { currentProvider, configured, preferredProvider } = getDiscoveryAiProviderStatus()
   const key = process.env.BERGET_API_KEY
-  if (!key) {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!currentProvider) {
     return NextResponse.json({
       error: 'AI-analys är inte aktiverad ännu. Lägg in OPENAI_API_KEY eller ANTHROPIC_API_KEY i Vercel när ni vill koppla nästa analysmotor.',
       providerStatus: { currentProvider, preferredProvider, configured },
@@ -589,49 +595,74 @@ export async function POST(req: NextRequest) {
       lensPrompt(lens),
     ].join(' ')
 
-    const res = await fetch(`${BERGET_BASE}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/Llama-3.3-70B-Instruct',
-        temperature: 0.2,
-        max_tokens: 1800,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              scopeText,
-              '',
-              'Material att analysera:',
-              responseBody,
-              '',
-              'Evidence-katalog att referera till:',
-              evidenceBody,
-              '',
-              `Lins: ${lens}`,
-              `Template ID: ${templateId}`,
-              `Theme ID: ${themeId || ''}`,
-              `Audience mode: ${template.audience_mode}`,
-              `Respondent count: ${respondentCount}`,
-            ].join('\n'),
+    const userPrompt = [
+      scopeText,
+      '',
+      'Material att analysera:',
+      responseBody,
+      '',
+      'Evidence-katalog att referera till:',
+      evidenceBody,
+      '',
+      `Lins: ${lens}`,
+      `Template ID: ${templateId}`,
+      `Theme ID: ${themeId || ''}`,
+      `Audience mode: ${template.audience_mode}`,
+      `Respondent count: ${respondentCount}`,
+    ].join('\n')
+
+    const res = currentProvider === 'anthropic'
+      ? await fetch(`${ANTHROPIC_BASE}/messages`, {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicKey as string,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
           },
-        ],
-      }),
-    })
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1800,
+            temperature: 0.2,
+            system: `${systemPrompt} Svara med ett enda JSON-objekt och ingen annan text.`,
+            messages: [
+              {
+                role: 'user',
+                content: userPrompt,
+              },
+            ],
+          }),
+        })
+      : await fetch(`${BERGET_BASE}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'meta-llama/Llama-3.3-70B-Instruct',
+            temperature: 0.2,
+            max_tokens: 1800,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: systemPrompt },
+              {
+                role: 'user',
+                content: userPrompt,
+              },
+            ],
+          }),
+        })
 
     if (!res.ok) {
       const errorText = await res.text()
-      console.error('Berget discovery analyze error:', res.status, errorText)
+      console.error(`${currentProvider} discovery analyze error:`, res.status, errorText)
       return NextResponse.json({ error: 'AI-analysen misslyckades.' }, { status: 500 })
     }
 
     const data = await res.json()
-    const raw = data.choices?.[0]?.message?.content || ''
+    const raw = currentProvider === 'anthropic'
+      ? data.content?.find((item: { type?: string; text?: string }) => item?.type === 'text')?.text || ''
+      : data.choices?.[0]?.message?.content || ''
 
     let parsed: DiscoveryAnalysisPayload | null = null
     try {

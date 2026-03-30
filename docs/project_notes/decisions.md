@@ -53,6 +53,12 @@ Running log of significant decisions made during development. For formal archite
 - future provider keys should live in Vercel env vars under `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`
 - preparation for those providers should not leak secrets to the client; only server routes may read them
 
+## 2026-03-30 — Discovery Should Prefer Anthropic When It Is Configured
+
+- once `ANTHROPIC_API_KEY` exists in Vercel, `Discovery` analysis should use Anthropic as its active provider
+- the UI should reflect that Anthropic is active, not just available
+- Berget remains in place for older AI surfaces until they are migrated separately
+
 ## 2026-03-30 — Discovery Data Should Be Customer-First and Support Anonymous Mode
 
 - `Discovery Data` should start from customer or organisation, not from a flat list of people
