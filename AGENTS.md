@@ -23,6 +23,44 @@ A Swedish consulting platform where clients submit voice or text briefs before e
 
 ---
 
+## Source of Truth
+
+GitHub `origin/main` is the source of truth for this repository.
+
+- Do not assume the local checkout reflects the latest project state.
+- Before planning or implementing work, verify `origin/main`.
+- If local files differ from GitHub, use GitHub for instructions, feature inventory, and current project state.
+- Treat local files as a working copy only.
+- If syncing a local checkout is blocked, surface that explicitly and continue to read from GitHub.
+
+---
+
+## Required Workflow
+
+Before making or proposing changes:
+
+1. Read `AGENTS.md`, `CLAUDE.md`, `app/CLAUDE.md`, `app/api/CLAUDE.md`, `lib/CLAUDE.md`, and relevant `docs/project_notes/*`.
+2. Verify the current GitHub state and do not rely on a stale local checkout.
+
+Before pushing changes:
+
+1. Ensure dependencies are installed locally if the relevant verification step requires them.
+2. Run the most relevant verification step for the change, at minimum the nearest build, lint, or targeted test.
+3. Do not describe the work as complete if verification was skipped or could not run.
+4. If verification cannot run, stop and surface the blocker clearly before push.
+
+## Definition of Done
+
+A change is not done until:
+
+- the current GitHub state was reviewed
+- required instruction files were read
+- relevant documentation was updated
+- dependencies were installed if needed for verification
+- relevant verification was run, or a blocker was explicitly surfaced before push
+
+---
+
 ## Non-Negotiable Rules
 
 1. **All user-facing strings in Swedish** — UI, error messages, email copy, labels.

@@ -76,14 +76,14 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           name: normalizedCustomQuestionSetName,
           description: normalizedQuestionSetId
-            ? 'Skapad i utvärderingsflödet från befintligt frågebatteri'
+            ? 'Skapad i utvärderingsflödet från tidigare frågor'
             : 'Skapad direkt i utvärderingsflödet',
         })
         .select('id, name')
         .single()
 
       if (questionSetCreateError || !createdQuestionSet) {
-        return NextResponse.json({ error: 'Kunde inte skapa frågebatteriet för utvärderingen.' }, { status: 500 })
+        return NextResponse.json({ error: 'Kunde inte skapa frågorna för utvärderingen.' }, { status: 500 })
       }
 
       const { data: questionInsertRows, error: questionInsertError } = await admin
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       resolvedQuestionSetName = createdQuestionSet.name
     } else {
       if (!normalizedQuestionSetId) {
-        return NextResponse.json({ error: 'Välj ett frågebatteri eller skapa egna frågor.' }, { status: 400 })
+        return NextResponse.json({ error: 'Välj tidigare frågor eller skapa egna frågor.' }, { status: 400 })
       }
 
       const { data: questionSet, error: questionSetError } = await admin
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (questionSetError || !questionSet) {
-        return NextResponse.json({ error: 'Frågebatteriet kunde inte verifieras.' }, { status: 404 })
+        return NextResponse.json({ error: 'Frågorna kunde inte verifieras.' }, { status: 404 })
       }
 
       resolvedQuestionSetId = questionSet.id

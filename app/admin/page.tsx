@@ -152,19 +152,9 @@ export default function AdminPage() {
       let rows: { name: string; email: string; password: string }[] = []
       const lowerName = file.name.toLowerCase()
 
-      if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
-        const XLSX = await import('xlsx')
-        const buffer = await file.arrayBuffer()
-        const workbook = XLSX.read(buffer, { type: 'array' })
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-        const matrix = XLSX.utils.sheet_to_json<(string | number | null)[]>(firstSheet, { header: 1, defval: '' })
-          .map(row => row.map(cell => `${cell ?? ''}`))
-        rows = toImportRows(matrix)
-      } else {
-        const text = await file.text()
-        const lines = text.split(/\r?\n/).filter(line => line.trim())
-        rows = toImportRows(lines.map(parseCsvLine))
-      }
+      const text = await file.text()
+      const lines = text.split(/\r?\n/).filter(line => line.trim())
+      rows = toImportRows(lines.map(parseCsvLine))
 
       setImportRows(rows)
       setImportStatus([])
@@ -363,7 +353,7 @@ export default function AdminPage() {
               }}>
                 Välj fil…
               </button>
-              <input ref={importRef} type="file" accept=".csv,.txt,.xlsx,.xls" onChange={handleImportFile} style={{ display: 'none' }} />
+              <input ref={importRef} type="file" accept=".csv,.txt" onChange={handleImportFile} style={{ display: 'none' }} />
             </div>
           </div>
 

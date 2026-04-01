@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, type Profile } from '@/lib/supabase'
+import { clearLoginScopeCookie, hasLoginScopeCookie } from '@/lib/auth-persistence'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
@@ -14,10 +15,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     sb.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.replace('/login'); return }
+      if (!hasLoginScopeCookie()) {
+        await sb.auth.signOut()
+        router.replace('/login')
+        return
+      }
 
       const response = await fetch('/api/brief-access', { cache: 'no-store' })
       if (!response.ok) {
         await sb.auth.signOut()
+        clearLoginScopeCookie()
         router.replace('/login')
         return
       }
@@ -29,12 +36,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   async function signOut() {
     await sb.auth.signOut()
+    clearLoginScopeCookie()
     router.replace('/login')
   }
 
   const nav = [
-    { href: '/dashboard',               label: 'Brief',          Icon: HomeIcon },
-    { href: '/dashboard/evaluations',   label: 'Utvärdering',    Icon: ChartIcon },
+    { href: '/dashboard/evaluations/new',   label: 'Utvärdering',    Icon: ChartIcon },
+    { href: '/dashboard/send',          label: 'Debrief',       Icon: HomeIcon },
+    { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
 
@@ -64,7 +73,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               fontSize: 13, fontWeight: 700, letterSpacing: '0.12em',
               color: 'var(--text)',
             }}>
-              Brief
+              Debrief
             </span>
           </div>
           <div style={{ height: 1, background: 'var(--border-sub)', marginTop: 20 }} />
@@ -156,6 +165,12 @@ const ChartIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <path d="M3 3v18h18"/>
     <path d="M7 14l4-4 3 3 5-7"/>
+  </svg>
+)
+const CompassIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M15.8 8.2l-2.4 7.2-7.2 2.4 2.4-7.2 7.2-2.4z" />
   </svg>
 )
 const LogoutIcon = () => (

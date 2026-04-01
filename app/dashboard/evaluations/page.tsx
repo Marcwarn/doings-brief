@@ -38,7 +38,7 @@ export default function EvaluationsPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
+    <div style={{ padding: '40px 44px', maxWidth: 1100, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 24 }}>
         <div>
           <h1 style={titleStyle}>Utvärdering</h1>
@@ -61,27 +61,28 @@ export default function EvaluationsPage() {
           text="Skapa en utvärdering för ett utbildningstillfälle, generera QR-koden och börja samla in svar."
         />
       ) : (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={tableHeaderStyle}>
-            {['Tillfälle', 'Kund', 'Svar', 'Skapad', ''].map(header => (
-              <span key={header} style={tableHeaderCellStyle}>{header}</span>
-            ))}
-          </div>
+        <div style={{ display: 'grid', gap: 14 }}>
           {evaluations.map(evaluation => (
-            <div key={evaluation.id} style={tableRowStyle}>
-              <div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{evaluation.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
-                  {evaluation.questionSetName || 'Frågebatteri'}
+            <div key={evaluation.id} style={cardStyle}>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontFamily: 'var(--font-display)', color: 'var(--text)', letterSpacing: '-0.02em' }}>
+                      {evaluation.label}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6 }}>
+                      {evaluation.customer} · {evaluation.questionSetName || 'Utvärderingsfrågor'}
+                    </div>
+                  </div>
+                  <Link href={`/dashboard/evaluations/${evaluation.id}`} style={secondaryLinkStyle}>
+                    Öppna
+                  </Link>
                 </div>
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text)' }}>{evaluation.customer}</div>
-              <div style={{ fontSize: 13, color: 'var(--text)' }}>{evaluation.responseCount}</div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{formatDate(evaluation.createdAt)}</div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Link href={`/dashboard/evaluations/${evaluation.id}`} style={secondaryLinkStyle}>
-                  Öppna
-                </Link>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <MetaPill label="Svar" value={`${evaluation.responseCount}`} tone="ok" />
+                  <MetaPill label="Skapad" value={formatDate(evaluation.createdAt)} />
+                </div>
               </div>
             </div>
           ))}
@@ -119,10 +120,10 @@ const leadStyle: React.CSSProperties = {
 const primaryLinkStyle: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  padding: '10px 18px',
-  borderRadius: 8,
-  background: 'var(--surface)',
-  color: 'var(--text)',
+  padding: '11px 18px',
+  borderRadius: 10,
+  background: 'var(--text)',
+  color: '#fff',
   border: '1px solid var(--border)',
   fontFamily: 'var(--font-display)',
   fontSize: 13,
@@ -131,8 +132,8 @@ const primaryLinkStyle: React.CSSProperties = {
 }
 
 const secondaryLinkStyle: React.CSSProperties = {
-  padding: '6px 12px',
-  borderRadius: 6,
+  padding: '8px 12px',
+  borderRadius: 8,
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
@@ -142,26 +143,26 @@ const secondaryLinkStyle: React.CSSProperties = {
   fontWeight: 700,
 }
 
-const tableHeaderStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1.2fr 1fr 80px 140px 120px',
-  padding: '9px 18px',
-  background: 'var(--bg)',
-  borderBottom: '1px solid var(--border)',
-}
-
-const tableHeaderCellStyle: React.CSSProperties = {
-  fontSize: 11,
-  fontWeight: 600,
-  color: 'var(--text-3)',
-  letterSpacing: '0.01em',
-}
-
-const tableRowStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1.2fr 1fr 80px 140px 120px',
-  alignItems: 'center',
-  padding: '14px 18px',
+const cardStyle: React.CSSProperties = {
   background: 'var(--surface)',
-  borderBottom: '1px solid var(--border-sub)',
+  border: '1px solid var(--border)',
+  borderRadius: 18,
+  padding: '20px 22px',
+  boxShadow: '0 12px 32px rgba(16,24,40,0.04)',
+}
+
+function MetaPill({ label, value, tone = 'muted' }: { label: string; value: string; tone?: 'muted' | 'ok' }) {
+  return (
+    <div style={{
+      padding: '8px 12px',
+      borderRadius: 999,
+      border: '1px solid var(--border)',
+      background: tone === 'ok' ? '#f0fdf4' : 'rgba(14,14,12,0.03)',
+      fontSize: 12.5,
+      color: tone === 'ok' ? '#166534' : 'var(--text-2)',
+      fontWeight: 600,
+    }}>
+      {label}: {value}
+    </div>
+  )
 }

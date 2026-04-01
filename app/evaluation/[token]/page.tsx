@@ -86,8 +86,9 @@ export default function EvaluationPublicPage() {
     return (
       <Shell>
         <Card
+          eyebrow="Utvärdering"
           title="Utvärderingen hittades inte"
-          description="Länken kan vara gammal eller felaktig."
+          description="Länken kan vara gammal, avslutad eller felaktig."
         />
       </Shell>
     )
@@ -97,8 +98,9 @@ export default function EvaluationPublicPage() {
     return (
       <Shell>
         <Card
+          eyebrow="Tack"
           title="Tack för dina svar"
-          description="Ditt svar är nu registrerat för den här utvärderingen."
+          description="Ditt svar är nu registrerat. Tack för att du tog dig tid att ge återkoppling efter dagens workshop."
         />
       </Shell>
     )
@@ -108,8 +110,9 @@ export default function EvaluationPublicPage() {
     return (
       <Shell>
         <Card
+          eyebrow={payload.evaluation.customer}
           title={payload.evaluation.label}
-          description={`Det här är en utvärdering för ${payload.evaluation.customer}. Det tar bara ett par minuter att svara.`}
+          description="Tack för idag. Här samlar vi in några korta reflektioner från dagen för att förstå vad som landade väl och vad som är viktigt att ta vidare."
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <button
@@ -131,13 +134,14 @@ export default function EvaluationPublicPage() {
   return (
     <Shell>
       <Card
+        eyebrow={payload.evaluation.customer}
         title={question?.text || ''}
         description={`Fråga ${current + 1} av ${payload.questions.length}`}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {isScaleQuestion ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8a6074' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-3)' }}>
                 <span>Lågt</span>
                 <span>Högt</span>
               </div>
@@ -152,9 +156,9 @@ export default function EvaluationPublicPage() {
                     style={{
                       padding: '16px 0',
                       borderRadius: 12,
-                      border: `1.5px solid ${active ? '#C62368' : '#f0cdd8'}`,
-                      background: active ? 'rgba(198,35,104,0.08)' : '#fff',
-                      color: active ? '#C62368' : '#1a1a1a',
+                      border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`,
+                      background: active ? 'rgba(198,35,104,0.08)' : 'var(--surface)',
+                      color: active ? 'var(--accent)' : 'var(--text)',
                       fontSize: 20,
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -177,7 +181,7 @@ export default function EvaluationPublicPage() {
           )}
           {isLast && payload.evaluation.collectEmail && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 12.5, color: '#8a6074' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
                 Skriv din e-post innan du skickar in svaret.
               </div>
               <input
@@ -238,28 +242,57 @@ export default function EvaluationPublicPage() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#fdf5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-      {children}
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(180deg, #f6f1ed 0%, #f9f7f4 42%, #fbfaf8 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '28px 16px',
+    }}>
+      <div style={{ width: '100%', maxWidth: 620 }}>
+        {children}
+      </div>
     </div>
   )
 }
 
 function Card({
+  eyebrow,
   title,
   description,
   children,
 }: {
+  eyebrow?: string
   title: string
   description: string
   children?: React.ReactNode
 }) {
   return (
-    <div style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(198,35,104,0.15)', boxShadow: '0 24px 64px rgba(198,35,104,0.12), 0 4px 20px rgba(0,0,0,0.08)' }}>
-      <div style={{ background: '#C62368', padding: '28px 28px 24px' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: '#fff', lineHeight: 1.1 }}>{title}</div>
-        <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.8)', marginTop: 10, lineHeight: 1.55 }}>{description}</div>
+    <div style={{
+      width: '100%',
+      background: 'var(--surface)',
+      borderRadius: 24,
+      overflow: 'hidden',
+      border: '1px solid rgba(14,14,12,0.08)',
+      boxShadow: '0 20px 48px rgba(16,24,40,0.08)',
+    }}>
+      <div style={{ background: 'var(--text)', padding: '28px 28px 26px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/doings-logo-white.svg" alt="Doings" style={{ width: 26, height: 26 }} />
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1, color: '#fff' }}>Utvärdering</div>
+          </div>
+          {eyebrow && (
+            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>
+              {eyebrow}
+            </div>
+          )}
+        </div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: '#fff', lineHeight: 1.08, letterSpacing: '-0.03em' }}>{title}</div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.78)', marginTop: 12, lineHeight: 1.7, maxWidth: 500 }}>{description}</div>
       </div>
-      <div style={{ padding: '24px 28px 28px', background: '#fdf5f7' }}>
+      <div style={{ padding: '24px 28px 28px', background: '#fbfaf8' }}>
         {children}
       </div>
     </div>
@@ -268,10 +301,10 @@ function Card({
 
 function FullscreenLoader() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fdf5f7' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fbfaf8' }}>
       <div style={{ display: 'flex', gap: 5 }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#C62368', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+          <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
         ))}
       </div>
     </div>
@@ -280,13 +313,13 @@ function FullscreenLoader() {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: '#fff',
-  border: '1.5px solid #f0cdd8',
-  borderRadius: 10,
-  padding: '12px 14px',
+  background: 'var(--surface)',
+  border: '1.5px solid var(--border)',
+  borderRadius: 12,
+  padding: '13px 14px',
   fontFamily: 'var(--font-sans)',
   fontSize: 15,
-  color: '#1a1a1a',
+  color: 'var(--text)',
   outline: 'none',
   lineHeight: 1.6,
   boxSizing: 'border-box',
@@ -295,10 +328,10 @@ const inputStyle: React.CSSProperties = {
 const primaryButtonStyle: React.CSSProperties = {
   width: '100%',
   padding: '13px 20px',
-  background: '#C62368',
+  background: 'var(--text)',
   color: '#fff',
   border: 'none',
-  borderRadius: 10,
+  borderRadius: 12,
   fontFamily: 'var(--font-display)',
   fontSize: 14,
   fontWeight: 700,
@@ -307,9 +340,9 @@ const primaryButtonStyle: React.CSSProperties = {
 
 const secondaryButtonStyle: React.CSSProperties = {
   ...primaryButtonStyle,
-  background: '#fff',
-  color: '#C62368',
-  border: '1px solid #f0cdd8',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  border: '1px solid var(--border)',
 }
 
 const errorStyle: React.CSSProperties = {

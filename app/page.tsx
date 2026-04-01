@@ -3,15 +3,21 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { hasLoginScopeCookie } from '@/lib/auth-persistence'
 
 export default function RootPage() {
   const router = useRouter()
 
   useEffect(() => {
     const sb = createClient()
-    sb.auth.getSession().then(({ data }) => {
+    sb.auth.getSession().then(async ({ data }) => {
       if (data.session) {
-        router.replace('/dashboard')
+        if (!hasLoginScopeCookie()) {
+          await sb.auth.signOut()
+          router.replace('/login')
+          return
+        }
+        router.replace('/dashboard/evaluations/new')
       } else {
         router.replace('/login')
       }

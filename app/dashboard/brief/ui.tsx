@@ -1,16 +1,15 @@
 import Link from 'next/link'
 
 type BriefSubnavKey = 'overview' | 'customers' | 'question-sets' | 'send' | 'briefs'
+type BriefSubnavDisplayKey = 'overview' | 'question-sets' | 'send'
 
-export function BriefSubnav({ active }: { active: BriefSubnavKey }) {
+export function BriefSubnav({ active }: { active: BriefSubnavKey | BriefSubnavDisplayKey }) {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
       {[
-        { href: '/dashboard', label: 'Översikt', key: 'overview' },
-        { href: '/dashboard/customers', label: 'Kunder', key: 'customers' },
-        { href: '/dashboard/question-sets', label: 'Frågebatterier', key: 'question-sets' },
         { href: '/dashboard/send', label: 'Nytt utskick', key: 'send' },
-        { href: '/dashboard/briefs', label: 'Utskick', key: 'briefs' },
+        { href: '/dashboard/question-sets', label: 'Frågor', key: 'question-sets' },
+        { href: '/dashboard', label: 'Översikt', key: 'overview' },
       ].map(item => (
         <Link
           key={item.href}

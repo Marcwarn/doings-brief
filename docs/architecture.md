@@ -107,7 +107,9 @@ Customer and evaluation metadata use their own prefixes — see `lib/customers.t
 | Service | Purpose | Auth |
 |---|---|---|
 | Supabase | Database, Auth | `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` |
-| Berget AI | Transcription (KB-Whisper) + Summarization (Llama) | `BERGET_API_KEY` |
+| Berget AI | Transcription (KB-Whisper) + current text generation routes | `BERGET_API_KEY` |
+| OpenAI | Planned future Discovery analysis provider | `OPENAI_API_KEY` |
+| Anthropic | Discovery analysis provider when configured | `ANTHROPIC_API_KEY` |
 | Resend | Transactional email | `RESEND_API_KEY` |
 | Vercel | Hosting + serverless functions | Deployment config |
 | GitHub Actions | CI smoke tests | GitHub Secrets |

@@ -8,6 +8,18 @@ A Swedish consulting platform where clients submit voice or text briefs before e
 
 ---
 
+## Source of Truth
+
+GitHub `origin/main` is the source of truth for this repository.
+
+- Do not assume the local checkout is current.
+- Verify `origin/main` before planning or implementing work.
+- If local files differ from GitHub, use GitHub for instructions, inventory, and current project state.
+- Treat the local checkout as a working copy, not the authoritative reference.
+- If syncing a local checkout is blocked by local changes, state that explicitly and continue to read from GitHub until the repo is aligned.
+
+---
+
 ## Repository Map
 
 ```
@@ -123,6 +135,23 @@ The font is Inter Variable (loaded via `next/font/local` bound to `--font-sans` 
 7. **`middleware.ts` is global** — it runs on every request. Never add redirect logic without checking the current path first (risk of infinite loop). Never remove `supabase.auth.getUser()` — it is what keeps sessions alive. Keep middleware minimal; heavy logic belongs in API routes.
 8. **Update `docs/project_notes/` when work is done** — fixed a bug → `bugs.md`, made an architectural decision → `decisions.md`, discovered a new technical problem → `issues.md`. These files are only useful if they are kept current.
 9. **En uppgift är inte klar förrän dokumentationen är uppdaterad** — om du lagt till, ändrat eller tagit bort en feature i `app/` eller `lib/`, uppdatera `app/CLAUDE.md` så att feature-inventariet reflekterar det som faktiskt finns. Gör detta *innan* du committar, inte efteråt. Detta är inte valfritt.
+10. **Verifiering före push är obligatorisk** — installera dependencies om de behövs, kör relevant build/lint/test, och pusha inte som "klart" utan verifiering eller tydligt blockeringsmeddelande i förväg.
+
+---
+
+## Required Workflow
+
+Before making or proposing changes:
+
+1. Read `AGENTS.md`, `CLAUDE.md`, `app/CLAUDE.md`, `app/api/CLAUDE.md`, `lib/CLAUDE.md`, and relevant `docs/project_notes/*`.
+2. Verify the current GitHub state rather than trusting a stale local checkout.
+
+Before pushing changes:
+
+1. Ensure dependencies are installed locally if the relevant verification step requires them.
+2. Run the most relevant verification step for the change.
+3. If verification cannot run, stop and surface the blocker clearly before push.
+4. Do not describe work as complete if verification was skipped.
 
 ---
 

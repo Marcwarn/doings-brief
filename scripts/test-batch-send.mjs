@@ -54,7 +54,7 @@ async function login(page) {
   await page.locator('input[type="email"]').fill(LOGIN_EMAIL)
   await page.locator('input[type="password"]').fill(LOGIN_PASSWORD)
   await Promise.all([
-    page.waitForURL('**/dashboard', { timeout: 20000 }),
+    page.waitForURL('**/dashboard/evaluations/new**', { timeout: 20000 }),
     page.getByRole('button', { name: /logga in/i }).click(),
   ])
 }

@@ -237,7 +237,7 @@ export default function CustomersPage() {
         )}
       </div>
 
-      <BriefSubnav active="customers" />
+      <BriefSubnav active="overview" />
 
       {pageError && (
         <div style={{

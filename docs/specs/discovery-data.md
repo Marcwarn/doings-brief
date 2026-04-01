@@ -1,0 +1,520 @@
+# Discovery Data Specification
+
+Status: Draft for implementation
+
+Owner: Doings Brief
+
+Last updated: 2026-03-30
+
+## Purpose
+
+`Data` is the fourth internal tab in the `Discovery` workspace.
+
+It is not a raw export view. It is the interpretation layer where consultants can understand what has come in, see patterns across respondents, and generate analysis from different lenses without losing access to the underlying answers.
+
+The goal is to make `Discovery` more than a send-and-collect flow. It should become a structured basis for understanding a client situation before the next step in the dialogue.
+
+## Position in the Workflow
+
+The intended editor flow in `/dashboard/discovery` becomes:
+
+- `Frågor`
+- `Upplägg`
+- `Skicka`
+- `Data`
+
+This mirrors the actual consultant workflow:
+
+1. shape the questions
+2. frame the setup
+3. send the material
+4. interpret what came back
+
+## Customer-First Entry Point
+
+`Data` should default to the customer or organisation level before the respondent level.
+
+The first question is usually not "which person answered?" but "what are we hearing from this customer?"
+
+The landing hierarchy should therefore be:
+
+1. customer
+2. respondent or anonymous answer set
+3. themes, analysis, and raw answers
+
+When named responses exist, people should appear after a customer has been selected.
+
+When anonymous responses exist, the customer view should instead open anonymous answer entries or grouped summaries.
+
+## Core Principles
+
+1. `Data` must feel editorial and decision-oriented, not like a spreadsheet.
+2. `Data` must always preserve a path back to the underlying answers.
+3. AI analysis must be clearly framed as interpretation, not as source truth.
+4. The first version should prioritize clarity and useful pattern recognition over broad analytics breadth.
+5. Visualizations must support consulting judgment, not become decorative dashboard clutter.
+
+## Primary Use Cases
+
+### Response overview
+
+The consultant wants to quickly understand:
+
+- how many have responded
+- which themes have the strongest signal
+- whether there are clear tensions or recurring needs
+
+### Theme interpretation
+
+The consultant wants to open one theme and see:
+
+- all responses for that theme
+- short AI-supported synthesis
+- repeated phrases or concerns
+- differences between audience groups where relevant
+
+### Perspective-based analysis
+
+The consultant wants to run the same response set through different analytical lenses, for example:
+
+- strongest shared challenge
+- readiness for change
+- leadership implications
+- where expectations differ between groups
+- what should be explored in the next conversation
+
+## Scope
+
+## In scope for first implementation
+
+- a `Data` tab in `/dashboard/discovery`
+- response status summary
+- per-theme summary cards
+- access to raw answers behind each summary
+- AI-generated theme summaries
+- AI-generated overall summary from a small set of predefined analysis perspectives
+
+## Out of scope for first implementation
+
+- free-form prompt writing by end users
+- benchmarking across customers
+- charts that require new event pipelines
+- PDF/PowerPoint export
+- automatic recommendations that trigger product actions
+
+## Information Architecture
+
+### Internal UI
+
+The `Data` tab should be divided into four sections:
+
+1. `Överblick`
+2. `Teman`
+3. `Analysvyer`
+4. `Rådata`
+
+### Suggested layout
+
+- top summary strip
+  - number of invites
+  - number of submitted responses
+  - response rate
+  - last response timestamp
+- theme grid
+  - one card per enabled Discovery theme
+  - signal strength, short summary, click into details
+- analysis panel
+  - choose one lens
+  - generate or refresh AI analysis
+  - show analysis text with clear label that it is AI-generated
+- raw responses panel
+  - searchable, grouped by respondent and theme
+
+## High-Volume UX Model
+
+When `Discovery` starts receiving tens or hundreds of responses, the UI must shift from "reading answers" to "finding signal".
+
+The default view should therefore follow this hierarchy:
+
+1. filter first
+2. aggregate second
+3. interpret third
+4. raw answers last
+
+The product should avoid opening on a flat list of all responses.
+
+## Recommended Screen Structure
+
+### 1. Filter bar
+
+A sticky filter bar should sit at the top of the `Data` tab.
+
+The first version should support:
+
+- customer or organisation
+- send-out or dispatch
+- audience mode
+- team or unit when such metadata exists
+- date range
+- response status
+- response mode
+
+Optional later additions:
+
+- save current view
+- compare two segments side by side
+
+### 2. Overview row
+
+Directly below the filter bar, the consultant should see a compact row of summary cards:
+
+- `Inbjudna`
+- `Svar inkomna`
+- `Svarsfrekvens`
+- `Senaste svar`
+- `Teman med stark signal`
+- `Teman med tydlig splittring`
+
+These cards are not the analysis. They are orientation.
+
+### 3. Main analysis canvas
+
+The main body of the `Data` tab should be structured into three functional zones.
+
+#### Zone A: Themes
+
+This is the primary entry point for understanding the response set.
+
+Each theme card should show:
+
+- theme name
+- number of respondents who answered that theme
+- signal strength indicator
+- one-line synthesis
+- split marker where disagreement is strong
+- click target for deeper view
+
+The theme grid should help a consultant answer:
+
+- where is there strongest alignment?
+- where is there tension?
+- which themes are still fuzzy?
+
+#### Zone B: Analysis
+
+This is where AI-supported interpretation sits.
+
+The first version should show one selected lens at a time, not many competing blocks.
+
+Each analysis block should include:
+
+- lens name
+- generation timestamp
+- scope summary, for example "23 svar, 3 team, målgrupp: blandad"
+- concise analysis broken into short sections
+- a clear tag that the content is AI-generated
+
+#### Zone C: Raw data
+
+This is the evidence layer.
+
+The raw answers area should:
+
+- inherit the active filters
+- inherit the selected theme where relevant
+- be searchable
+- default to short excerpts or collapsed cards
+- allow expansion to full answers
+
+The raw data area should never overwhelm the overview and analysis sections.
+
+## Theme Detail View
+
+Clicking a theme card should open a deeper theme-specific view.
+
+This can be a drawer, modal, or dedicated internal subview, but it should always contain:
+
+- theme summary
+- response coverage
+- common patterns
+- key differences
+- representative excerpts
+- filtered raw answers
+
+For large volumes, the theme detail view is more important than a generic "all responses" page.
+
+## Component Specification
+
+### FilterBar
+
+Purpose:
+
+- define the slice of data currently being interpreted
+
+Should include:
+
+- primary filters visible at all times
+- "Rensa filter"
+- visible result scope text such as "Visar 48 svar från 2 utskick"
+
+### SummaryCard
+
+Purpose:
+
+- orient quickly without scrolling
+
+Should include:
+
+- short label
+- value
+- optional secondary note
+
+### ThemeSignalCard
+
+Purpose:
+
+- represent one Discovery theme as an analytical unit
+
+Should include:
+
+- title
+- response count
+- signal strength
+- synthesis
+- markers for `samsyn`, `splittring`, or `otydligt`
+
+### AnalysisLensPanel
+
+Purpose:
+
+- run and present AI-supported interpretation from one named perspective
+
+Should include:
+
+- lens selector
+- refresh button
+- generated timestamp
+- analysis sections in short readable blocks
+
+### RawAnswerList
+
+Purpose:
+
+- expose the underlying answers for trust and drill-down
+
+Should include:
+
+- respondent label
+- section or theme
+- excerpt
+- expand interaction
+- search within current scope
+
+## Large-Volume Design Rules
+
+For 100+ responses, the product should follow these rules:
+
+1. Never lead with a giant table.
+2. Never mix summary, interpretation, and raw data without visible separation.
+3. Always make disagreement visible, not just consensus.
+4. Always preserve drill-down from AI summary to raw evidence.
+5. Keep one analytical question in focus at a time.
+
+## Visual Priority
+
+The order of emphasis should be:
+
+1. filters and scope
+2. high-level signal
+3. chosen interpretation
+4. supporting evidence
+
+This prevents the screen from feeling like analytics clutter.
+
+## Empty and Sparse States
+
+### No sends yet
+
+Show:
+
+- calm explanation
+- CTA to `Skicka`
+- note that responses and analysis appear here after send-out
+
+### Sent but no responses yet
+
+Show:
+
+- invite count
+- waiting state
+- optional prompt to send reminders
+
+### Only a few responses
+
+The UI should pivot slightly toward narrative interpretation instead of pretending to have statistical weight.
+
+This means:
+
+- fewer charts
+- more emphasis on excerpts
+- more careful wording in AI outputs
+
+## Data Sources
+
+The first version should rely on existing Discovery entities:
+
+- `discovery_templates`
+- `discovery_sections`
+- `discovery_questions`
+- `discovery_sessions`
+- `discovery_responses`
+- `discovery_response_options`
+
+No new response storage model should be introduced for v1.
+
+AI summaries may initially be cached in `settings`, following the existing pattern used elsewhere in the product, with keys such as:
+
+- `discovery_data_summary:{templateId}`
+- `discovery_theme_summary:{templateId}:{sectionId}`
+- `discovery_analysis:{templateId}:{lens}`
+
+If the volume grows or invalidation becomes complex, this can later move into dedicated summary tables.
+
+## Response Identity Modes
+
+`Data` must work for both named and anonymous `Discovery` sends.
+
+In named mode:
+
+- customer-first grouping still applies
+- named respondents may be shown under the customer
+
+In anonymous mode:
+
+- customer-first grouping still applies
+- respondent identity must not be shown
+- anonymous answer entries or grouped summaries should be used instead
+
+See `docs/specs/discovery-customer-and-anonymous.md` for the dedicated product specification.
+
+## Analysis Lenses
+
+The first version should not expose arbitrary prompting. It should offer a small set of named lenses with predictable outputs.
+
+Recommended v1 lenses:
+
+- `Gemensamma behov`
+  - what themes and needs recur across respondents
+- `Skillnader i perspektiv`
+  - where answers diverge or tension appears
+- `Beredskap för nästa steg`
+  - signs of readiness, hesitation, or ambiguity
+- `Vad bör utforskas vidare`
+  - what the next dialogue or workshop should clarify
+
+Each lens should use a fixed prompt template behind the scenes and make the framing visible in the UI.
+
+See `docs/specs/discovery-ai-analysis.md` for the dedicated AI contract, including output format, prompt rules, sparse-data handling, and caching strategy.
+
+## AI Summary Rules
+
+AI analysis in `Data` must:
+
+- only use submitted Discovery responses tied to the chosen template or send context
+- clearly state which responses were included
+- distinguish between direct observations and inferred interpretations
+- link back to raw answers where possible
+
+AI analysis must not:
+
+- invent quantitative certainty
+- hide disagreement between respondents
+- present inferred conclusions as if they were explicit respondent statements
+
+## Visualization Model
+
+The visual style should stay consistent with the calmer Discovery language already established.
+
+Recommended v1 visual elements:
+
+- summary cards
+- stacked response bars
+- theme signal cards
+- compact comparison blocks
+- expandable quote or answer lists
+
+Avoid in v1:
+
+- complex charts
+- 3D or novelty visualizations
+- dense BI-style tables as the primary surface
+
+## UX Requirements
+
+### DR-1 Data tab entry
+
+The `Data` tab should be visible even before responses exist, but show a calm empty state:
+
+- explain that responses and analysis will appear here after send-out
+- point to `Skicka` if nothing has been sent
+
+### DR-2 Theme summaries
+
+Each enabled theme should surface:
+
+- number of respondents who answered
+- short synthesis
+- one or two representative excerpts where appropriate
+- entry point to deeper raw answers
+
+### DR-3 AI transparency
+
+Every AI-generated block should clearly state:
+
+- that it is AI-generated
+- which lens was used
+- when it was generated
+
+### DR-4 Raw answer access
+
+The consultant must always be able to move from summary to raw answer context.
+
+### DR-5 Regeneration
+
+The consultant should be able to rerun a summary or analysis when new responses have arrived.
+
+## Permissions
+
+Only the consultant who owns the Discovery template or its sessions may:
+
+- open the `Data` tab
+- view aggregated response content
+- trigger AI analysis
+
+No public or cross-consultant access is allowed.
+
+## Suggested Implementation Phases
+
+### Phase 1
+
+- add `Data` as the fourth tab in `/dashboard/discovery`
+- show response counts and theme cards
+- show empty state when no responses exist
+
+### Phase 2
+
+- add theme summaries
+- add raw answer drill-down
+
+### Phase 3
+
+- add predefined AI lenses
+- cache AI outputs
+- allow refresh/regenerate
+
+## Open Questions
+
+1. Should `Data` summarize per template or per send-out when a template is reused across multiple customers?
+2. Should AI analysis be scoped to all responses for a template, or filtered by customer/organisation by default?
+3. Should raw answers display respondent names by default, or should the product support anonymous reading modes later?
+4. When a Discovery has only one respondent, should `Data` still show theme summaries or pivot to a more narrative single-response mode?

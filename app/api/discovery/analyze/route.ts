@@ -1,0 +1,709 @@
+import { createHash } from 'crypto'
+import { NextRequest, NextResponse } from 'next/server'
+import { getSupabaseRequestClient } from '@/lib/server-auth'
+import { getSupabaseAdminClient } from '@/lib/server-clients'
+
+const BERGET_BASE = 'https://api.berget.ai/v1'
+const ANTHROPIC_BASE = 'https://api.anthropic.com/v1'
+
+type DiscoveryAiProvider = 'berget' | 'openai' | 'anthropic' | null
+
+type DiscoveryAnalysisLens =
+  | 'Gemensamma behov'
+  | 'Skillnader i perspektiv'
+  | 'Beredskap för nästa steg'
+  | 'Vad bör utforskas vidare'
+
+type DiscoveryAnalysisPayload = {
+  lens: DiscoveryAnalysisLens
+  preliminary: boolean
+  caution: string | null
+  scope: {
+    template_id: string
+    theme_id: string | null
+    respondent_count: number
+    audience_mode: 'shared' | 'leaders' | 'mixed'
+  }
+  summary: string
+  observations: Array<{
+    title: string
+    detail: string
+    confidence: 'high' | 'medium' | 'low'
+    evidence_ids: string[]
+  }>
+  differences: Array<{
+    title: string
+    detail: string
+    confidence: 'high' | 'medium' | 'low'
+    evidence_ids: string[]
+  }>
+  uncertainties: Array<{
+    title: string
+    detail: string
+    evidence_ids: string[]
+  }>
+  next_questions: string[]
+  evidence: Array<{
+    id: string
+    theme_id: string
+    respondent_label: string
+    excerpt: string
+  }>
+}
+
+type StoredDiscoveryAnalysis = {
+  analysis: DiscoveryAnalysisPayload
+  updatedAt: string
+}
+
+function normalizeString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeConfidence(value: unknown): 'high' | 'medium' | 'low' {
+  if (value === 'high' || value === 'medium' || value === 'low') return value
+  return 'low'
+}
+
+function normalizeList<T>(value: unknown, mapItem: (item: unknown) => T | null, limit = 6) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(mapItem)
+    .filter((item): item is T => Boolean(item))
+    .slice(0, limit)
+}
+
+function normalizeEvidenceIds(value: unknown, validEvidenceIds: Set<string>) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(item => normalizeString(item))
+    .filter(item => validEvidenceIds.has(item))
+    .slice(0, 3)
+}
+
+function parseDiscoveryAnalysisPayload(value: unknown, validEvidenceIds: Set<string>): DiscoveryAnalysisPayload | null {
+  if (!value || typeof value !== 'object') return null
+
+  const candidate = value as Record<string, unknown>
+  const lens = normalizeString(candidate.lens) as DiscoveryAnalysisLens
+  const summary = normalizeString(candidate.summary)
+  const preliminary = candidate.preliminary === true
+  const caution = normalizeString(candidate.caution) || null
+  const scope = candidate.scope && typeof candidate.scope === 'object'
+    ? candidate.scope as Record<string, unknown>
+    : null
+
+  if (!summary || !scope || !lens) return null
+
+  const templateId = normalizeString(scope.template_id)
+  const themeId = normalizeString(scope.theme_id) || null
+  const respondentCountRaw = scope.respondent_count
+  const respondentCount = typeof respondentCountRaw === 'number' && respondentCountRaw >= 0
+    ? respondentCountRaw
+    : 0
+  const audienceModeRaw = normalizeString(scope.audience_mode)
+  const audienceMode = audienceModeRaw === 'leaders' || audienceModeRaw === 'mixed' ? audienceModeRaw : 'shared'
+
+  if (!templateId) return null
+
+  return {
+    lens,
+    preliminary,
+    caution,
+    scope: {
+      template_id: templateId,
+      theme_id: themeId,
+      respondent_count: respondentCount,
+      audience_mode: audienceMode,
+    },
+    summary,
+    observations: normalizeList(candidate.observations, item => {
+      if (!item || typeof item !== 'object') return null
+      const next = item as Record<string, unknown>
+      const title = normalizeString(next.title)
+      const detail = normalizeString(next.detail)
+      const evidenceIds = normalizeEvidenceIds(next.evidence_ids, validEvidenceIds)
+      if (!title || !detail || evidenceIds.length === 0) return null
+      if (!title || !detail) return null
+      return {
+        title,
+        detail,
+        confidence: normalizeConfidence(next.confidence),
+        evidence_ids: evidenceIds,
+      }
+    }),
+    differences: normalizeList(candidate.differences, item => {
+      if (!item || typeof item !== 'object') return null
+      const next = item as Record<string, unknown>
+      const title = normalizeString(next.title)
+      const detail = normalizeString(next.detail)
+      const evidenceIds = normalizeEvidenceIds(next.evidence_ids, validEvidenceIds)
+      if (!title || !detail || evidenceIds.length === 0) return null
+      return {
+        title,
+        detail,
+        confidence: normalizeConfidence(next.confidence),
+        evidence_ids: evidenceIds,
+      }
+    }),
+    uncertainties: normalizeList(candidate.uncertainties, item => {
+      if (!item || typeof item !== 'object') return null
+      const next = item as Record<string, unknown>
+      const title = normalizeString(next.title)
+      const detail = normalizeString(next.detail)
+      const evidenceIds = normalizeEvidenceIds(next.evidence_ids, validEvidenceIds)
+      if (!title || !detail) return null
+      return { title, detail, evidence_ids: evidenceIds }
+    }),
+    next_questions: normalizeList(candidate.next_questions, item => {
+      const next = normalizeString(item)
+      return next || null
+    }),
+    evidence: normalizeList(candidate.evidence, item => {
+      if (!item || typeof item !== 'object') return null
+      const next = item as Record<string, unknown>
+      const id = normalizeString(next.id)
+      const themeId = normalizeString(next.theme_id)
+      const excerpt = normalizeString(next.excerpt)
+      if (!id || !validEvidenceIds.has(id) || !themeId || !excerpt) return null
+      return {
+        id,
+        theme_id: themeId,
+        respondent_label: normalizeString(next.respondent_label) || 'Respondent',
+        excerpt,
+      }
+    }, 8),
+  }
+}
+
+function parseStoredDiscoveryAnalysis(raw: string | null | undefined) {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as StoredDiscoveryAnalysis
+    return {
+      analysis: parsed.analysis,
+      updatedAt: parsed.updatedAt || new Date().toISOString(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function buildScopeHash(input: unknown) {
+  return createHash('sha256').update(JSON.stringify(input)).digest('hex').slice(0, 16)
+}
+
+function buildAnalysisKey(templateId: string, themeId: string | null, lens: DiscoveryAnalysisLens, scopeHash: string) {
+  if (themeId) return `discovery_analysis:theme:${templateId}:${themeId}:${scopeHash}:${lens}`
+  return `discovery_analysis:overall:${templateId}:${scopeHash}:${lens}`
+}
+
+function lensPrompt(lens: DiscoveryAnalysisLens) {
+  switch (lens) {
+    case 'Skillnader i perspektiv':
+      return 'Lyft främst fram var svaren skiljer sig åt, var bilden verkar ojämn och vilka spänningar eller perspektivskillnader som är viktigast att förstå bättre.'
+    case 'Beredskap för nästa steg':
+      return 'Bedöm främst hur redo gruppen verkar vara för nästa steg. Lyft tydlighet, tvekan, energi, motstånd och vad som talar för att mer förtydligande behövs.'
+    case 'Vad bör utforskas vidare':
+      return 'Fokusera främst på vad som fortfarande är oklart, vilka frågor som bör tas vidare och vad som skulle ge bäst värde i nästa dialog eller workshop.'
+    default:
+      return 'Fokusera främst på det som återkommer tydligast i materialet och vilka behov eller signaler som flera respondenter verkar peka mot.'
+  }
+}
+
+function getDiscoveryAiProviderStatus() {
+  const configured = {
+    berget: Boolean(process.env.BERGET_API_KEY),
+    openai: Boolean(process.env.OPENAI_API_KEY),
+    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+  }
+
+  const preferredProvider: DiscoveryAiProvider = configured.openai
+    ? 'openai'
+    : configured.anthropic
+      ? 'anthropic'
+      : configured.berget
+        ? 'berget'
+        : null
+
+  return {
+    configured,
+    preferredProvider,
+    currentProvider: configured.anthropic
+      ? 'anthropic'
+      : configured.berget
+        ? 'berget'
+        : null,
+  }
+}
+
+function buildPreliminaryAnalysis(args: {
+  lens: DiscoveryAnalysisLens
+  templateId: string
+  themeId: string | null
+  audienceMode: 'shared' | 'leaders' | 'mixed'
+  respondentCount: number
+  evidence: DiscoveryAnalysisPayload['evidence']
+}) {
+  const themeScope = args.themeId ? 'det valda temat' : 'hela materialet'
+  return {
+    lens: args.lens,
+    preliminary: true,
+    caution: `Underlaget är fortfarande tunt. Analysen bygger just nu på ${args.respondentCount} svar och bör läsas som tidiga signaler, inte som en stabil bild.`,
+    scope: {
+      template_id: args.templateId,
+      theme_id: args.themeId,
+      respondent_count: args.respondentCount,
+      audience_mode: args.audienceMode,
+    },
+    summary: `Det har kommit in ${args.respondentCount} svar i ${themeScope}. Det räcker för att se några tidiga signaler, men inte för att dra säkra slutsatser ännu.`,
+    observations: [],
+    differences: [],
+    uncertainties: [
+      {
+        title: 'För tidigt för tydlig tolkning',
+        detail: 'Det finns ännu inte tillräckligt många svar för att avgöra vad som verkligen återkommer, vad som bara är enskilda perspektiv och var det finns stabil samsyn eller faktisk splittring.',
+        evidence_ids: args.evidence.slice(0, 2).map(item => item.id),
+      },
+    ],
+    next_questions: [
+      'Vilka signaler återkommer även när fler svar har kommit in?',
+      'Finns det någon skillnad mellan roller, team eller delar av organisationen?',
+      'Vad behöver vi fråga vidare om innan vi drar slutsatser?'
+    ],
+    evidence: args.evidence.slice(0, 4),
+  } satisfies DiscoveryAnalysisPayload
+}
+
+export async function POST(req: NextRequest) {
+  const { currentProvider, configured, preferredProvider } = getDiscoveryAiProviderStatus()
+  const key = process.env.BERGET_API_KEY
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!currentProvider) {
+    return NextResponse.json({
+      error: 'AI-analys är inte aktiverad ännu. Lägg in OPENAI_API_KEY eller ANTHROPIC_API_KEY i Vercel när ni vill koppla nästa analysmotor.',
+      providerStatus: { currentProvider, preferredProvider, configured },
+    }, { status: 503 })
+  }
+
+  try {
+    const supabase = getSupabaseRequestClient()
+    const admin = getSupabaseAdminClient()
+
+    const body = await req.json()
+    const templateId = typeof body?.templateId === 'string' ? body.templateId.trim() : ''
+    const themeId = typeof body?.themeId === 'string' && body.themeId.trim() ? body.themeId.trim() : null
+    const query = typeof body?.query === 'string' ? body.query.trim() : ''
+    const customerKey = typeof body?.customerKey === 'string' && body.customerKey.trim() ? body.customerKey.trim().toLowerCase() : null
+    const regenerate = body?.regenerate === true
+    const lens = normalizeString(body?.lens) as DiscoveryAnalysisLens
+
+    if (!templateId) {
+      return NextResponse.json({ error: 'templateId krävs.' }, { status: 400 })
+    }
+
+    if (!lens) {
+      return NextResponse.json({ error: 'Analyslins krävs.' }, { status: 400 })
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Obehörig' }, { status: 401 })
+    }
+
+    const { data: template, error: templateError } = await admin
+      .from('discovery_templates')
+      .select('id, user_id, name, audience_mode')
+      .eq('id', templateId)
+      .single()
+
+    if (templateError || !template) {
+      return NextResponse.json({ error: 'Upplägget hittades inte.' }, { status: 404 })
+    }
+
+    if (template.user_id !== user.id) {
+      return NextResponse.json({ error: 'Obehörig' }, { status: 403 })
+    }
+
+    const { data: sections, error: sectionsError } = await admin
+      .from('discovery_sections')
+      .select('id, label, description, order_index')
+      .eq('template_id', templateId)
+      .order('order_index')
+
+    if (sectionsError) {
+      console.error('discovery analyze sections error:', sectionsError)
+      return NextResponse.json({ error: 'Kunde inte läsa temana.' }, { status: 500 })
+    }
+
+    if (themeId && !(sections || []).some(section => section.id === themeId)) {
+      return NextResponse.json({ error: 'Temat hittades inte.' }, { status: 404 })
+    }
+
+    const queryLower = query.toLowerCase()
+    let sessionsQuery = admin
+      .from('discovery_sessions')
+      .select('id, response_mode, client_name, client_email, client_organisation, status, submitted_at')
+      .eq('consultant_id', user.id)
+      .eq('template_id', templateId)
+      .eq('status', 'submitted')
+
+    const { data: sessions, error: sessionsError } = await sessionsQuery
+
+    if (sessionsError) {
+      console.error('discovery analyze sessions error:', sessionsError)
+      return NextResponse.json({ error: 'Kunde inte läsa svaren.' }, { status: 500 })
+    }
+
+    const filteredSessions = (sessions || []).filter(session => {
+      const sessionCustomerKey = (session.client_organisation?.trim() || session.client_name.trim() || 'okand-kund').toLowerCase()
+      if (customerKey && sessionCustomerKey !== customerKey) return false
+      if (!queryLower) return true
+      return [session.client_name, session.client_email, session.client_organisation || '']
+        .join(' ')
+        .toLowerCase()
+        .includes(queryLower)
+    })
+
+    if (filteredSessions.length === 0) {
+      return NextResponse.json({ error: 'Det finns inga besvarade Discovery-svar i det valda urvalet.' }, { status: 400 })
+    }
+
+    const relevantSections = themeId
+      ? (sections || []).filter(section => section.id === themeId)
+      : (sections || [])
+
+    const sectionIds = relevantSections.map(section => section.id)
+    const { data: questions, error: questionsError } = sectionIds.length > 0
+      ? await admin
+          .from('discovery_questions')
+          .select('id, section_id, type, text, order_index')
+          .in('section_id', sectionIds)
+          .order('order_index')
+      : { data: [], error: null }
+
+    if (questionsError) {
+      console.error('discovery analyze questions error:', questionsError)
+      return NextResponse.json({ error: 'Kunde inte läsa frågorna.' }, { status: 500 })
+    }
+
+    const questionIds = (questions || []).map(question => question.id)
+    const sessionIds = filteredSessions.map(session => session.id)
+
+    const { data: submissionEntries, error: submissionEntriesError } = sessionIds.length > 0
+      ? await admin
+          .from('discovery_submission_entries')
+          .select('id, session_id, respondent_label, demographic_role, demographic_team')
+          .in('session_id', sessionIds)
+      : { data: [], error: null }
+
+    if (submissionEntriesError) {
+      console.error('discovery analyze submission entries error:', submissionEntriesError)
+      return NextResponse.json({ error: 'Kunde inte läsa svaren.' }, { status: 500 })
+    }
+
+    const [{ data: responses, error: responsesError }, { data: responseOptions, error: responseOptionsError }] = await Promise.all([
+      questionIds.length > 0
+        ? admin
+            .from('discovery_responses')
+            .select('id, session_id, submission_entry_id, question_id, response_type, text_value, scale_value')
+            .in('session_id', sessionIds)
+            .in('question_id', questionIds)
+        : Promise.resolve({ data: [], error: null }),
+      questionIds.length > 0
+        ? admin
+            .from('discovery_response_options')
+            .select('response_id, option_label')
+        : Promise.resolve({ data: [], error: null }),
+    ])
+
+    if (responsesError) {
+      console.error('discovery analyze responses error:', responsesError)
+      return NextResponse.json({ error: 'Kunde inte läsa svaren.' }, { status: 500 })
+    }
+
+    if (responseOptionsError) {
+      console.error('discovery analyze response options error:', responseOptionsError)
+      return NextResponse.json({ error: 'Kunde inte läsa valda alternativ.' }, { status: 500 })
+    }
+
+    const optionMap = new Map<string, string[]>()
+    for (const option of responseOptions || []) {
+      const bucket = optionMap.get(option.response_id) || []
+      bucket.push(option.option_label)
+      optionMap.set(option.response_id, bucket)
+    }
+
+    const questionById = new Map((questions || []).map(question => [question.id, question]))
+    const sectionById = new Map((relevantSections || []).map(section => [section.id, section]))
+    const sessionById = new Map(filteredSessions.map(session => [session.id, session]))
+    const submissionEntryById = new Map((submissionEntries || []).map(entry => [entry.id, entry]))
+
+    const grouped = new Map<string, Array<{
+      respondentLabel: string
+      questionLabel: string
+      questionText: string
+      answer: string
+    }>>()
+
+    for (const response of responses || []) {
+      const question = questionById.get(response.question_id)
+      const session = sessionById.get(response.session_id)
+      if (!question || !session) continue
+
+      const section = sectionById.get(question.section_id)
+      if (!section) continue
+
+      let answer = ''
+      if (response.response_type === 'choice') {
+        answer = (optionMap.get(response.id) || []).join(', ')
+      } else if (response.response_type === 'scale') {
+        answer = typeof response.scale_value === 'number' ? `${response.scale_value}` : ''
+      } else {
+        answer = normalizeString(response.text_value)
+      }
+
+      if (!answer) continue
+
+      const bucket = grouped.get(section.id) || []
+      const submissionEntry = response.submission_entry_id ? submissionEntryById.get(response.submission_entry_id) : null
+      bucket.push({
+        respondentLabel:
+          submissionEntry?.respondent_label
+          || [submissionEntry?.demographic_role, submissionEntry?.demographic_team].filter(Boolean).join(' · ')
+          || (session.response_mode === 'anonymous' ? 'Anonymt svar' : (session.client_name || session.client_email)),
+        questionLabel: `Fråga ${question.order_index + 1}`,
+        questionText: question.text,
+        answer,
+      })
+      grouped.set(section.id, bucket)
+    }
+
+    const groupedResponses = relevantSections.map(section => ({
+      sectionId: section.id,
+      sectionLabel: section.label,
+      sectionDescription: section.description,
+      responses: grouped.get(section.id) || [],
+    })).filter(section => section.responses.length > 0)
+
+    if (groupedResponses.length === 0) {
+      return NextResponse.json({ error: 'Det finns inte tillräckligt med svar i urvalet för analys ännu.' }, { status: 400 })
+    }
+
+    const respondentCount = Math.max((submissionEntries || []).length, filteredSessions.length)
+    const evidenceCatalog = groupedResponses.flatMap(section =>
+      section.responses.map((item, index) => ({
+        id: `E${section.sectionId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6)}${index + 1}`,
+        theme_id: section.sectionId,
+        respondent_label: item.respondentLabel,
+        excerpt: item.answer.slice(0, 220),
+      }))
+    ).slice(0, 24)
+    const validEvidenceIds = new Set(evidenceCatalog.map(item => item.id))
+
+    const scopeHash = buildScopeHash({
+      templateId,
+      themeId,
+      lens,
+      query,
+      customerKey,
+      entryIds: (submissionEntries || []).map(entry => entry.id).sort(),
+    })
+    const cacheKey = buildAnalysisKey(templateId, themeId, lens, scopeHash)
+
+    if (!regenerate) {
+      const { data: cachedRow, error: cacheReadError } = await admin
+        .from('settings')
+        .select('value')
+        .eq('key', cacheKey)
+        .maybeSingle()
+
+      if (cacheReadError) {
+        console.error('discovery analysis cache read error:', cacheReadError)
+      }
+
+      const cached = parseStoredDiscoveryAnalysis(cachedRow?.value)
+      const cachedAnalysis = cached ? parseDiscoveryAnalysisPayload(cached.analysis, validEvidenceIds) : null
+      if (cached && cachedAnalysis) {
+        return NextResponse.json({ analysis: cachedAnalysis, updatedAt: cached.updatedAt, cached: true })
+      }
+    }
+
+    if (respondentCount < 3) {
+      const preliminary = buildPreliminaryAnalysis({
+        lens,
+        templateId,
+        themeId,
+        audienceMode: template.audience_mode,
+        respondentCount,
+        evidence: evidenceCatalog,
+      })
+      return NextResponse.json({ analysis: preliminary, updatedAt: new Date().toISOString(), cached: false })
+    }
+
+    const scopeText = [
+      `Upplägg: ${template.name}`,
+      `Målgrupp: ${template.audience_mode}`,
+      `Respondenter: ${respondentCount}`,
+      customerKey ? `Kundscope: ${customerKey}` : 'Kundscope: alla kunder i urvalet',
+      `Tema: ${themeId ? sectionById.get(themeId)?.label || 'Okänt tema' : 'Alla teman'}`,
+      query ? `Urval: filtrerat på "${query}"` : 'Urval: alla besvarade svar i scope',
+    ].join('\n')
+
+    const responseBody = groupedResponses.map(section => {
+      const responseLines = section.responses.map((item, index) => [
+        `Svar ${index + 1}`,
+        `Respondent: ${item.respondentLabel}`,
+        `${item.questionLabel}: ${item.questionText}`,
+        `Svar: ${item.answer}`,
+      ].join('\n')).join('\n\n')
+
+      return [
+        `Tema: ${section.sectionLabel}`,
+        `Beskrivning: ${section.sectionDescription}`,
+        responseLines,
+      ].join('\n')
+    }).join('\n\n')
+
+    const evidenceBody = evidenceCatalog.map(item => [
+      `ID: ${item.id}`,
+      `Tema: ${sectionById.get(item.theme_id)?.label || item.theme_id}`,
+      `Respondent: ${item.respondent_label}`,
+      `Utdrag: ${item.excerpt}`,
+    ].join('\n')).join('\n\n')
+
+    const systemPrompt = [
+      'Du ar en senior konsult som analyserar Discovery-svar.',
+      'Du far bara anvanda information som finns i det givna materialet.',
+      'Du maste vara specifik, nykter och aterhallsam.',
+      'Du maste skilja pa observationer, skillnader, osakerheter och fragor att ta vidare.',
+      'Du far inte hitta pa citat eller overdriva samstammighet.',
+      'Du far inte skriva en observation eller skillnad utan att koppla den till minst ett evidence_id som finns i underlaget.',
+      'Om stod saknas ska du utelamna punkten och i stallet lyfta osakerheten.',
+      'Du far inte pasta samsyn om inte flera svar tydligt pekar at samma hall.',
+      'Du far inte formulera tolkningar som fakta.',
+      'Skriv pa svenska.',
+      'Returnera ENDAST JSON med exakt dessa nycklar:',
+      'lens, preliminary, caution, scope, summary, observations, differences, uncertainties, next_questions, evidence.',
+      'preliminary ska vara false.',
+      'caution ska vara null eller en kort svensk varning om underlaget ar ojamt.',
+      'scope maste innehalla template_id, theme_id, respondent_count och audience_mode.',
+      'observations och differences ska innehalla title, detail, confidence och evidence_ids.',
+      'uncertainties ska innehalla title, detail och evidence_ids om det finns stod i underlaget.',
+      'next_questions ska vara korta svenska punkter.',
+      'evidence ska vara ett urval av poster ur evidence-katalogen och varje post maste innehalla id, theme_id, respondent_label och excerpt exakt som i katalogen.',
+      lensPrompt(lens),
+    ].join(' ')
+
+    const userPrompt = [
+      scopeText,
+      '',
+      'Material att analysera:',
+      responseBody,
+      '',
+      'Evidence-katalog att referera till:',
+      evidenceBody,
+      '',
+      `Lins: ${lens}`,
+      `Template ID: ${templateId}`,
+      `Theme ID: ${themeId || ''}`,
+      `Audience mode: ${template.audience_mode}`,
+      `Respondent count: ${respondentCount}`,
+    ].join('\n')
+
+    const res = currentProvider === 'anthropic'
+      ? await fetch(`${ANTHROPIC_BASE}/messages`, {
+          method: 'POST',
+          headers: {
+            'x-api-key': anthropicKey as string,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1800,
+            temperature: 0.2,
+            system: `${systemPrompt} Svara med ett enda JSON-objekt och ingen annan text.`,
+            messages: [
+              {
+                role: 'user',
+                content: userPrompt,
+              },
+            ],
+          }),
+        })
+      : await fetch(`${BERGET_BASE}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'meta-llama/Llama-3.3-70B-Instruct',
+            temperature: 0.2,
+            max_tokens: 1800,
+            response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: systemPrompt },
+              {
+                role: 'user',
+                content: userPrompt,
+              },
+            ],
+          }),
+        })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error(`${currentProvider} discovery analyze error:`, res.status, errorText)
+      return NextResponse.json({ error: 'AI-analysen misslyckades.' }, { status: 500 })
+    }
+
+    const data = await res.json()
+    const raw = currentProvider === 'anthropic'
+      ? data.content?.find((item: { type?: string; text?: string }) => item?.type === 'text')?.text || ''
+      : data.choices?.[0]?.message?.content || ''
+
+    let parsed: DiscoveryAnalysisPayload | null = null
+    try {
+      parsed = parseDiscoveryAnalysisPayload(JSON.parse(raw), validEvidenceIds)
+    } catch {
+      parsed = null
+    }
+
+    if (!parsed) {
+      console.error('Invalid discovery analysis payload:', raw)
+      return NextResponse.json({ error: 'Ogiltigt svar från AI.' }, { status: 500 })
+    }
+
+    const updatedAt = new Date().toISOString()
+    const { error: cacheWriteError } = await admin
+      .from('settings')
+      .upsert({
+        key: cacheKey,
+        value: JSON.stringify({ analysis: parsed, updatedAt }),
+        updated_at: updatedAt,
+      })
+
+    if (cacheWriteError) {
+      console.error('discovery analysis cache write error:', cacheWriteError)
+    }
+
+    return NextResponse.json({ analysis: parsed, updatedAt, cached: false })
+  } catch (error) {
+    console.error('discovery analyze fatal:', error)
+    return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 })
+  }
+}
+
+export async function GET() {
+  const { configured, currentProvider, preferredProvider } = getDiscoveryAiProviderStatus()
+  return NextResponse.json({
+    configured,
+    currentProvider,
+    preferredProvider,
+    ready: Boolean(currentProvider),
+  })
+}
+
+export const maxDuration = 30

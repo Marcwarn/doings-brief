@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { PageLoader, InlineError } from '@/app/dashboard/evaluations/ui'
 
 type EvaluationDetailPayload = {
@@ -42,9 +43,12 @@ type EvaluationDetailPayload = {
 
 export default function EvaluationDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [payload, setPayload] = useState<EvaluationDetailPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [view, setView] = useState<'questions' | 'participants'>('questions')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -85,6 +89,34 @@ export default function EvaluationDetailPage() {
     link.click()
     link.remove()
     URL.revokeObjectURL(objectUrl)
+  }
+
+  async function deleteEvaluation() {
+    if (!payload || deleting) return
+
+    const confirmed = window.confirm(
+      'Detta tar bort utvärderingen, inkomna svar och tillhörande frågeupplägg om inget annat använder det. Vill du fortsätta?'
+    )
+
+    if (!confirmed) return
+
+    setDeleteError(null)
+    setDeleting(true)
+
+    try {
+      const response = await fetch(`/api/evaluations/${payload.evaluation.id}`, { method: 'DELETE' })
+      const nextPayload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(nextPayload?.error || 'Kunde inte ta bort utvärderingen.')
+      }
+
+      router.push('/dashboard/evaluations')
+      router.refresh()
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Kunde inte ta bort utvärderingen.')
+      setDeleting(false)
+    }
   }
 
   if (loading) return <PageLoader />
@@ -150,7 +182,7 @@ export default function EvaluationDetailPage() {
   })
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
+    <div style={{ padding: '40px 44px', maxWidth: 1120, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 12.5 }}>
         <Link href="/dashboard/evaluations" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Utvärdering</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
@@ -170,9 +202,15 @@ export default function EvaluationDetailPage() {
           <MetricPill label="Frågor" value={questions.length} />
           <MetricPill label="Svar" value={responses.length} tone="ok" />
           <button onClick={() => navigator.clipboard.writeText(publicUrl)} style={ghostButtonStyle}>Kopiera länk</button>
+          <a href={publicUrl} target="_blank" rel="noreferrer" style={ghostLinkStyle}>Öppna deltagarvy</a>
           <button onClick={() => void downloadQrPng()} style={ghostButtonStyle}>Ladda ner QR som PNG</button>
+          <button onClick={() => void deleteEvaluation()} disabled={deleting} style={dangerButtonStyle(deleting)}>
+            {deleting ? 'Tar bort…' : 'Ta bort'}
+          </button>
         </div>
       </div>
+
+      {deleteError && <InlineError text={deleteError} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18, marginBottom: 20 }}>
         <SectionCard title="Utvärderingslänk">
@@ -189,7 +227,7 @@ export default function EvaluationDetailPage() {
         <SectionCard title="Översikt">
           <div style={{ display: 'grid', gap: 10 }}>
             <OverviewRow label="Kund" value={evaluation.customer} />
-            <OverviewRow label="Frågebatteri" value={evaluation.questionSetName || payload.questionSet?.name || 'Ej angivet'} />
+            <OverviewRow label="Frågor" value={evaluation.questionSetName || payload.questionSet?.name || 'Ej angivet'} />
             <OverviewRow label="Svarsläge" value={evaluation.collectEmail ? 'Med e-post' : 'Anonymt'} />
             <OverviewRow label="Svar hittills" value={`${responses.length}`} />
             <OverviewRow label="Senaste svar" value={latestResponseAt ? formatDateTime(latestResponseAt) : 'Inga ännu'} />
@@ -301,11 +339,11 @@ export default function EvaluationDetailPage() {
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+    <div style={{ background: 'var(--surface)', borderRadius: 18, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 12px 32px rgba(16,24,40,0.04)' }}>
+      <div style={{ padding: '16px 20px 13px', borderBottom: '1px solid var(--border-sub)', fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
         {title}
       </div>
-      <div style={{ padding: '16px 18px' }}>
+      <div style={{ padding: '18px 20px' }}>
         {children}
       </div>
     </div>
@@ -364,8 +402,8 @@ function slugify(value: string) {
 }
 
 const ghostButtonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 8,
+  padding: '9px 12px',
+  borderRadius: 10,
   border: '1px solid var(--border)',
   background: 'var(--surface)',
   color: 'var(--text)',
@@ -374,12 +412,33 @@ const ghostButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
 }
 
+const ghostLinkStyle: React.CSSProperties = {
+  ...ghostButtonStyle,
+  display: 'inline-flex',
+  alignItems: 'center',
+  textDecoration: 'none',
+}
+
+function dangerButtonStyle(disabled: boolean): React.CSSProperties {
+  return {
+    padding: '9px 12px',
+    borderRadius: 10,
+    border: '1px solid rgba(185, 28, 28, 0.18)',
+    background: disabled ? '#fef2f2' : '#fff1f2',
+    color: '#b91c1c',
+    fontSize: 12.5,
+    fontWeight: 700,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.7 : 1,
+  }
+}
+
 function pickerButtonStyle(active: boolean): React.CSSProperties {
   return {
     padding: '8px 12px',
     borderRadius: 999,
     border: '1px solid var(--border)',
-    background: active ? 'var(--accent-dim)' : 'var(--surface)',
+    background: active ? 'rgba(198,35,104,0.08)' : 'rgba(14,14,12,0.03)',
     color: active ? 'var(--accent)' : 'var(--text-2)',
     fontSize: 12.5,
     fontWeight: active ? 700 : 500,

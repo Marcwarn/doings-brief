@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { createClient, type QuestionSet, type Question, type BriefSession, type Profile } from '@/lib/supabase'
+import { createClient, type BriefSession, type Profile } from '@/lib/supabase'
 import { EvaluationSubnav, InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 import type { EvaluationQuestionType } from '@/lib/evaluations'
 
@@ -20,46 +20,96 @@ type CreatedPayload = {
   publicUrl: string
 }
 
+type EvaluationWorkspaceTab = 'questions' | 'setup' | 'publish'
+type EvaluationDraftQuestion = {
+  text: string
+  type: EvaluationQuestionType
+  starterKey?: string
+}
+
+const evaluationQuestionStarters = [
+  {
+    id: 'reflection',
+    label: 'Reflektion efter dagen',
+    description: 'Korta frågor om vad deltagarna tar med sig från workshopen och vad som är viktigast att ta vidare.',
+    questionSetName: 'Reflektion efter dagen',
+    questions: [
+      { text: 'Vad tar du framför allt med dig från dagen?', type: 'text' as const },
+      { text: 'Hur relevant var innehållet för din vardag?', type: 'scale_1_5' as const },
+      { text: 'Vad vill du se mer av eller fördjupa framåt?', type: 'text' as const },
+    ],
+  },
+  {
+    id: 'value',
+    label: 'Värde och nästa steg',
+    description: 'Passar när ni vill förstå vad som skapade mest värde och vad som bör följas upp efteråt.',
+    questionSetName: 'Värde och nästa steg',
+    questions: [
+      { text: 'Vad var mest värdefullt för dig under workshopen?', type: 'text' as const },
+      { text: 'Hur användbart känns detta för det som väntar framåt?', type: 'scale_1_5' as const },
+      { text: 'Vilket nästa steg skulle göra störst skillnad nu?', type: 'text' as const },
+    ],
+  },
+  {
+    id: 'facilitation',
+    label: 'Dagens upplägg',
+    description: 'Passar när ni vill få återkoppling på upplägg, energi, delaktighet och facilitering.',
+    questionSetName: 'Återkoppling på dagens upplägg',
+    questions: [
+      { text: 'Hur upplevde du dagens upplägg och tempo?', type: 'text' as const },
+      { text: 'Hur väl skapade dagen utrymme för delaktighet och reflektion?', type: 'scale_1_5' as const },
+      { text: 'Vad hade gjort upplevelsen ännu bättre för dig?', type: 'text' as const },
+    ],
+  },
+] as const
+
+const evaluationStarterQuestionBank = evaluationQuestionStarters.flatMap(starter => (
+  starter.questions.map((question, index) => ({
+    key: `${starter.id}-${index}`,
+    starterId: starter.id,
+    text: question.text,
+    type: question.type,
+  }))
+))
+
 export default function NewEvaluationPage() {
   const sb = createClient()
-  const [questionSets, setQuestionSets] = useState<QuestionSet[]>([])
   const [customers, setCustomers] = useState<string[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [customer, setCustomer] = useState('')
-  const [questionSetId, setQuestionSetId] = useState('')
-  const [questionSetQuery, setQuestionSetQuery] = useState('')
-  const [showQuestionSetPicker, setShowQuestionSetPicker] = useState(false)
-  const [questionPreview, setQuestionPreview] = useState<Question[]>([])
-  const [customQuestionSetName, setCustomQuestionSetName] = useState('')
-  const [customQuestions, setCustomQuestions] = useState<{ text: string; type: EvaluationQuestionType }[]>([
-    { text: '', type: 'text' },
-    { text: '', type: 'text' },
-  ])
+  const [customQuestionSetName, setCustomQuestionSetName] = useState<string>('Utvärderingsfrågor')
+  const [customQuestions, setCustomQuestions] = useState<EvaluationDraftQuestion[]>([])
   const [label, setLabel] = useState('')
   const [collectEmail, setCollectEmail] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedPayload | null>(null)
+  const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
+  const [activeTab, setActiveTab] = useState<EvaluationWorkspaceTab>('questions')
+  const [expandedStarterIds, setExpandedStarterIds] = useState<string[]>([])
 
   const qrUrl = useMemo(() => (
     created ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(created.publicUrl)}` : ''
   ), [created])
 
-  const selectedQuestionSet = questionSets.find(item => item.id === questionSetId) || null
-  const filteredQuestionSets = questionSets.filter(item => {
-    if (!questionSetQuery.trim()) return true
-    const query = questionSetQuery.trim().toLowerCase()
-    return `${item.name} ${item.description || ''}`.toLowerCase().includes(query)
-  })
-  const visibleQuestionSets = filteredQuestionSets.slice(0, questionSetQuery.trim() ? 12 : 8)
+  const previewQuestions = useMemo(
+    () => customQuestions.filter(question => question.text.trim()),
+    [customQuestions],
+  )
+  const previewTitle = label.trim() || 'Utvärdering efter sessionen'
+  const previewCustomer = customer.trim() || 'Vald kund'
+  const previewQuestionSource = customQuestionSetName.trim() || 'Utvärderingsfrågor'
+  const selectedStarterKeys = useMemo(
+    () => new Set(customQuestions.map(question => question.starterKey).filter(Boolean)),
+    [customQuestions],
+  )
 
   useEffect(() => {
     Promise.all([
       sb.auth.getUser(),
-      sb.from('question_sets').select('*').order('updated_at', { ascending: false }),
       sb.from('brief_sessions').select('*').order('created_at', { ascending: false }).limit(200),
-    ]).then(async ([{ data: authData }, { data: questionSetRows }, { data: sessionRows }]) => {
+    ]).then(async ([{ data: authData }, { data: sessionRows }]) => {
       const nextCustomers = Array.from(new Set((sessionRows || [])
         .map((session: BriefSession) => session.client_organisation?.trim() || '')
         .filter(Boolean)))
@@ -70,7 +120,6 @@ export default function NewEvaluationPage() {
         setProfile(nextProfile || null)
       }
 
-      setQuestionSets(questionSetRows || [])
       setCustomers(nextCustomers)
       setLoading(false)
     }).catch(() => {
@@ -80,20 +129,14 @@ export default function NewEvaluationPage() {
   }, [sb])
 
   useEffect(() => {
-    if (!questionSetId) {
-      setQuestionPreview([])
-      return
-    }
-
-    sb.from('questions').select('*').eq('question_set_id', questionSetId).order('order_index')
-      .then(({ data }) => setQuestionPreview(data || []))
-  }, [questionSetId, sb])
-
-  useEffect(() => {
     if (!customQuestionSetName.trim() && label.trim()) {
-      setCustomQuestionSetName(`${label.trim()} · Frågor`)
+      setCustomQuestionSetName(`${label.trim()} · utvärderingsfrågor`)
     }
   }, [label, customQuestionSetName])
+
+  useEffect(() => {
+    setActivePreviewQuestionIndex(prev => Math.min(prev, Math.max(previewQuestions.length - 1, 0)))
+  }, [previewQuestions.length])
 
   function updateCustomQuestion(index: number, value: string) {
     setCustomQuestions(prev => prev.map((question, questionIndex) => (
@@ -115,30 +158,60 @@ export default function NewEvaluationPage() {
     setCustomQuestions(prev => prev.length <= 1 ? prev : prev.filter((_, questionIndex) => questionIndex !== index))
   }
 
-  async function selectQuestionSetSource(setId: string) {
-    const selected = questionSets.find(item => item.id === setId) || null
-    setQuestionSetId(setId)
-    setQuestionSetQuery('')
-    setShowQuestionSetPicker(false)
+  function addStarterQuestions(starterId: string) {
+    setCustomQuestions(prev => {
+      const existingKeys = new Set(prev.map(question => question.starterKey).filter(Boolean))
+      const additions = evaluationStarterQuestionBank
+        .filter(question => question.starterId === starterId && !existingKeys.has(question.key))
+        .map(question => ({ text: question.text, type: question.type, starterKey: question.key }))
 
-    const { data } = await sb.from('questions').select('*').eq('question_set_id', setId).order('order_index')
-    const nextQuestions = data || []
-    setQuestionPreview(nextQuestions)
-    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selected?.name || 'Importerade frågor'} · kopia`)
-    setCustomQuestions(nextQuestions.length > 0
-      ? nextQuestions.map(question => ({ text: question.text, type: 'text' as const }))
-      : [{ text: '', type: 'text' }, { text: '', type: 'text' }])
+      return additions.length > 0 ? [...prev, ...additions] : prev
+    })
+    setError(null)
   }
 
-  function importSelectedQuestionSetAgain() {
-    if (!questionSetId || questionPreview.length === 0) {
-      setError('Välj ett frågebatteri först om du vill importera det.')
-      return
-    }
-
+  function removeStarterQuestions(starterId: string) {
+    const keysToRemove = new Set(
+      evaluationStarterQuestionBank
+        .filter(question => question.starterId === starterId)
+        .map(question => question.key),
+    )
+    setCustomQuestions(prev => prev.filter(question => !question.starterKey || !keysToRemove.has(question.starterKey)))
     setError(null)
-    setCustomQuestionSetName(prev => prev.trim() ? prev : `${selectedQuestionSet?.name || 'Importerade frågor'} · kopia`)
-    setCustomQuestions(questionPreview.map(question => ({ text: question.text, type: 'text' })))
+  }
+
+  function toggleStarterQuestion(questionKey: string) {
+    const selectedQuestion = evaluationStarterQuestionBank.find(question => question.key === questionKey)
+    if (!selectedQuestion) return
+    setError(null)
+    setCustomQuestions(prev => {
+      const exists = prev.some(question => question.starterKey === questionKey)
+      if (exists) {
+        return prev.filter(question => question.starterKey !== questionKey)
+      }
+
+      return [
+        ...prev,
+        { text: selectedQuestion.text, type: selectedQuestion.type, starterKey: selectedQuestion.key },
+      ]
+    })
+  }
+
+  function addAllStarterQuestions() {
+    setCustomQuestions(prev => {
+      const existingKeys = new Set(prev.map(question => question.starterKey).filter(Boolean))
+      const additions = evaluationStarterQuestionBank
+        .filter(question => !existingKeys.has(question.key))
+        .map(question => ({ text: question.text, type: question.type, starterKey: question.key }))
+
+      return additions.length > 0 ? [...prev, ...additions] : prev
+    })
+    setError(null)
+  }
+
+  function clearStarterQuestions() {
+    setCustomQuestions(prev => prev.filter(question => !question.starterKey))
+    setError(null)
   }
 
   async function createEvaluation(e: React.FormEvent) {
@@ -170,7 +243,7 @@ export default function NewEvaluationPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: customer.trim(),
-        questionSetId,
+        questionSetId: '',
         label: label.trim(),
         collectEmail,
         customQuestionSetName: customQuestionSetName.trim(),
@@ -207,7 +280,7 @@ export default function NewEvaluationPage() {
   if (loading) return <PageLoader />
 
   return (
-    <div style={{ padding: '40px 44px', maxWidth: 980, animation: 'fadeUp 0.35s ease both' }}>
+    <div style={pageShellStyle}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
           Skapa utvärdering
@@ -221,113 +294,182 @@ export default function NewEvaluationPage() {
 
       {error && <InlineError text={error} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: created ? '1fr 0.9fr' : '1fr', gap: 20 }}>
-        <form onSubmit={createEvaluation} style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Field label="Kund">
-            <>
-              <input
-                list="evaluation-customers"
-                value={customer}
-                onChange={e => setCustomer(e.target.value)}
-                placeholder="Till exempel Mojang"
-                style={inputStyle}
-              />
-              <datalist id="evaluation-customers">
-                {customers.map(item => <option key={item} value={item} />)}
-              </datalist>
-            </>
-          </Field>
+      <div style={evaluationStatsRowStyle}>
+        <EvaluationStatCard
+          label="Frågor"
+          value={`${previewQuestions.length}`}
+          text={previewQuestions.length === 1 ? 'fråga i utvärderingen' : 'frågor i utvärderingen'}
+        />
+        <EvaluationStatCard
+          label="Kund"
+          value={previewCustomer}
+          text={customer.trim() ? 'kopplad till utvärderingen' : 'lägg till i upplägget'}
+        />
+        <EvaluationStatCard
+          label="Insamling"
+          value={collectEmail ? 'Med e-post' : 'Anonym'}
+          text={collectEmail ? 'deltagaren identifierar sig sist' : 'svar skickas utan identitet'}
+        />
+      </div>
 
-          <Field label="Frågebatteri">
+      <div style={workspaceStyle}>
+        <form onSubmit={createEvaluation} style={editorPanelStyle}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
+            {[
+              { key: 'questions' as const, label: 'Frågor' },
+              { key: 'setup' as const, label: 'Upplägg' },
+              { key: 'publish' as const, label: 'Publicera' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  ...workspaceTabButtonStyle,
+                  color: activeTab === tab.key ? 'var(--text)' : 'var(--text-2)',
+                  background: activeTab === tab.key ? 'rgba(14,14,12,0.06)' : 'rgba(255,255,255,0.88)',
+                  borderColor: activeTab === tab.key ? 'rgba(14,14,12,0.12)' : 'var(--border)',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'questions' && (
+          <Field label="Utvärderingsfrågor">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ padding: '14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: showQuestionSetPicker ? 10 : 0 }}>
-                  <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Hämta från frågebatteri</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                      Välj ett befintligt batteri om du vill använda det som startpunkt.
-                    </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>Välj ett upplägg för dagens utvärdering</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                    Öppna ett block och välj hela blocket eller enskilda frågor. Du kan kombinera fritt mellan alla nio frågor.
                   </div>
-                  <button type="button" onClick={() => setShowQuestionSetPicker(prev => !prev)} style={ghostButtonStyle}>
-                    {selectedQuestionSet ? 'Byt källa' : 'Välj frågebatteri'}
-                  </button>
                 </div>
-
-                {selectedQuestionSet && !showQuestionSetPicker && (
-                  <div style={{ marginTop: 10, padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{selectedQuestionSet.name}</div>
-                      {selectedQuestionSet.description && (
-                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>{selectedQuestionSet.description}</div>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      Aktiv källa
-                    </div>
-                  </div>
-                )}
-
-                {showQuestionSetPicker && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                    <input
-                      value={questionSetQuery}
-                      onChange={e => setQuestionSetQuery(e.target.value)}
-                      placeholder="Sök frågebatteri"
-                      style={inputStyle}
-                    />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', paddingRight: 2 }}>
-                      {visibleQuestionSets.map(item => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => { void selectQuestionSetSource(item.id) }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 12,
-                            width: '100%',
-                            textAlign: 'left',
-                            padding: '12px 14px',
-                            borderRadius: 7,
-                            cursor: 'pointer',
-                            border: `1.5px solid ${questionSetId === item.id ? 'var(--accent)' : 'var(--border)'}`,
-                            background: questionSetId === item.id ? 'var(--accent-dim)' : 'var(--surface)',
-                          }}
-                        >
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {evaluationQuestionStarters.map(item => {
+                    const starterQuestions = evaluationStarterQuestionBank.filter(question => question.starterId === item.id)
+                    const selectedCount = starterQuestions.filter(question => selectedStarterKeys.has(question.key)).length
+                    const allSelected = selectedCount === starterQuestions.length
+                    const expanded = expandedStarterIds.includes(item.id)
+                    return (
+                      <div key={item.id} style={{
+                        display: 'grid',
+                        gap: 10,
+                        padding: '12px 14px',
+                        borderRadius: 12,
+                        border: `1.5px solid ${allSelected ? 'rgba(198,35,104,0.32)' : 'var(--border)'}`,
+                        background: allSelected ? 'rgba(198,35,104,0.05)' : 'var(--surface)',
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                           <div>
-                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{item.name}</div>
-                            {item.description && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{item.description}</div>}
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{item.label}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.55, marginTop: 2 }}>{item.description}</div>
                           </div>
-                        </button>
-                      ))}
-                      {visibleQuestionSets.length === 0 && (
-                        <div style={{ padding: '12px 14px', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)' }}>
-                          Inga frågebatterier matchar din sökning.
+                          <div style={{
+                            flexShrink: 0,
+                            padding: '6px 10px',
+                            borderRadius: 999,
+                            background: selectedCount > 0 ? 'rgba(198,35,104,0.10)' : 'rgba(14,14,12,0.05)',
+                            color: selectedCount > 0 ? 'var(--accent)' : 'var(--text-3)',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                          }}>
+                            {selectedCount === 0 ? 'Inga valda' : `${selectedCount} av ${starterQuestions.length} valda`}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedStarterIds(prev => (
+                              prev.includes(item.id)
+                                ? prev.filter(id => id !== item.id)
+                                : [...prev, item.id]
+                            ))}
+                            style={ghostButtonStyle}
+                          >
+                            {expanded ? 'Dölj frågor' : 'Öppna frågor'}
+                          </button>
+                        </div>
+                        {expanded && (
+                          <div style={{ display: 'grid', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <button type="button" onClick={() => allSelected ? removeStarterQuestions(item.id) : addStarterQuestions(item.id)} style={ghostButtonStyle}>
+                                {allSelected ? 'Avmarkera hela blocket' : `Välj hela blocket (${starterQuestions.length})`}
+                              </button>
+                              {selectedCount > 0 && !allSelected && (
+                                <button type="button" onClick={() => removeStarterQuestions(item.id)} style={ghostButtonStyle}>
+                                  Avmarkera blocket
+                                </button>
+                              )}
+                            </div>
+                            {starterQuestions.map(question => {
+                              const selected = selectedStarterKeys.has(question.key)
+                              return (
+                                <label
+                                  key={question.key}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    justifyContent: 'space-between',
+                                    gap: 12,
+                                    padding: '11px 12px',
+                                    borderRadius: 10,
+                                    border: `1px solid ${selected ? 'rgba(198,35,104,0.26)' : 'var(--border)'}`,
+                                    background: selected ? 'rgba(198,35,104,0.08)' : 'rgba(255,255,255,0.9)',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selected}
+                                      onChange={() => toggleStarterQuestion(question.key)}
+                                      style={{ marginTop: 2 }}
+                                    />
+                                    <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.55 }}>
+                                      {question.text}
+                                    </div>
+                                  </div>
+                                  <div style={{
+                                    flexShrink: 0,
+                                    padding: '5px 8px',
+                                    borderRadius: 999,
+                                    background: selected ? 'rgba(198,35,104,0.12)' : 'rgba(14,14,12,0.05)',
+                                    color: selected ? 'var(--accent)' : 'var(--text-3)',
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.04em',
+                                  }}>
+                                    {question.type === 'scale_1_5' ? 'Skala' : 'Fritext'}
+                                  </div>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <Field label="Namn på frågebatteri">
+                <Field label="Namn på frågorna">
                   <input
                     value={customQuestionSetName}
                     onChange={e => setCustomQuestionSetName(e.target.value)}
-                    placeholder="Till exempel Ledarutbildning Malmö · Frågor"
+                    placeholder="Till exempel Reflektion efter dagen"
                     style={inputStyle}
                   />
                 </Field>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)' }}>Egna frågor</div>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)' }}>Frågor till deltagarna</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {selectedQuestionSet && (
-                      <button type="button" onClick={importSelectedQuestionSetAgain} style={ghostButtonStyle}>
-                        Hämta in källan igen
-                      </button>
-                    )}
                     <button type="button" onClick={addCustomQuestion} style={ghostButtonStyle}>
                       Lägg till fråga
                     </button>
@@ -362,6 +504,24 @@ export default function NewEvaluationPage() {
                 </div>
               </div>
             </div>
+          </Field>
+          )}
+
+          {activeTab === 'setup' && (
+            <>
+          <Field label="Kund">
+            <>
+              <input
+                list="evaluation-customers"
+                value={customer}
+                onChange={e => setCustomer(e.target.value)}
+                placeholder="Till exempel Mojang"
+                style={inputStyle}
+              />
+              <datalist id="evaluation-customers">
+                {customers.map(item => <option key={item} value={item} />)}
+              </datalist>
+            </>
           </Field>
 
           <Field label="Namn på tillfälle">
@@ -399,58 +559,297 @@ export default function NewEvaluationPage() {
               </div>
             </label>
           )}
+            </>
+          )}
 
-          <button type="submit" disabled={saving} style={submitButtonStyle(saving)}>
-            {saving ? 'Skapar…' : 'Skapa länk och QR-kod'}
-          </button>
+          {activeTab === 'publish' && (
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div style={subtlePanelStyle}>
+                <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
+                  Publicering
+                </div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                  När du skapar utvärderingen genereras en publik länk och QR-kod här i publiceringssteget. Därifrån kan du kopiera länken, ladda ner QR-koden och öppna uppföljningen.
+                </div>
+              </div>
+
+              <div style={{ ...subtlePanelStyle, display: 'grid', gap: 12 }}>
+                <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                  Kontrollera frågorna och previewn först. Publiceringen använder exakt det upplägg du ser till höger.
+                </div>
+                <button type="submit" disabled={saving} style={submitButtonStyle(saving)}>
+                  {saving ? 'Skapar…' : 'Skapa länk och QR'}
+                </button>
+              </div>
+
+              {created && (
+                <EvaluationPublishCard created={created} qrUrl={qrUrl} onDownloadQr={() => void downloadQrPng()} />
+              )}
+            </div>
+          )}
         </form>
 
-        {created && (
-          <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', padding: '22px 24px' }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
-              {created.evaluation.label}
+        <aside style={previewRailStyle}>
+          <div style={previewRailInnerStyle}>
+            <EvaluationPreviewCard
+              title={previewTitle}
+              customer={previewCustomer}
+              questionSource={previewQuestionSource}
+              collectEmail={collectEmail}
+              questions={previewQuestions}
+              activeQuestionIndex={activePreviewQuestionIndex}
+              onSelectQuestion={setActivePreviewQuestionIndex}
+            />
+          </div>
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function EvaluationStatCard({ label, value, text }: { label: string; value: string; text: string }) {
+  return (
+    <div style={{ ...subtlePanelStyle, minWidth: 0 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 7 }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 600, lineHeight: 1.15, color: 'var(--text)', marginBottom: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.5 }}>
+        {text}
+      </div>
+    </div>
+  )
+}
+
+function EvaluationPreviewCard({
+  title,
+  customer,
+  questionSource,
+  collectEmail,
+  questions,
+  activeQuestionIndex,
+  onSelectQuestion,
+}: {
+  title: string
+  customer: string
+  questionSource: string
+  collectEmail: boolean
+  questions: Array<{ text: string; type: EvaluationQuestionType }>
+  activeQuestionIndex: number
+  onSelectQuestion: (index: number) => void
+}) {
+  const activeQuestion = questions[activeQuestionIndex] || null
+  const resolvedTitle = title.trim() || 'Reflektion efter workshoppen'
+  const resolvedCustomer = customer.trim() || 'Ingen kund vald ännu'
+  const progressWidth = questions.length > 0
+    ? `${Math.max(18, Math.round(((activeQuestionIndex + 1) / questions.length) * 100))}%`
+    : '0%'
+
+  return (
+    <div style={previewSurfaceStyle}>
+      <div style={previewFrameStyle}>
+        <div style={previewHeroStyle}>
+          <div style={previewEyebrowStyle}>Deltagarens vy</div>
+          <div style={previewTitleStyle}>{resolvedTitle}</div>
+          <div style={previewDescriptionStyle}>
+            Tack för att du var med. Vi vill gärna fånga hur dagen landade för dig innan du går vidare.
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
+            <PreviewPill>{resolvedCustomer}</PreviewPill>
+            <PreviewPill>{questionSource}</PreviewPill>
+            <PreviewPill>{collectEmail ? 'E-post i sista steget' : 'Helt anonymt'}</PreviewPill>
+          </div>
+        </div>
+
+        <div style={previewBodyStyle}>
+          <div style={{ display: 'grid', gap: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', paddingTop: 10 }}>
+              <div />
+              <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.2, paddingBottom: 2 }}>
+                Fråga {questions.length > 0 ? `${activeQuestionIndex + 1}` : '0'} av {questions.length || 0}
+              </div>
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 16 }}>
-              {created.evaluation.customer} · {created.evaluation.questionSetName || 'Frågebatteri'}
-              <span style={{ marginLeft: 6 }}>
-                · {created.evaluation.collectEmail ? 'E-post samlas in' : 'Helt anonym'}
-              </span>
-            </div>
-            <div style={{ display: 'grid', gap: 14 }}>
-              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 14px 12px' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6 }}>
-                  Länk till deltagarna
-                </div>
-                <div style={{ fontSize: 11.5, color: 'var(--text)', wordBreak: 'break-all' }}>{created.publicUrl}</div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
-                <img src={qrUrl} alt="QR-kod för utvärdering" style={{ width: 220, height: 220, objectFit: 'contain' }} />
-              </div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => navigator.clipboard.writeText(created.publicUrl)} style={ghostButtonStyle}>
-                  Kopiera länk
-                </button>
-                <button type="button" onClick={() => void downloadQrPng()} style={ghostButtonStyle}>
-                  Ladda ner QR som PNG
-                </button>
-                <Link href={`/dashboard/evaluations/${created.evaluation.id}`} style={secondaryLinkStyle}>
-                  Öppna utvärdering
-                </Link>
-              </div>
+
+            <div style={{ height: 6, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
+              <div style={{ width: progressWidth, height: '100%', background: 'var(--accent)' }} />
             </div>
           </div>
-        )}
+
+          {questions.length > 0 ? (
+            <>
+              {questions.length > 1 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {questions.map((question, index) => (
+                  <button
+                    key={`${index}-${question.text}`}
+                    type="button"
+                    onClick={() => onSelectQuestion(index)}
+                    style={{
+                      ...previewStepButtonStyle,
+                      background: index === activeQuestionIndex ? 'rgba(198,35,104,0.08)' : 'rgba(250,248,246,0.82)',
+                      borderColor: index === activeQuestionIndex ? 'rgba(198,35,104,0.22)' : 'rgba(14,14,12,0.08)',
+                      color: index === activeQuestionIndex ? 'var(--accent)' : 'var(--text-2)',
+                    }}
+                  >
+                    Fråga {index + 1}
+                  </button>
+                ))}
+                </div>
+              )}
+
+              <div style={previewQuestionCardStyle}>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <div style={previewQuestionBadgeStyle}>Fråga {questions.length > 0 ? activeQuestionIndex + 1 : 1}</div>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '6px 10px',
+                      borderRadius: 999,
+                      background: 'rgba(14,14,12,0.05)',
+                      color: 'var(--text-3)',
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}>
+                      {activeQuestion?.type === 'scale_1_5' ? 'Skala 1–5' : 'Fritext'}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', lineHeight: 1.18, letterSpacing: '-0.02em' }}>
+                    {activeQuestion?.text}
+                  </div>
+                </div>
+
+                {activeQuestion?.type === 'scale_1_5' ? (
+                  <div style={previewScaleAreaStyle}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 10 }}>
+                    {[1, 2, 3, 4, 5].map(value => (
+                      <div key={value} style={previewScaleOptionStyle}>
+                        {value}
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={previewTextAreaStyle}>
+                    Här skriver deltagaren sin reflektion med egna ord.
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button type="button" style={previewPrimaryButtonStyle}>
+                    {questions.length > 1 ? 'Nästa fråga' : 'Börja svara'}
+                  </button>
+                  <button type="button" style={previewSecondaryButtonStyle}>
+                    Tillbaka
+                  </button>
+                </div>
+              </div>
+
+              <div style={previewMiniReviewStyle}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Känslan i slutet
+                </div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                  {collectEmail
+                    ? 'Efter sista frågan lämnar deltagaren sin e-post i ett separat steg innan svaren skickas in. Det ska kännas tydligt varför uppgiften efterfrågas.'
+                    : 'Efter sista frågan skickas svaren in direkt utan identifiering. Avslutet ska kännas kort, lugnt och respektfullt mot deltagarens tid.'}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={previewEmptyStyle}>
+              Lägg till minst en fråga i vänsterpanelen för att se hur utvärderingen kommer att se ut.
+            </div>
+          )}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function EvaluationPublishCard({
+  created,
+  qrUrl,
+  onDownloadQr,
+}: {
+  created: CreatedPayload
+  qrUrl: string
+  onDownloadQr: () => void
+}) {
+  return (
+    <div style={publishCardStyle}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 21, fontWeight: 700, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.02em' }}>
+        {created.evaluation.label}
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 16 }}>
+        {created.evaluation.customer} · {created.evaluation.questionSetName || 'Utvärderingsfrågor'}
+        <span style={{ marginLeft: 6 }}>
+          · {created.evaluation.collectEmail ? 'E-post samlas in' : 'Helt anonym'}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gap: 14 }}>
+        <div style={publishLinkCardStyle}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 6 }}>
+            Länk till deltagarna
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--text)', wordBreak: 'break-all' }}>{created.publicUrl}</div>
+        </div>
+        <div style={publishQrCardStyle}>
+          <img src={qrUrl} alt="QR-kod för utvärdering" style={{ width: 220, height: 220, objectFit: 'contain' }} />
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => navigator.clipboard.writeText(created.publicUrl)} style={ghostButtonStyle}>
+            Kopiera länk
+          </button>
+          <a
+            href={created.publicUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={secondaryLinkStyle}
+          >
+            Öppna deltagarvy
+          </a>
+          <button type="button" onClick={onDownloadQr} style={ghostButtonStyle}>
+            Ladda ner QR som PNG
+          </button>
+          <Link href={`/dashboard/evaluations/${created.evaluation.id}`} style={secondaryLinkStyle}>
+            Öppna översikt
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PreviewPill({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '8px 12px',
+      borderRadius: 999,
+      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(255,255,255,0.14)',
+      color: 'rgba(255,255,255,0.84)',
+      fontSize: 12.5,
+      fontWeight: 600,
+      backdropFilter: 'blur(10px)',
+    }}>
+      {children}
     </div>
   )
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-3)' }}>{label}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span style={fieldLabelStyle}>{label}</span>
       {children}
-    </label>
+    </div>
   )
 }
 
@@ -464,24 +863,25 @@ function slugify(value: string) {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  padding: '10px 14px',
-  borderRadius: 7,
+  padding: '13px 16px',
+  borderRadius: 12,
   border: '1px solid var(--border)',
-  background: 'var(--bg)',
-  fontSize: 13.5,
+  background: 'rgba(255,255,255,0.92)',
+  fontSize: 14,
   color: 'var(--text)',
   outline: 'none',
   fontFamily: 'var(--font-sans)',
+  transition: 'border-color 0.18s, box-shadow 0.18s, background 0.18s',
 }
 
 function submitButtonStyle(disabled: boolean): React.CSSProperties {
   return {
     width: '100%',
-    padding: '12px 0',
-    borderRadius: 8,
+    padding: '13px 0',
+    borderRadius: 10,
     border: '1px solid var(--border)',
-    background: disabled ? 'var(--bg)' : 'var(--surface)',
-    color: disabled ? 'var(--text-3)' : 'var(--text)',
+    background: disabled ? 'rgba(14,14,12,0.08)' : 'var(--text)',
+    color: disabled ? 'var(--text-3)' : '#fff',
     fontFamily: 'var(--font-display)',
     fontSize: 14,
     fontWeight: 700,
@@ -490,36 +890,334 @@ function submitButtonStyle(disabled: boolean): React.CSSProperties {
 }
 
 const ghostButtonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 7,
+  padding: '9px 13px',
+  borderRadius: 10,
   border: '1px solid var(--border)',
-  background: 'var(--surface)',
+  background: 'rgba(255,255,255,0.88)',
   color: 'var(--text)',
-  fontSize: 12.5,
+  fontSize: 12,
   fontWeight: 600,
   cursor: 'pointer',
+  transition: 'border-color 0.18s, background 0.18s',
 }
 
 const smallDeleteStyle: React.CSSProperties = {
   flexShrink: 0,
-  padding: '10px 12px',
-  borderRadius: 8,
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
+  padding: '9px 12px',
+  borderRadius: 10,
+  border: '1px solid transparent',
+  background: 'none',
   color: 'var(--text-3)',
-  fontSize: 12.5,
-  fontWeight: 600,
+  fontSize: 12,
   cursor: 'pointer',
 }
 
 const secondaryLinkStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 7,
+  padding: '9px 13px',
+  borderRadius: 10,
   border: '1px solid var(--border)',
-  background: 'var(--surface)',
+  background: 'rgba(255,255,255,0.88)',
   color: 'var(--text)',
   textDecoration: 'none',
-  fontFamily: 'var(--font-display)',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  transition: 'border-color 0.18s, background 0.18s',
+}
+
+const pageShellStyle: React.CSSProperties = {
+  padding: '40px 44px',
+  maxWidth: 1360,
+  animation: 'fadeUp 0.35s ease both',
+}
+
+const evaluationStatsRowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: 14,
+  marginBottom: 18,
+}
+
+const workspaceStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'minmax(360px, 0.92fr) minmax(440px, 1.28fr)',
+  gap: 18,
+  alignItems: 'start',
+}
+
+const editorPanelStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.9)',
+  borderRadius: 24,
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 18px 44px rgba(14,14,12,0.06), 0 4px 14px rgba(14,14,12,0.03)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  padding: '22px 24px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 18,
+  minWidth: 0,
+}
+
+const previewRailStyle: React.CSSProperties = {
+  minWidth: 0,
+}
+
+const previewRailInnerStyle: React.CSSProperties = {
+  position: 'sticky',
+  top: 22,
+  display: 'grid',
+  gap: 18,
+}
+
+const workspaceTabButtonStyle: React.CSSProperties = {
+  padding: '10px 14px',
+  borderRadius: 999,
+  border: '1px solid var(--border)',
+  background: 'rgba(255,255,255,0.88)',
   fontSize: 12.5,
   fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'background 0.18s, border-color 0.18s, color 0.18s',
+}
+
+const panelStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.9)',
+  borderRadius: 24,
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 18px 44px rgba(14,14,12,0.06), 0 4px 14px rgba(14,14,12,0.03)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+}
+
+const subtlePanelStyle: React.CSSProperties = {
+  padding: '14px 16px',
+  borderRadius: 16,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(250,248,246,0.9)',
+}
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11.5,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  marginBottom: 8,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  fontFamily: 'var(--font-display)',
+}
+
+const eyebrowLabelStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-display)',
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+}
+
+const previewSurfaceStyle: React.CSSProperties = {
+  ...panelStyle,
+  padding: 0,
+  overflow: 'hidden',
+}
+
+const previewFrameStyle: React.CSSProperties = {
+  display: 'grid',
+  minHeight: 820,
+  background: 'linear-gradient(180deg, #131111 0%, #131111 260px, rgba(247,244,241,0.88) 260px, rgba(247,244,241,0.94) 100%)',
+}
+
+const previewHeroStyle: React.CSSProperties = {
+  padding: '38px 38px 34px',
+}
+
+const previewEyebrowStyle: React.CSSProperties = {
+  fontSize: 11.5,
+  fontWeight: 700,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'rgba(255,255,255,0.5)',
+  marginBottom: 18,
+}
+
+const previewTitleStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-display)',
+  fontSize: 36,
+  fontWeight: 700,
+  color: '#fff',
+  lineHeight: 1.02,
+  letterSpacing: '-0.03em',
+}
+
+const previewDescriptionStyle: React.CSSProperties = {
+  fontSize: 14,
+  color: 'rgba(255,255,255,0.78)',
+  marginTop: 10,
+  lineHeight: 1.65,
+}
+
+const previewBodyStyle: React.CSSProperties = {
+  padding: '0 32px 32px',
+  display: 'grid',
+  gap: 18,
+}
+
+const previewMetaRowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 12,
+}
+
+const previewMetaCardStyle: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.74)',
+  padding: '16px 18px',
+}
+
+const previewMetaLabelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  marginBottom: 8,
+}
+
+const previewMetaValueStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-display)',
+  fontSize: 17,
+  color: 'var(--text)',
+  lineHeight: 1.2,
+}
+
+const previewQuestionCardStyle: React.CSSProperties = {
+  borderRadius: 24,
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(14,14,12,0.08)',
+  boxShadow: '0 22px 54px rgba(14,14,12,0.08), 0 4px 14px rgba(14,14,12,0.04)',
+  padding: 24,
+  display: 'grid',
+  gap: 16,
+}
+
+const previewQuestionBadgeStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '6px 10px',
+  borderRadius: 999,
+  background: 'rgba(198,35,104,0.08)',
+  color: 'var(--accent)',
+  fontSize: 11.5,
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  width: 'fit-content',
+}
+
+const previewStepButtonStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 999,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(250,248,246,0.82)',
+  fontSize: 12,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const previewScaleOptionStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 54,
+  borderRadius: 16,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(250,248,246,0.82)',
+  fontFamily: 'var(--font-display)',
+  fontSize: 18,
+  color: 'var(--text)',
+}
+
+const previewScaleAreaStyle: React.CSSProperties = {
+  minHeight: 120,
+  display: 'flex',
+  alignItems: 'center',
+}
+
+const previewTextAreaStyle: React.CSSProperties = {
+  minHeight: 120,
+  borderRadius: 16,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(250,248,246,0.82)',
+  padding: '16px 18px',
+  color: 'var(--text-3)',
+  fontSize: 14,
+  lineHeight: 1.7,
+}
+
+const previewPrimaryButtonStyle: React.CSSProperties = {
+  padding: '13px 20px',
+  background: 'var(--text)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 12,
+  fontFamily: 'var(--font-display)',
+  fontSize: 14,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const previewSecondaryButtonStyle: React.CSSProperties = {
+  ...previewPrimaryButtonStyle,
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  border: '1px solid var(--border)',
+}
+
+const previewMiniReviewStyle: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.74)',
+  padding: '16px 18px',
+}
+
+const previewEmptyStyle: React.CSSProperties = {
+  borderRadius: 18,
+  border: '1px dashed rgba(14,14,12,0.12)',
+  background: 'rgba(255,255,255,0.74)',
+  padding: '24px 20px',
+  color: 'var(--text-3)',
+  fontSize: 13.5,
+  lineHeight: 1.7,
+}
+
+const publishCardStyle: React.CSSProperties = {
+  ...panelStyle,
+  padding: '22px 24px',
+}
+
+const publishLinkCardStyle: React.CSSProperties = {
+  background: 'rgba(14,14,12,0.03)',
+  border: '1px solid var(--border)',
+  borderRadius: 14,
+  padding: '14px 14px 12px',
+}
+
+const publishQrCardStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  padding: 12,
+  background: 'rgba(14,14,12,0.03)',
+  border: '1px solid var(--border)',
+  borderRadius: 14,
+}
+
+const publishHintStyle: React.CSSProperties = {
+  ...subtlePanelStyle,
+  padding: '20px 22px',
 }

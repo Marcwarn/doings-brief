@@ -2,19 +2,39 @@
 
 ## Overview
 
-There is no migration tool (Flyway, Drizzle, Prisma migrate) configured in this project. Schema changes are applied directly in the Supabase Dashboard SQL editor or via Supabase CLI.
+There is no migration framework (Flyway, Drizzle, Prisma migrate) configured in this project. Schema changes are applied in Supabase, but the SQL files should still be versioned in the repo under `supabase/migrations/` for reviewability and history.
+
+When adding or changing schema:
+
+1. add a reviewed SQL file under `supabase/migrations/`
+2. apply the SQL via Supabase Dashboard SQL editor or Supabase CLI
+3. update `lib/supabase.ts`
+4. update docs if the feature inventory or architecture changed
 
 ## Current Schema Source of Truth
 
-The TypeScript types in `lib/supabase.ts` define the shape of database tables as used by the application. These are the authoritative types:
+The TypeScript types in `lib/supabase.ts` define the shape of database tables as used by the application, but SQL in `supabase/migrations/` is the reviewable change log for schema evolution.
+
+Current application-level table types:
 
 - `Profile` → `profiles` table
 - `QuestionSet` → `question_sets` table
 - `Question` → `questions` table
 - `BriefSession` → `brief_sessions` table
 - `BriefResponse` → `brief_responses` table
+- `DiscoveryTemplate` → `discovery_templates` table
+- `DiscoverySection` → `discovery_sections` table
+- `DiscoveryQuestion` → `discovery_questions` table
+- `DiscoveryQuestionOption` → `discovery_question_options` table
+- `DiscoverySession` → `discovery_sessions` table
+- `DiscoveryResponse` → `discovery_responses` table
+- `DiscoveryResponseOption` → `discovery_response_options` table
 
 The `settings` table is a key-value store (`key TEXT, value TEXT`) — it has no TypeScript type because it's schemaless by design.
+
+Recent Discovery column additions:
+
+- `discovery_templates.audience_mode` with allowed values `shared`, `leaders`, `mixed`
 
 ## Adding a New Column
 
@@ -26,7 +46,8 @@ The `settings` table is a key-value store (`key TEXT, value TEXT`) — it has no
 
 ## Adding a New Table
 
-1. Create the table in Supabase Dashboard
+1. Add a SQL migration file under `supabase/migrations/`
+2. Apply it in Supabase Dashboard or via Supabase CLI
 2. Set up RLS: enable RLS on the table, add appropriate policies
 3. If consultants should only see their own rows: add a policy like `auth.uid() = user_id`
 4. If admin routes need full access: admin client bypasses RLS (service role key)
