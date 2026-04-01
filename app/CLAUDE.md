@@ -23,7 +23,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 ## `/dashboard` — Konsultvy (kräver Supabase-session)
 
 - Översikt: pending/submitted per kund och dispatch
-- "Needs attention"-panel med aktiva dispatches
+- "Needs attention"-panel med aktiva dispatches + "Påminn"-knapp per utskick
 - Länk till sessionsdetalj, frågeuppsättningar, kunder, utskicksflöde
 - AI-sammanfattning per session (genereras via `/api/briefs/summarize`)
 - Word-export av brief + sammanfattning
@@ -62,6 +62,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 | `/api/briefs/send-invite` | Skickar inbjudningsmail med token-länk till klient |
 | `/api/briefs/summarize` | Genererar AI-sammanfattning via Llama-3.3-70B, cachas i settings |
 | `/api/briefs/batches` | Hämtar batch-metadata för dashboard-gruppering |
+| `/api/briefs/remind` | Skickar påminnelsemail till klienter som inte svarat; sparar `brief_reminder:{id}` i settings |
 | `/api/briefs/delete` | Tar bort session |
 | `/api/transcribe` | Skickar audio till KB-Whisper, returnerar text |
 | `/api/generate-questions` | AI-genererar frågeförslag |
@@ -72,13 +73,12 @@ Separat flöde från brief — används för att samla in feedback från kliente
 | `/api/evaluations` | Utvärderingsformulär-state |
 | `/api/admin/*` | Admin: bulk-template, invite, users |
 
-**Finns inte**: Påminnelsemail till klienter som inte svarat, token-expiry enforcement
+**Finns inte**: token-expiry enforcement
 
 ---
 
 ## Vad som genuint saknas (prioriterat)
 
-1. **Påminnelsemail** — ingen automatik om klient inte svarat
-2. **Token-expiry** — inbjudningslänkar gäller för evigt trots att copy säger 30 dagar
-3. **Autosave** — klient förlorar svar om webbläsaren stängs
-4. **Error boundary** — `app/dashboard/error.tsx` saknas
+1. **Token-expiry** — inbjudningslänkar gäller för evigt trots att copy säger 30 dagar
+2. **Autosave** — klient förlorar svar om webbläsaren stängs
+3. **Error boundary** — `app/dashboard/error.tsx` saknas

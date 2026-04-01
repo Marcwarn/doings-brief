@@ -11,7 +11,9 @@ Operational facts that are easy to forget and critical to get right.
 | **Klient-brief** `/brief/[token]` | Röstinspelning + realtidstransskription (KB-Whisper), waveform, timer, text-fallback, progress bar, review-screen, edit från review. Fungerar på mobil. | Autosave/draft (stänger webbläsaren = förlorar allt), token-expiry enforcement |
 | **Inbjudningsmail** | Branded HTML-mail med token-länk, reply-to satt till konsultens email, 30-dagars text i copy | 30-dagars text stämmer inte — ingen expiry-check i koden |
 | **Submission-notis** | Konsulten får mail med hela Q&A + dashboardlänk direkt när klienten skickar in | — |
-| **Dashboard** | Pending/submitted-counts per kund och dispatch, "Needs attention"-panel, länk till sessionsdetalj | Påminnelsemail till klienter som inte svarat, ingen overdue-indikator |
+| **Dashboard** | Pending/submitted-counts per kund och dispatch, "Needs attention"-panel med "Påminn"-knapp per utskick, länk till sessionsdetalj | Ingen overdue-indikator |
+| **Påminnelsemail** | `/api/briefs/remind` skickar branded påminnelsemail till pending-klienter. Duplicate-guard via `brief_reminder:{id}` i settings-tabellen. Knapp i "Needs attention"-panelen. | Automatisk schemalagd påminnelse (kräver cron) |
+
 | **AI-sammanfattning** | Llama-3.3-70B genererar summary, key signals, risks, follow-up questions, next steps. Cachas i settings-tabellen. | — |
 | **Word-export** | Exporterar brief + sammanfattning till .docx | PDF-export saknas |
 | **Frågeuppsättningar** | Konsult skapar/redigerar question sets, AI kan generera förslag | — |

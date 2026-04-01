@@ -189,6 +189,128 @@ export function parseStoredBriefSummary(raw: string | null | undefined) {
   }
 }
 
+export const BRIEF_AGENDA_KEY_PREFIX = 'brief_agenda:'
+
+export type BriefAgendaItem = {
+  item: string
+  timeEstimate: string
+}
+
+export type BriefAgendaPayload = {
+  objective: string
+  agendaItems: BriefAgendaItem[]
+  questionsToExplore: string[]
+  consultantPrep: string[]
+}
+
+export type StoredBriefAgenda = {
+  agenda: BriefAgendaPayload
+  updatedAt: string
+}
+
+export function getBriefAgendaKey(sessionId: string): string {
+  return `${BRIEF_AGENDA_KEY_PREFIX}${sessionId}`
+}
+
+export function parseBriefAgendaPayload(value: unknown): BriefAgendaPayload | null {
+  if (!value || typeof value !== 'object') return null
+  const c = value as Record<string, unknown>
+  const objective = typeof c.objective === 'string' ? c.objective.trim() : ''
+  if (!objective) return null
+
+  const agendaItems: BriefAgendaItem[] = Array.isArray(c.agendaItems)
+    ? c.agendaItems
+        .filter((i): i is Record<string, unknown> => !!i && typeof i === 'object')
+        .map(i => ({
+          item: typeof i.item === 'string' ? i.item.trim() : '',
+          timeEstimate: typeof i.timeEstimate === 'string' ? i.timeEstimate.trim() : '',
+        }))
+        .filter(i => i.item)
+        .slice(0, 6)
+    : []
+
+  return {
+    objective,
+    agendaItems,
+    questionsToExplore: normalizeStringList(c.questionsToExplore),
+    consultantPrep: normalizeStringList(c.consultantPrep),
+  }
+}
+
+export function parseStoredBriefAgenda(raw: string | null | undefined): StoredBriefAgenda | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as StoredBriefAgenda
+    const agenda = parseBriefAgendaPayload(parsed?.agenda)
+    if (!agenda) return null
+    return { agenda, updatedAt: parsed?.updatedAt || new Date().toISOString() }
+  } catch {
+    return null
+  }
+}
+
+export const BRIEF_COMPARE_KEY_PREFIX = 'brief_compare:'
+
+export type BriefComparisonQuestion = {
+  questionText: string
+  consensus: string
+  divergence: string
+}
+
+export type BriefComparisonPayload = {
+  overview: string
+  questionComparisons: BriefComparisonQuestion[]
+  commonThemes: string[]
+  keyDifferences: string[]
+}
+
+export type StoredBriefComparison = {
+  comparison: BriefComparisonPayload
+  updatedAt: string
+}
+
+export function getBriefCompareKey(dispatchId: string): string {
+  return `${BRIEF_COMPARE_KEY_PREFIX}${dispatchId}`
+}
+
+export function parseBriefComparisonPayload(value: unknown): BriefComparisonPayload | null {
+  if (!value || typeof value !== 'object') return null
+  const c = value as Record<string, unknown>
+  const overview = typeof c.overview === 'string' ? c.overview.trim() : ''
+  if (!overview) return null
+
+  const questionComparisons: BriefComparisonQuestion[] = Array.isArray(c.questionComparisons)
+    ? c.questionComparisons
+        .filter((i): i is Record<string, unknown> => !!i && typeof i === 'object')
+        .map(i => ({
+          questionText: typeof i.questionText === 'string' ? i.questionText.trim() : '',
+          consensus: typeof i.consensus === 'string' ? i.consensus.trim() : '',
+          divergence: typeof i.divergence === 'string' ? i.divergence.trim() : '',
+        }))
+        .filter(i => i.questionText)
+        .slice(0, 20)
+    : []
+
+  return {
+    overview,
+    questionComparisons,
+    commonThemes: normalizeStringList(c.commonThemes),
+    keyDifferences: normalizeStringList(c.keyDifferences),
+  }
+}
+
+export function parseStoredBriefComparison(raw: string | null | undefined): StoredBriefComparison | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as StoredBriefComparison
+    const comparison = parseBriefComparisonPayload(parsed?.comparison)
+    if (!comparison) return null
+    return { comparison, updatedAt: parsed?.updatedAt || new Date().toISOString() }
+  } catch {
+    return null
+  }
+}
+
 function fallbackGroupKey(session: BriefSession) {
   const organisation = session.client_organisation?.trim().toLowerCase()
   if (organisation) return `org:${organisation}`

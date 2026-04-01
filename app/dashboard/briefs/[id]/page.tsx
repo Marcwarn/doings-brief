@@ -14,6 +14,14 @@ type BriefSummary = {
   basedOn: string[]
 }
 
+type BriefAgendaItem = { item: string; timeEstimate: string }
+type BriefAgenda = {
+  objective: string
+  agendaItems: BriefAgendaItem[]
+  questionsToExplore: string[]
+  consultantPrep: string[]
+}
+
 export default function BriefResponsesPage() {
   const { id } = useParams<{ id: string }>()
   const router  = useRouter()
@@ -30,6 +38,10 @@ export default function BriefResponsesPage() {
   const [summary, setSummary] = useState<BriefSummary | null>(null)
   const [summaryUpdatedAt, setSummaryUpdatedAt] = useState<string | null>(null)
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const [agenda, setAgenda] = useState<BriefAgenda | null>(null)
+  const [agendaUpdatedAt, setAgendaUpdatedAt] = useState<string | null>(null)
+  const [generatingAgenda, setGeneratingAgenda] = useState(false)
+  const [agendaError, setAgendaError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -47,17 +59,30 @@ export default function BriefResponsesPage() {
     let isMounted = true
     setLoadingSummary(true)
 
-    fetch('/api/briefs/summarize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId: session.id, cachedOnly: true }),
-    })
-      .then(async response => {
-        const payload = await response.json().catch(() => null)
+    Promise.all([
+      fetch('/api/briefs/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, cachedOnly: true }),
+      }),
+      fetch('/api/briefs/agenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, cachedOnly: true }),
+      }),
+    ])
+      .then(async ([summaryRes, agendaRes]) => {
         if (!isMounted) return
-        if (!response.ok) return
-        setSummary(payload?.summary || null)
-        setSummaryUpdatedAt(payload?.updatedAt || null)
+        const summaryPayload = await summaryRes.json().catch(() => null)
+        if (summaryRes.ok) {
+          setSummary(summaryPayload?.summary || null)
+          setSummaryUpdatedAt(summaryPayload?.updatedAt || null)
+        }
+        const agendaPayload = await agendaRes.json().catch(() => null)
+        if (agendaRes.ok) {
+          setAgenda(agendaPayload?.agenda || null)
+          setAgendaUpdatedAt(agendaPayload?.updatedAt || null)
+        }
       })
       .catch(() => {
         if (!isMounted) return
@@ -205,6 +230,30 @@ export default function BriefResponsesPage() {
     }
   }
 
+  async function generateAgenda(regenerate = false) {
+    if (!session || responses.length === 0 || generatingAgenda) return
+    setGeneratingAgenda(true)
+    setAgendaError(null)
+    try {
+      const response = await fetch('/api/briefs/agenda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, regenerate }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || !payload?.agenda) {
+        setAgendaError(payload?.error || 'Kunde inte skapa mötesagendan.')
+        return
+      }
+      setAgenda(payload.agenda)
+      setAgendaUpdatedAt(payload.updatedAt || null)
+    } catch {
+      setAgendaError('Nätverksfel. Försök igen.')
+    } finally {
+      setGeneratingAgenda(false)
+    }
+  }
+
   async function copySummary() {
     if (!summary) return
 
@@ -318,12 +367,32 @@ export default function BriefResponsesPage() {
               onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
               {summarizing ? 'Sammanfattar med AI...' : (summary ? 'Generera om AI-sammanfattning' : 'Sammanfatta med AI')}
             </button>
+            <button
+              onClick={() => generateAgenda(Boolean(agenda))}
+              disabled={generatingAgenda}
+              style={{
+                padding: '9px 18px', borderRadius: 7,
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                fontSize: 13, fontWeight: 500, color: 'var(--text-2)',
+                cursor: generatingAgenda ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-sans)',
+                transition: 'border-color 0.15s',
+                opacity: generatingAgenda ? 0.65 : 1,
+              }}
+              onMouseEnter={e => {
+                if (!generatingAgenda) e.currentTarget.style.borderColor = 'var(--accent)'
+              }}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+              {generatingAgenda ? 'Förbereder möte...' : (agenda ? 'Generera om mötesagenda' : 'Förbered möte')}
+            </button>
           </div>
           {exportError && (
             <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{exportError}</p>
           )}
           {summaryError && (
             <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{summaryError}</p>
+          )}
+          {agendaError && (
+            <p style={{ margin: 0, fontSize: 12.5, color: '#b91c1c' }}>{agendaError}</p>
           )}
           {loadingSummary && !summary && (
             <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>Läser sparad AI-sammanfattning...</p>
@@ -391,6 +460,45 @@ export default function BriefResponsesPage() {
             </SummaryBlock>
             <SummaryBlock title="Bygger främst på">
               <SummaryList items={summary.basedOn} emptyLabel="AI:n angav inget tydligt underlag." />
+            </SummaryBlock>
+          </div>
+        </div>
+      )}
+
+      {agenda && (
+        <div style={{ marginTop: 20, background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-sub)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.01em' }}>
+              Mötesagenda
+            </div>
+            <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.55 }}>
+              Förberedelsematerial inför kundmötet.
+              {agendaUpdatedAt && (
+                <> Senast genererad {new Date(agendaUpdatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.</>
+              )}
+            </p>
+          </div>
+          <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <SummaryBlock title="Syfte med mötet">
+              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.7 }}>{agenda.objective}</p>
+            </SummaryBlock>
+            {agenda.agendaItems.length > 0 && (
+              <SummaryBlock title="Agendapunkter">
+                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {agenda.agendaItems.map(i => (
+                    <li key={i.item} style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
+                      <span style={{ fontWeight: 500 }}>{i.item}</span>
+                      {i.timeEstimate && <span style={{ color: 'var(--text-3)', marginLeft: 8, fontSize: 12.5 }}>{i.timeEstimate}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </SummaryBlock>
+            )}
+            <SummaryBlock title="Frågor att utforska">
+              <SummaryList items={agenda.questionsToExplore} emptyLabel="Inga frågor föreslogs." />
+            </SummaryBlock>
+            <SummaryBlock title="Förbered som konsult">
+              <SummaryList items={agenda.consultantPrep} emptyLabel="Inga förberedelser föreslogs." />
             </SummaryBlock>
           </div>
         </div>
