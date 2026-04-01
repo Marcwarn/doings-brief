@@ -249,6 +249,68 @@ export function parseStoredBriefAgenda(raw: string | null | undefined): StoredBr
   }
 }
 
+export const BRIEF_COMPARE_KEY_PREFIX = 'brief_compare:'
+
+export type BriefComparisonQuestion = {
+  questionText: string
+  consensus: string
+  divergence: string
+}
+
+export type BriefComparisonPayload = {
+  overview: string
+  questionComparisons: BriefComparisonQuestion[]
+  commonThemes: string[]
+  keyDifferences: string[]
+}
+
+export type StoredBriefComparison = {
+  comparison: BriefComparisonPayload
+  updatedAt: string
+}
+
+export function getBriefCompareKey(dispatchId: string): string {
+  return `${BRIEF_COMPARE_KEY_PREFIX}${dispatchId}`
+}
+
+export function parseBriefComparisonPayload(value: unknown): BriefComparisonPayload | null {
+  if (!value || typeof value !== 'object') return null
+  const c = value as Record<string, unknown>
+  const overview = typeof c.overview === 'string' ? c.overview.trim() : ''
+  if (!overview) return null
+
+  const questionComparisons: BriefComparisonQuestion[] = Array.isArray(c.questionComparisons)
+    ? c.questionComparisons
+        .filter((i): i is Record<string, unknown> => !!i && typeof i === 'object')
+        .map(i => ({
+          questionText: typeof i.questionText === 'string' ? i.questionText.trim() : '',
+          consensus: typeof i.consensus === 'string' ? i.consensus.trim() : '',
+          divergence: typeof i.divergence === 'string' ? i.divergence.trim() : '',
+        }))
+        .filter(i => i.questionText)
+        .slice(0, 20)
+    : []
+
+  return {
+    overview,
+    questionComparisons,
+    commonThemes: normalizeStringList(c.commonThemes),
+    keyDifferences: normalizeStringList(c.keyDifferences),
+  }
+}
+
+export function parseStoredBriefComparison(raw: string | null | undefined): StoredBriefComparison | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as StoredBriefComparison
+    const comparison = parseBriefComparisonPayload(parsed?.comparison)
+    if (!comparison) return null
+    return { comparison, updatedAt: parsed?.updatedAt || new Date().toISOString() }
+  } catch {
+    return null
+  }
+}
+
 function fallbackGroupKey(session: BriefSession) {
   const organisation = session.client_organisation?.trim().toLowerCase()
   if (organisation) return `org:${organisation}`

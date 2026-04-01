@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient, type BriefSession } from '@/lib/supabase'
+import { createClient, type BriefSession, type BriefResponse } from '@/lib/supabase'
 
 type BriefDispatch = {
   dispatchId: string
@@ -26,6 +26,20 @@ type DispatchPayload = {
   sessions: BriefSession[]
 }
 
+type QuestionGroup = {
+  orderIndex: number
+  questionText: string
+  answers: Array<{ sessionId: string; name: string; role: string | null; text: string }>
+}
+
+type BriefComparisonQuestion = { questionText: string; consensus: string; divergence: string }
+type BriefComparison = {
+  overview: string
+  questionComparisons: BriefComparisonQuestion[]
+  commonThemes: string[]
+  keyDifferences: string[]
+}
+
 export default function DispatchPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -36,6 +50,13 @@ export default function DispatchPage() {
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deletingDispatch, setDeletingDispatch] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'data'>('overview')
+  const [questionGroups, setQuestionGroups] = useState<QuestionGroup[]>([])
+  const [loadingData, setLoadingData] = useState(false)
+  const [comparison, setComparison] = useState<BriefComparison | null>(null)
+  const [comparisonUpdatedAt, setComparisonUpdatedAt] = useState<string | null>(null)
+  const [comparing, setComparing] = useState(false)
+  const [compareError, setCompareError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -84,6 +105,107 @@ export default function DispatchPage() {
     [sessions]
   )
   const pendingCount = sessions.length - submittedCount
+
+  const submittedSessions = useMemo(
+    () => sessions.filter(s => s.status === 'submitted'),
+    [sessions]
+  )
+
+  // Load response data + cached comparison when Data tab is activated
+  useEffect(() => {
+    if (activeTab !== 'data' || !payload || submittedSessions.length === 0) return
+    if (questionGroups.length > 0) return // already loaded
+
+    let cancelled = false
+    setLoadingData(true)
+
+    const sessionIds = submittedSessions.map(s => s.id)
+    const contactBySessionId = Object.fromEntries(
+      payload.dispatch.contacts.map(c => [c.sessionId, c])
+    )
+
+    Promise.all([
+      sb.from('brief_responses')
+        .select('*')
+        .in('session_id', sessionIds)
+        .order('order_index'),
+      payload.dispatch.dispatchId
+        ? fetch('/api/briefs/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              dispatchId: payload.dispatch.dispatchId,
+              sessionIds,
+              cachedOnly: true,
+            }),
+          }).then(r => r.json()).catch(() => null)
+        : Promise.resolve(null),
+    ]).then(([{ data: responses }, cachedPayload]) => {
+      if (cancelled) return
+
+      if (responses) {
+        const map = new Map<number, QuestionGroup>()
+        for (const r of responses as BriefResponse[]) {
+          const existing = map.get(r.order_index)
+          const session = submittedSessions.find(s => s.id === r.session_id)
+          const contact = contactBySessionId[r.session_id]
+          const answer = {
+            sessionId: r.session_id,
+            name: session?.client_name || r.session_id,
+            role: contact?.role || null,
+            text: r.text_content?.trim() || 'Inget svar',
+          }
+          if (existing) {
+            existing.answers.push(answer)
+          } else {
+            map.set(r.order_index, { orderIndex: r.order_index, questionText: r.question_text, answers: [answer] })
+          }
+        }
+        setQuestionGroups(
+          Array.from(map.entries()).sort(([a], [b]) => a - b).map(([, q]) => q)
+        )
+      }
+
+      if (cachedPayload?.comparison) {
+        setComparison(cachedPayload.comparison)
+        setComparisonUpdatedAt(cachedPayload.updatedAt || null)
+      }
+
+      setLoadingData(false)
+    }).catch(() => {
+      if (!cancelled) setLoadingData(false)
+    })
+
+    return () => { cancelled = true }
+  }, [activeTab, payload, submittedSessions, questionGroups.length])
+
+  async function runComparison(regenerate = false) {
+    if (!payload || submittedSessions.length < 2 || comparing) return
+    setComparing(true)
+    setCompareError(null)
+    try {
+      const response = await fetch('/api/briefs/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dispatchId: payload.dispatch.dispatchId,
+          sessionIds: submittedSessions.map(s => s.id),
+          regenerate,
+        }),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.comparison) {
+        setCompareError(data?.error || 'Kunde inte analysera svaren.')
+        return
+      }
+      setComparison(data.comparison)
+      setComparisonUpdatedAt(data.updatedAt || null)
+    } catch {
+      setCompareError('Nätverksfel. Försök igen.')
+    } finally {
+      setComparing(false)
+    }
+  }
 
   async function deleteDispatch() {
     if (!payload) return
@@ -169,6 +291,33 @@ export default function DispatchPage() {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 2, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
+        {(['overview', 'data'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '8px 18px',
+              background: 'none',
+              border: 'none',
+              borderBottom: `2px solid ${activeTab === tab ? 'var(--accent)' : 'transparent'}`,
+              fontFamily: 'var(--font-display)',
+              fontSize: 13,
+              fontWeight: activeTab === tab ? 700 : 500,
+              color: activeTab === tab ? 'var(--text)' : 'var(--text-3)',
+              cursor: 'pointer',
+              marginBottom: -1,
+              transition: 'color 0.1s',
+            }}
+          >
+            {tab === 'overview' ? 'Översikt' : 'Data'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' && (
+      <>
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.7fr', gap: 18, marginBottom: 18 }}>
         <SectionCard title="Översikt">
           <OverviewGrid
@@ -277,6 +426,137 @@ export default function DispatchPage() {
           </div>
         </SectionCard>
       </div>
+      </>
+      )}
+
+      {activeTab === 'data' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {submittedSessions.length === 0 ? (
+            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '48px 24px', textAlign: 'center', border: '1px solid var(--border)' }}>
+              <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                Inga svar har kommit in ännu.
+              </p>
+            </div>
+          ) : loadingData ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {[0,1,2].map(i => (
+                  <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: 'bounce 1s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Response grid per question */}
+              {questionGroups.map((q, qi) => (
+                <div key={q.orderIndex} style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border-sub)', background: 'var(--bg)' }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                      Fråga {qi + 1}
+                    </span>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>
+                      {q.questionText}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)' }}>
+                    {q.answers.map(a => (
+                      <div key={a.sessionId} style={{ background: 'var(--surface)', padding: '14px 18px' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 6 }}>
+                          {a.name}{a.role ? <span style={{ fontWeight: 400 }}> · {a.role}</span> : null}
+                        </div>
+                        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                          {a.text}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {/* AI comparison section */}
+              <div style={{ background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', marginTop: 4 }}>
+                <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid var(--border-sub)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                  <div>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                      AI-jämförelse
+                    </span>
+                    {comparisonUpdatedAt && (
+                      <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-3)' }}>
+                        Senast genererad {new Date(comparisonUpdatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
+                  {submittedSessions.length >= 2 && (
+                    <button
+                      onClick={() => void runComparison(Boolean(comparison))}
+                      disabled={comparing}
+                      style={{
+                        padding: '8px 16px', borderRadius: 7,
+                        border: '1px solid var(--border)', background: 'var(--surface)',
+                        fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)',
+                        cursor: comparing ? 'not-allowed' : 'pointer',
+                        fontFamily: 'var(--font-sans)', transition: 'border-color 0.15s',
+                        opacity: comparing ? 0.65 : 1, flexShrink: 0,
+                      }}
+                      onMouseEnter={e => { if (!comparing) e.currentTarget.style.borderColor = 'var(--accent)' }}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                    >
+                      {comparing ? 'Analyserar...' : (comparison ? 'Analysera om' : 'Analysera med AI')}
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ padding: '18px' }}>
+                  {submittedSessions.length < 2 && (
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                      Jämförelse kräver minst 2 respondenter som svarat.
+                    </p>
+                  )}
+                  {compareError && (
+                    <p style={{ margin: '0 0 12px', fontSize: 12.5, color: '#b91c1c' }}>{compareError}</p>
+                  )}
+                  {!comparison && !compareError && submittedSessions.length >= 2 && (
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>
+                      Klicka på "Analysera med AI" för att se var respondenterna är överens och var de divergerar.
+                    </p>
+                  )}
+                  {comparison && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      <DataBlock title="Övergripande analys">
+                        <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text)', lineHeight: 1.7 }}>{comparison.overview}</p>
+                      </DataBlock>
+
+                      {comparison.questionComparisons.map((qc, i) => (
+                        <DataBlock key={i} title={`Fråga ${i + 1}: ${qc.questionText}`}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div style={{ background: '#f0fdf4', borderRadius: 7, padding: '10px 14px' }}>
+                              <div style={{ fontSize: 10.5, fontWeight: 700, color: '#15803d', letterSpacing: '0.05em', marginBottom: 6 }}>ÖVERENS</div>
+                              <p style={{ margin: 0, fontSize: 13, color: '#14532d', lineHeight: 1.6 }}>{qc.consensus || '–'}</p>
+                            </div>
+                            <div style={{ background: '#fef9c3', borderRadius: 7, padding: '10px 14px' }}>
+                              <div style={{ fontSize: 10.5, fontWeight: 700, color: '#92400e', letterSpacing: '0.05em', marginBottom: 6 }}>SKILJER SIG</div>
+                              <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.6 }}>{qc.divergence || '–'}</p>
+                            </div>
+                          </div>
+                        </DataBlock>
+                      ))}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <DataBlock title="Gemensamma teman">
+                          <DataList items={comparison.commonThemes} emptyLabel="Inga gemensamma teman identifierades." />
+                        </DataBlock>
+                        <DataBlock title="Viktiga skillnader">
+                          <DataList items={comparison.keyDifferences} emptyLabel="Inga tydliga skillnader identifierades." />
+                        </DataBlock>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -454,6 +734,30 @@ const linkButtonStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.01em',
   textDecoration: 'none',
+}
+
+function DataBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.01em' }}>
+        {title}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function DataList({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
+  if (items.length === 0) {
+    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)', fontStyle: 'italic' }}>{emptyLabel}</p>
+  }
+  return (
+    <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {items.map(item => (
+        <li key={item} style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>{item}</li>
+      ))}
+    </ul>
+  )
 }
 
 function PageLoader() {
