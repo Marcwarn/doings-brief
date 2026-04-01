@@ -189,6 +189,66 @@ export function parseStoredBriefSummary(raw: string | null | undefined) {
   }
 }
 
+export const BRIEF_AGENDA_KEY_PREFIX = 'brief_agenda:'
+
+export type BriefAgendaItem = {
+  item: string
+  timeEstimate: string
+}
+
+export type BriefAgendaPayload = {
+  objective: string
+  agendaItems: BriefAgendaItem[]
+  questionsToExplore: string[]
+  consultantPrep: string[]
+}
+
+export type StoredBriefAgenda = {
+  agenda: BriefAgendaPayload
+  updatedAt: string
+}
+
+export function getBriefAgendaKey(sessionId: string): string {
+  return `${BRIEF_AGENDA_KEY_PREFIX}${sessionId}`
+}
+
+export function parseBriefAgendaPayload(value: unknown): BriefAgendaPayload | null {
+  if (!value || typeof value !== 'object') return null
+  const c = value as Record<string, unknown>
+  const objective = typeof c.objective === 'string' ? c.objective.trim() : ''
+  if (!objective) return null
+
+  const agendaItems: BriefAgendaItem[] = Array.isArray(c.agendaItems)
+    ? c.agendaItems
+        .filter((i): i is Record<string, unknown> => !!i && typeof i === 'object')
+        .map(i => ({
+          item: typeof i.item === 'string' ? i.item.trim() : '',
+          timeEstimate: typeof i.timeEstimate === 'string' ? i.timeEstimate.trim() : '',
+        }))
+        .filter(i => i.item)
+        .slice(0, 6)
+    : []
+
+  return {
+    objective,
+    agendaItems,
+    questionsToExplore: normalizeStringList(c.questionsToExplore),
+    consultantPrep: normalizeStringList(c.consultantPrep),
+  }
+}
+
+export function parseStoredBriefAgenda(raw: string | null | undefined): StoredBriefAgenda | null {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as StoredBriefAgenda
+    const agenda = parseBriefAgendaPayload(parsed?.agenda)
+    if (!agenda) return null
+    return { agenda, updatedAt: parsed?.updatedAt || new Date().toISOString() }
+  } catch {
+    return null
+  }
+}
+
 function fallbackGroupKey(session: BriefSession) {
   const organisation = session.client_organisation?.trim().toLowerCase()
   if (organisation) return `org:${organisation}`
