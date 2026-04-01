@@ -136,6 +136,7 @@ export default function DispatchPage() {
             body: JSON.stringify({
               dispatchId: payload.dispatch.dispatchId,
               sessionIds,
+              contacts: payload.dispatch.contacts,
               cachedOnly: true,
             }),
           }).then(r => r.json()).catch(() => null)
@@ -190,6 +191,7 @@ export default function DispatchPage() {
         body: JSON.stringify({
           dispatchId: payload.dispatch.dispatchId,
           sessionIds: submittedSessions.map(s => s.id),
+          contacts: payload.dispatch.contacts,
           regenerate,
         }),
       })

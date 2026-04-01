@@ -19,13 +19,27 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { dispatchId, sessionIds, regenerate = false, cachedOnly = false } = await req.json()
+    const {
+      dispatchId,
+      sessionIds,
+      contacts = [],
+      regenerate = false,
+      cachedOnly = false,
+    } = await req.json()
 
     if (!dispatchId || typeof dispatchId !== 'string') {
       return NextResponse.json({ error: 'dispatchId krävs' }, { status: 400 })
     }
     if (!Array.isArray(sessionIds) || sessionIds.length < 2) {
       return NextResponse.json({ error: 'Minst 2 sessionIds krävs för jämförelse' }, { status: 400 })
+    }
+
+    // Build contacts lookup from client-supplied contacts (avoids extra DB round-trip)
+    const contactsBySessionId: Record<string, { role: string | null }> = {}
+    if (Array.isArray(contacts)) {
+      for (const c of contacts) {
+        if (c?.sessionId) contactsBySessionId[c.sessionId] = { role: c.role || null }
+      }
     }
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -62,26 +76,6 @@ export async function POST(req: NextRequest) {
 
     if (!sessions || sessions.length === 0) {
       return NextResponse.json({ error: 'Sessioner hittades inte' }, { status: 404 })
-    }
-
-    // Fetch all contacts from settings to get roles
-    const { data: settingsRow } = await admin
-      .from('settings')
-      .select('value')
-      .like('key', 'brief_dispatch:%')
-      .contains('value', dispatchId)
-      .maybeSingle()
-
-    let contactsBySessionId: Record<string, { role: string | null }> = {}
-    if (settingsRow?.value) {
-      try {
-        const parsed = JSON.parse(settingsRow.value)
-        if (Array.isArray(parsed?.contacts)) {
-          for (const c of parsed.contacts) {
-            if (c.sessionId) contactsBySessionId[c.sessionId] = { role: c.role || null }
-          }
-        }
-      } catch { /* ignore */ }
     }
 
     // Fetch all responses for submitted sessions, ordered by session + question
