@@ -16,6 +16,7 @@ type EvaluationDetailPayload = {
     questionSetName: string | null
     collectEmail: boolean
     createdAt: string
+    senderGroupId: string | null
   }
   questionSet: {
     id: string
@@ -49,8 +50,16 @@ export default function EvaluationDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [view, setView] = useState<'questions' | 'participants'>('questions')
+  const [view, setView] = useState<'questions' | 'participants' | 'loop'>('questions')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Loop / sender.net state
+  const [senderGroups, setSenderGroups] = useState<{ id: string; name: string }[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
+  const [groupsConfigured, setGroupsConfigured] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState('')
+  const [savingGroup, setSavingGroup] = useState(false)
+  const [groupSaveResult, setGroupSaveResult] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/evaluations/${id}`)
@@ -65,6 +74,47 @@ export default function EvaluationDetailPage() {
         setLoading(false)
       })
   }, [id])
+
+  // Load sender.net groups when loop tab opens
+  useEffect(() => {
+    if (view !== 'loop') return
+    if (senderGroups.length > 0 || loadingGroups) return
+    setLoadingGroups(true)
+    fetch('/api/sender/groups')
+      .then(r => r.json())
+      .then(data => {
+        setSenderGroups(data.groups || [])
+        setGroupsConfigured(data.configured !== false)
+        if (payload?.evaluation.senderGroupId) {
+          setSelectedGroup(payload.evaluation.senderGroupId)
+        }
+        setLoadingGroups(false)
+      })
+      .catch(() => setLoadingGroups(false))
+  }, [view, senderGroups.length, loadingGroups, payload])
+
+  async function saveGroupConnection() {
+    if (!payload) return
+    setSavingGroup(true)
+    setGroupSaveResult(null)
+    try {
+      const res = await fetch(`/api/evaluations/${payload.evaluation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senderGroupId: selectedGroup || null }),
+      })
+      const data = await res.json()
+      if (data.error) setGroupSaveResult(`Fel: ${data.error}`)
+      else {
+        setGroupSaveResult('Sparad!')
+        setPayload(prev => prev ? { ...prev, evaluation: { ...prev.evaluation, senderGroupId: data.senderGroupId } } : prev)
+      }
+    } catch {
+      setGroupSaveResult('Nätverksfel')
+    } finally {
+      setSavingGroup(false)
+    }
+  }
 
   const publicUrl = useMemo(() => (
     payload ? `${window.location.origin}/evaluation/${payload.evaluation.token}` : ''
@@ -255,6 +305,9 @@ export default function EvaluationDetailPage() {
               <button type="button" onClick={() => setView('participants')} style={pickerButtonStyle(view === 'participants')}>
                 Per deltagare
               </button>
+              <button type="button" onClick={() => setView('loop')} style={pickerButtonStyle(view === 'loop')}>
+                Uppföljning
+              </button>
             </div>
             <input
               value={searchQuery}
@@ -264,7 +317,21 @@ export default function EvaluationDetailPage() {
             />
           </div>
 
-          {responses.length === 0 ? (
+          {view === 'loop' ? (
+            <LoopSection
+              evalId={evaluation.id}
+              collectEmail={evaluation.collectEmail}
+              senderGroupId={evaluation.senderGroupId}
+              groups={senderGroups}
+              loadingGroups={loadingGroups}
+              groupsConfigured={groupsConfigured}
+              selectedGroup={selectedGroup}
+              onSelectGroup={setSelectedGroup}
+              onSave={saveGroupConnection}
+              saving={savingGroup}
+              saveResult={groupSaveResult}
+            />
+          ) : responses.length === 0 ? (
             <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-3)' }}>
               Inga deltagare har svarat ännu.
             </p>
@@ -333,6 +400,108 @@ export default function EvaluationDetailPage() {
           )}
         </SectionCard>
       </div>
+    </div>
+  )
+}
+
+function LoopSection({
+  evalId: _evalId,
+  collectEmail,
+  senderGroupId,
+  groups,
+  loadingGroups,
+  groupsConfigured,
+  selectedGroup,
+  onSelectGroup,
+  onSave,
+  saving,
+  saveResult,
+}: {
+  evalId: string
+  collectEmail: boolean
+  senderGroupId: string | null
+  groups: { id: string; name: string }[]
+  loadingGroups: boolean
+  groupsConfigured: boolean
+  selectedGroup: string
+  onSelectGroup: (id: string) => void
+  onSave: () => void
+  saving: boolean
+  saveResult: string | null
+}) {
+  if (!collectEmail) {
+    return (
+      <div style={{ padding: '14px 16px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-3)' }}>
+        Uppföljning via sender.net kräver att e-postinsamling är aktiverat för den här utvärderingen.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+        Koppla en sender.net-grupp till den här utvärderingen. Varje deltagare som skickar in svar läggs automatiskt till i gruppen och triggar din automation i sender.net — t.ex. ett tackmail efter en vecka.
+      </p>
+
+      {senderGroupId && (
+        <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
+          Ansluten: {groups.find(g => g.id === senderGroupId)?.name || senderGroupId}
+        </div>
+      )}
+
+      {!groupsConfigured && !loadingGroups && (
+        <div style={{ padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, fontSize: 13, color: '#92400e' }}>
+          <strong>SENDER_API_KEY</strong> är inte konfigurerad i Vercel. Lägg till den för att aktivera sender.net-integration.
+        </div>
+      )}
+
+      {loadingGroups ? (
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar grupper…</p>
+      ) : groupsConfigured && groups.length === 0 ? (
+        <div style={{ padding: '12px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-3)' }}>
+          Inga grupper hittades i sender.net. Skapa en grupp i sender.net-dashboarden först.
+        </div>
+      ) : groupsConfigured ? (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)' }}>Välj sender.net-grupp</label>
+          <select
+            value={selectedGroup}
+            onChange={e => onSelectGroup(e.target.value)}
+            style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text)', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="">— Ingen koppling —</option>
+            {groups.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      {groupsConfigured && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            style={{
+              padding: '8px 16px',
+              background: saving ? 'var(--border)' : 'var(--accent)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: saving ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {saving ? 'Sparar…' : 'Spara koppling'}
+          </button>
+          {saveResult && (
+            <span style={{ fontSize: 13, color: saveResult.startsWith('Fel') ? '#b91c1c' : '#15803d', fontWeight: 600 }}>
+              {saveResult}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

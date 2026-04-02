@@ -152,6 +152,7 @@ export async function POST(req: NextRequest) {
       collectEmail: resolvedCollectEmail,
       createdBy: user.id,
       createdAt,
+      senderGroupId: null,
     }
 
     const rows = [

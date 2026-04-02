@@ -98,6 +98,42 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   }
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const supabase = getSupabaseRequestClient()
+    const admin = getSupabaseAdminClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Obehörig' }, { status: 401 })
+
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Ogiltig förfrågan' }, { status: 400 })
+    }
+
+    const key = `evaluation:${params.id}`
+    const { data: row } = await admin.from('settings').select('value').eq('key', key).single()
+    const evaluation = parseEvaluationMetadata(row?.value)
+    if (!evaluation) return NextResponse.json({ error: 'Utvärderingen hittades inte.' }, { status: 404 })
+    if (evaluation.createdBy !== user.id) return NextResponse.json({ error: 'Åtkomst nekad.' }, { status: 403 })
+
+    const updated = {
+      ...evaluation,
+      senderGroupId: 'senderGroupId' in body
+        ? (typeof body.senderGroupId === 'string' && body.senderGroupId.trim() ? body.senderGroupId.trim() : null)
+        : evaluation.senderGroupId,
+    }
+
+    const { error } = await admin.from('settings').upsert({ key, value: JSON.stringify(updated) })
+    if (error) return NextResponse.json({ error: 'Kunde inte uppdatera utvärderingen.' }, { status: 500 })
+
+    return NextResponse.json({ ok: true, senderGroupId: updated.senderGroupId })
+  } catch (error) {
+    console.error('evaluation PATCH error:', error)
+    return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 })
+  }
+}
+
 export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     const supabase = getSupabaseRequestClient()

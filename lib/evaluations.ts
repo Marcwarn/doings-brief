@@ -22,6 +22,7 @@ export type EvaluationMetadata = {
   collectEmail: boolean
   createdBy: string
   createdAt: string
+  senderGroupId: string | null
 }
 
 export type EvaluationAnswer = {
@@ -122,6 +123,7 @@ export function parseEvaluationMetadata(raw: string | null | undefined) {
       collectEmail: parsed.collectEmail !== false,
       createdBy: parsed.createdBy,
       createdAt: parsed.createdAt,
+      senderGroupId: typeof parsed.senderGroupId === 'string' && parsed.senderGroupId.trim() ? parsed.senderGroupId.trim() : null,
     } satisfies EvaluationMetadata
   } catch {
     return null

@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
+import { addSubscriberToGroup } from '@/lib/sender'
 import {
   EvaluationResponseRecord,
   getEvaluationKey,
@@ -121,6 +122,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     if (upsertError) {
       console.error('evaluation submit upsert error:', upsertError)
       return NextResponse.json({ error: 'Kunde inte spara svaret.' }, { status: 500 })
+    }
+
+    // Add to sender.net group if configured — fire-and-forget, never blocks submission
+    if (evaluation.senderGroupId && normalizedEmail) {
+      addSubscriberToGroup({ email: normalizedEmail, groupId: evaluation.senderGroupId }).catch(err =>
+        console.error('sender.net subscribe error:', err)
+      )
     }
 
     return NextResponse.json({ ok: true })
