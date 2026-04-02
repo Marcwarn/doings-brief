@@ -1155,7 +1155,11 @@ export default function DiscoveryPage() {
           return {
             ...question,
             max: Math.max(1, Math.min(value || 1, question.options.length || 1)),
-      
+          }
+        }),
+      }
+    }))
+  }
 
   function addQuestion(categoryId: string) {
     setBuilderCategories(prev => prev.map(category => {
