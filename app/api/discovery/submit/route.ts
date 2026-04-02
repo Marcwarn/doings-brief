@@ -10,9 +10,11 @@ type DiscoverySubmitPayload = {
 
 type SubmittedResponse = {
   questionId: string
-  responseType: 'open' | 'choice' | 'scale'
+  responseType: 'open' | 'choice' | 'scale' | 'likert'
   textValue: string | null
   scaleValue: number | null
+  likertAgreement: number | null
+  likertImportance: number | null
   selectedOptions: string[]
 }
 
@@ -51,9 +53,11 @@ function normalizeSubmittedResponses(value: unknown) {
 
     const item = rawItem as Record<string, unknown>
     const questionId = asTrimmedString(item.questionId)
-    const responseType = item.responseType === 'choice' || item.responseType === 'scale' ? item.responseType : 'open'
+    const responseType = item.responseType === 'choice' || item.responseType === 'scale' || item.responseType === 'likert' ? item.responseType : 'open'
     const textValue = responseType === 'open' ? asTrimmedString(item.textValue) : ''
     const scaleValue = responseType === 'scale' ? asIntegerOrNull(item.scaleValue) : null
+    const likertAgreement = responseType === 'likert' ? asIntegerOrNull(item.likertAgreement) : null
+    const likertImportance = responseType === 'likert' ? asIntegerOrNull(item.likertImportance) : null
     const selectedOptions = responseType === 'choice' && Array.isArray(item.selectedOptions)
       ? item.selectedOptions.map(option => asTrimmedString(option)).filter(Boolean)
       : []
@@ -70,6 +74,10 @@ function normalizeSubmittedResponses(value: unknown) {
       return { responses: [] as SubmittedResponse[], error: 'Alla skalfrågor måste ha ett värde.' }
     }
 
+    if (responseType === 'likert' && (likertAgreement === null || likertImportance === null)) {
+      return { responses: [] as SubmittedResponse[], error: 'Likert-svar saknar värde.' }
+    }
+
     if (responseType === 'choice' && selectedOptions.length === 0) {
       return { responses: [] as SubmittedResponse[], error: 'Alla valfrågor måste ha minst ett valt alternativ.' }
     }
@@ -79,6 +87,8 @@ function normalizeSubmittedResponses(value: unknown) {
       responseType,
       textValue: responseType === 'open' ? textValue : null,
       scaleValue,
+      likertAgreement,
+      likertImportance,
       selectedOptions,
     })
   }
@@ -200,6 +210,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Svarstypen matchar inte frågan.' }, { status: 400 })
       }
 
+      if (response.responseType === 'likert') {
+        if (response.likertAgreement === null || response.likertAgreement === undefined ||
+            response.likertImportance === null || response.likertImportance === undefined) {
+          return NextResponse.json({ error: 'Likert-svar saknar värde.' }, { status: 400 })
+        }
+      }
+
       if (response.responseType === 'choice') {
         const allowedOptions = optionLabelsByQuestionId.get(response.questionId) || new Set<string>()
         if (response.selectedOptions.some(option => !allowedOptions.has(option))) {
@@ -257,6 +274,8 @@ export async function POST(req: NextRequest) {
         response_type: response.responseType,
         text_value: response.textValue,
         scale_value: response.scaleValue,
+        likert_agreement: response.likertAgreement ?? null,
+        likert_importance: response.likertImportance ?? null,
       })))
       .select('id, question_id')
 
