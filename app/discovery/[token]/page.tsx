@@ -26,7 +26,7 @@ type PublicDiscoveryPayload = {
       orderIndex: number
       questions: Array<{
         id: string
-        type: 'open' | 'choice' | 'scale'
+        type: 'open' | 'choice' | 'scale' | 'likert'
         text: string
         orderIndex: number
         maxChoices: number | null
@@ -55,6 +55,11 @@ function answeredCount(
     if (question.type === 'scale' && typeof value === 'string' && value) return count + 1
     if (question.type === 'open' && typeof value === 'string' && value.trim().length > 0) return count + 1
     if (question.type === 'choice' && Array.isArray(value) && value.length > 0) return count + 1
+    if (question.type === 'likert') {
+      const agreement = answers[question.id + '_agreement']
+      const importance = answers[question.id + '_importance']
+      if (typeof agreement === 'string' && agreement && typeof importance === 'string' && importance) return count + 1
+    }
     return count
   }, 0)
 }
@@ -107,6 +112,10 @@ export default function DiscoveryPublicPage() {
     setAnswers(prev => ({ ...prev, [questionId]: value }))
   }
 
+  function setLikert(questionId: string, axis: 'agreement' | 'importance', value: string) {
+    setAnswers(prev => ({ ...prev, [questionId + '_' + axis]: value }))
+  }
+
   function toggleChoice(questionId: string, option: string, max: number) {
     setAnswers(prev => {
       const current = Array.isArray(prev[questionId]) ? [...(prev[questionId] as string[])] : []
@@ -131,6 +140,11 @@ export default function DiscoveryPublicPage() {
         const value = answers[question.id]
         if (question.type === 'open') return !(typeof value === 'string' && value.trim())
         if (question.type === 'scale') return !(typeof value === 'string' && value)
+        if (question.type === 'likert') {
+          const agreement = answers[question.id + '_agreement']
+          const importance = answers[question.id + '_importance']
+          return !(typeof agreement === 'string' && agreement && typeof importance === 'string' && importance)
+        }
         return !(Array.isArray(value) && value.length > 0)
       })
 
@@ -165,6 +179,17 @@ export default function DiscoveryPublicPage() {
               questionId: question.id,
               responseType: 'scale',
               scaleValue: typeof value === 'string' ? Number(value) : null,
+            }
+          }
+
+          if (question.type === 'likert') {
+            const agreement = answers[question.id + '_agreement']
+            const importance = answers[question.id + '_importance']
+            return {
+              questionId: question.id,
+              responseType: 'likert',
+              likertAgreement: typeof agreement === 'string' ? Number(agreement) : null,
+              likertImportance: typeof importance === 'string' ? Number(importance) : null,
             }
           }
 
@@ -467,6 +492,48 @@ export default function DiscoveryPublicPage() {
                         })}
                       </div>
                     )}
+
+                  {question.type === 'likert' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      {[
+                        { axis: 'agreement' as const, label: question.text + ' – Nuläge (0–4)', minLabel: 'Strongly disagree', maxLabel: 'Strongly agree' },
+                        { axis: 'importance' as const, label: question.text + ' – Vikt (0–4)', minLabel: 'Not important', maxLabel: 'Very important' },
+                      ].map(({ axis, label, minLabel, maxLabel }) => {
+                        const axisValue = answers[question.id + '_' + axis]
+                        return (
+                          <div key={axis}>
+                            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 10 }}>{label}</div>
+                            <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                              {[0, 1, 2, 3, 4].map(n => {
+                                const sel = axisValue === String(n)
+                                return (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => setLikert(question.id, axis, String(n))}
+                                    style={{
+                                      width: 54, height: 54, borderRadius: 12,
+                                      border: `1px solid ${sel ? 'var(--accent)' : 'var(--border)'}`,
+                                      background: sel ? 'var(--accent)' : 'transparent',
+                                      color: sel ? '#fff' : 'var(--text-2)',
+                                      fontSize: 16, fontWeight: 600, cursor: 'pointer',
+                                    }}
+                                  >
+                                    {n}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', maxWidth: 310 }}>
+                              <span>{minLabel}</span>
+                              <span>{maxLabel}</span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
                   </article>
                 )
               })}
