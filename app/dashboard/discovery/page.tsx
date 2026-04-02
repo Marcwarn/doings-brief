@@ -1756,7 +1756,7 @@ export default function DiscoveryPage() {
 
                       {question.type === 'likert' && (
                         <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: 'rgba(198,35,104,0.06)', border: '1px solid rgba(198,35,104,0.15)', fontSize: 12, color: 'var(--text-2)' }}>
-                          <strong>Likert-fråga:</strong> Respondenterna svarar på två skalor (0–4): <em>Strongly disagree → Strongly agree</em> och <em>Not important → Very important</em>. Gap-insikt beräknas automatiskt.
+                          <strong>Likert-påstående:</strong> Respondenterna svarar på två skalor (1–5): <em>Håller inte alls → Håller helt</em> och <em>Inte viktigt → Mycket viktigt</em>. Gap-insikt beräknas automatiskt.
                         </div>
                       )}
                     </div>
@@ -2083,6 +2083,33 @@ export default function DiscoveryPage() {
                             </button>
                           )
                         })}
+                      </div>
+                    )}
+
+                    {question.type === 'likert' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Enighet</div>
+                          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <div key={n} style={{ width: 40, height: 40, borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>{n}</div>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 240 }}>
+                            <span>Håller inte alls</span><span>Håller helt</span>
+                          </div>
+                        </div>
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Hur viktigt är detta?</div>
+                          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <div key={n} style={{ width: 40, height: 40, borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>{n}</div>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 240 }}>
+                            <span>Inte viktigt</span><span>Mycket viktigt</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </article>
