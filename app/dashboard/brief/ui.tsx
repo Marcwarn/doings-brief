@@ -9,7 +9,7 @@ export function BriefSubnav({ active }: { active: BriefSubnavKey | BriefSubnavDi
       {[
         { href: '/dashboard/send', label: 'Nytt utskick', key: 'send' },
         { href: '/dashboard/question-sets', label: 'Frågor', key: 'question-sets' },
-        { href: '/dashboard', label: 'Översikt', key: 'overview' },
+        { href: '/dashboard/briefs', label: 'Översikt', key: 'overview' },
       ].map(item => (
         <Link
           key={item.href}
