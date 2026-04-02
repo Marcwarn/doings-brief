@@ -53,13 +53,10 @@ export default function EvaluationDetailPage() {
   const [view, setView] = useState<'questions' | 'participants' | 'loop'>('questions')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Loop / sender.net state
+  // sender.net groups state (for Uppföljning tab)
   const [senderGroups, setSenderGroups] = useState<{ id: string; name: string }[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
   const [groupsConfigured, setGroupsConfigured] = useState(false)
-  const [selectedGroup, setSelectedGroup] = useState('')
-  const [savingGroup, setSavingGroup] = useState(false)
-  const [groupSaveResult, setGroupSaveResult] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/evaluations/${id}`)
@@ -85,36 +82,10 @@ export default function EvaluationDetailPage() {
       .then(data => {
         setSenderGroups(data.groups || [])
         setGroupsConfigured(data.configured !== false)
-        if (payload?.evaluation.senderGroupId) {
-          setSelectedGroup(payload.evaluation.senderGroupId)
-        }
         setLoadingGroups(false)
       })
       .catch(() => setLoadingGroups(false))
-  }, [view, senderGroups.length, loadingGroups, payload])
-
-  async function saveGroupConnection() {
-    if (!payload) return
-    setSavingGroup(true)
-    setGroupSaveResult(null)
-    try {
-      const res = await fetch(`/api/evaluations/${payload.evaluation.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderGroupId: selectedGroup || null }),
-      })
-      const data = await res.json()
-      if (data.error) setGroupSaveResult(`Fel: ${data.error}`)
-      else {
-        setGroupSaveResult('Sparad!')
-        setPayload(prev => prev ? { ...prev, evaluation: { ...prev.evaluation, senderGroupId: data.senderGroupId } } : prev)
-      }
-    } catch {
-      setGroupSaveResult('Nätverksfel')
-    } finally {
-      setSavingGroup(false)
-    }
-  }
+  }, [view, senderGroups.length, loadingGroups])
 
   const publicUrl = useMemo(() => (
     payload ? `${window.location.origin}/evaluation/${payload.evaluation.token}` : ''
@@ -319,17 +290,12 @@ export default function EvaluationDetailPage() {
 
           {view === 'loop' ? (
             <LoopSection
-              evalId={evaluation.id}
               collectEmail={evaluation.collectEmail}
               senderGroupId={evaluation.senderGroupId}
               groups={senderGroups}
               loadingGroups={loadingGroups}
               groupsConfigured={groupsConfigured}
-              selectedGroup={selectedGroup}
-              onSelectGroup={setSelectedGroup}
-              onSave={saveGroupConnection}
-              saving={savingGroup}
-              saveResult={groupSaveResult}
+              respondentsWithEmail={responses.filter(r => r.email).length}
             />
           ) : responses.length === 0 ? (
             <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-3)' }}>
@@ -405,103 +371,87 @@ export default function EvaluationDetailPage() {
 }
 
 function LoopSection({
-  evalId: _evalId,
   collectEmail,
   senderGroupId,
   groups,
   loadingGroups,
   groupsConfigured,
-  selectedGroup,
-  onSelectGroup,
-  onSave,
-  saving,
-  saveResult,
+  respondentsWithEmail,
 }: {
-  evalId: string
   collectEmail: boolean
   senderGroupId: string | null
   groups: { id: string; name: string }[]
   loadingGroups: boolean
   groupsConfigured: boolean
-  selectedGroup: string
-  onSelectGroup: (id: string) => void
-  onSave: () => void
-  saving: boolean
-  saveResult: string | null
+  respondentsWithEmail: number
 }) {
+  const groupName = groups.find(g => g.id === senderGroupId)?.name || null
+
+  if (!groupsConfigured && !loadingGroups) {
+    return (
+      <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
+        <strong>Automatisk uppföljning är inte aktiv.</strong><br />
+        <span style={{ fontWeight: 400 }}>SENDER_API_KEY saknas i Vercel. Lägg till den för att aktivera.</span>
+      </div>
+    )
+  }
+
   if (!collectEmail) {
     return (
-      <div style={{ padding: '14px 16px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-3)' }}>
-        Uppföljning via sender.net kräver att e-postinsamling är aktiverat för den här utvärderingen.
+      <div style={{ padding: '14px 16px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>
+        Den här utvärderingen samlar inte in e-post — automatisk uppföljning är inte tillgänglig.
+      </div>
+    )
+  }
+
+  if (loadingGroups) {
+    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar…</p>
+  }
+
+  if (!senderGroupId) {
+    return (
+      <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
+        Ingen uppföljningsgrupp är kopplad. Detta kan hända om sender.net var otillgänglig när utvärderingen skapades.
       </div>
     )
   }
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
-        Koppla en sender.net-grupp till den här utvärderingen. Varje deltagare som skickar in svar läggs automatiskt till i gruppen och triggar din automation i sender.net — t.ex. ett tackmail efter en vecka.
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
+        <span style={{ fontSize: 18, lineHeight: 1 }}>✓</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>Automatisk uppföljning är aktiv</div>
+          <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>{groupName || senderGroupId}</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <StatusTile
+          label="Deltagare med e-post"
+          value={String(respondentsWithEmail)}
+          sub="har lagts till i uppföljningen"
+        />
+        <StatusTile
+          label="Nästa steg"
+          value="Automatiskt"
+          sub="sender.net hanterar utskicken"
+        />
+      </div>
+
+      <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
+        Varje deltagare som svarar med sin e-post läggs automatiskt till i sender.net och triggar din uppföljningssekvens — inget mer behöver göras här.
       </p>
+    </div>
+  )
+}
 
-      {senderGroupId && (
-        <div style={{ padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
-          Ansluten: {groups.find(g => g.id === senderGroupId)?.name || senderGroupId}
-        </div>
-      )}
-
-      {!groupsConfigured && !loadingGroups && (
-        <div style={{ padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, fontSize: 13, color: '#92400e' }}>
-          <strong>SENDER_API_KEY</strong> är inte konfigurerad i Vercel. Lägg till den för att aktivera sender.net-integration.
-        </div>
-      )}
-
-      {loadingGroups ? (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar grupper…</p>
-      ) : groupsConfigured && groups.length === 0 ? (
-        <div style={{ padding: '12px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text-3)' }}>
-          Inga grupper hittades i sender.net. Skapa en grupp i sender.net-dashboarden först.
-        </div>
-      ) : groupsConfigured ? (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <label style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)' }}>Välj sender.net-grupp</label>
-          <select
-            value={selectedGroup}
-            onChange={e => onSelectGroup(e.target.value)}
-            style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--text)', cursor: 'pointer', outline: 'none' }}
-          >
-            <option value="">— Ingen koppling —</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>{g.name}</option>
-            ))}
-          </select>
-        </div>
-      ) : null}
-
-      {groupsConfigured && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={onSave}
-            disabled={saving}
-            style={{
-              padding: '8px 16px',
-              background: saving ? 'var(--border)' : 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: saving ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {saving ? 'Sparar…' : 'Spara koppling'}
-          </button>
-          {saveResult && (
-            <span style={{ fontSize: 13, color: saveResult.startsWith('Fel') ? '#b91c1c' : '#15803d', fontWeight: 600 }}>
-              {saveResult}
-            </span>
-          )}
-        </div>
-      )}
+function StatusTile({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div style={{ padding: '12px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 4 }}>{sub}</div>
     </div>
   )
 }
