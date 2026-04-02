@@ -8,6 +8,7 @@ type DiscoveryQuestion =
   | { type: 'open'; text: string }
   | { type: 'scale'; text: string }
   | { type: 'choice'; text: string; max: number; options: string[] }
+  | { type: 'likert'; text: string }
 
 type DiscoveryCategory = {
   id: string
@@ -1154,7 +1155,57 @@ export default function DiscoveryPage() {
           return {
             ...question,
             max: Math.max(1, Math.min(value || 1, question.options.length || 1)),
-          }
+      
+
+  function addQuestion(categoryId: string) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: [...category.questions, { type: 'open' as const, text: '' }],
+      }
+    }))
+  }
+
+  function removeQuestion(categoryId: string, questionIndex: number) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: category.questions.filter((_, i) => i !== questionIndex),
+      }
+    }))
+  }    }
+        }),
+      }
+    }))
+  }
+
+  function addQuestion(categoryId: string) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return { ...category, questions: [...category.questions, { type: 'open' as const, text: '' }] }
+    }))
+  }
+
+  function removeQuestion(categoryId: string, questionIndex: number) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return { ...category, questions: category.questions.filter((_, i) => i !== questionIndex) }
+    }))
+  }
+
+  function updateQuestionType(categoryId: string, questionIndex: number, newType: 'open' | 'scale' | 'choice' | 'likert') {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: category.questions.map((q, i) => {
+          if (i !== questionIndex) return q
+          if (newType === 'choice') return { type: 'choice' as const, text: q.text, max: 2, options: ['Alt 1', 'Alt 2'] }
+          if (newType === 'open') return { type: 'open' as const, text: q.text }
+          if (newType === 'scale') return { type: 'scale' as const, text: q.text }
+          return { type: 'likert' as const, text: q.text }
         }),
       }
     }))
@@ -1644,7 +1695,7 @@ export default function DiscoveryPage() {
                           Fråga {questionIndex + 1}
                         </div>
                         <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-                          {question.type === 'open' ? 'Öppen' : question.type === 'scale' ? 'Skala' : 'Val'}
+                          {question.type === 'open' ? 'Öppen' : question.type === 'scale' ? 'Skala' : question.type === 'likert' ? 'Likert' : 'Val'}
                         </div>
                       </div>
 
@@ -1654,6 +1705,30 @@ export default function DiscoveryPage() {
                         rows={question.type === 'open' ? 3 : 2}
                         style={{ ...editorInputStyle, minHeight: question.type === 'open' ? 92 : 72, resize: 'vertical' }}
                       />
+
+                      
+                      {/* Type selector + remove */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>Svarstyp</div>
+                        <select
+                          value={question.type}
+                          onChange={event => updateQuestionType(activeCategory.id, questionIndex, event.target.value as 'open' | 'scale' | 'choice' | 'likert')}
+                          style={{ ...editorInputStyle, fontSize: 12, padding: '4px 8px', flex: 1 }}
+                        >
+                          <option value="open">Fritext</option>
+                          <option value="scale">Skala 1-5</option>
+                          <option value="likert">Likert (enig/viktigt)</option>
+                          <option value="choice">Val (flerval)</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => removeQuestion(activeCategory.id, questionIndex)}
+                          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'var(--text-3)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
+                          title="Ta bort fråga"
+                        >
+                          Ta bort
+                        </button>
+                      </div>
 
                       {question.type === 'choice' && (
                         <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
@@ -1677,9 +1752,41 @@ export default function DiscoveryPage() {
                           </Field>
                         </div>
                       )}
+
+                      {question.type === 'likert' && (
+                        <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: 'rgba(198,35,104,0.06)', border: '1px solid rgba(198,35,104,0.15)', fontSize: 12, color: 'var(--text-2)' }}>
+                          <strong>Likert-fråga:</strong> Respondenterna svarar på två skalor (0–4): <em>Strongly disagree → Strongly agree</em> och <em>Not important → Very important</em>. Gap-insikt beräknas automatiskt.
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => addQuestion(activeCategory.id)}
+                  style={{
+                    marginTop: 10,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    border: '1px dashed var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-3)',
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    width: '100%',
+                    justifyContent: 'center',
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-3)' }}
+                >
+                  + Lägg till fråga
+                </button>
                 </div>
                 )}
 
