@@ -1179,10 +1179,6 @@ export default function DiscoveryPage() {
         questions: category.questions.filter((_, i) => i !== questionIndex),
       }
     }))
-  }    }
-        }),
-      }
-    }))
   }
 
   function addQuestion(categoryId: string) {
