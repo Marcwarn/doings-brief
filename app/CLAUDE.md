@@ -141,8 +141,27 @@ Separat flöde från brief — används för att samla in feedback från kliente
 | `/api/customers` | Kundpost-hantering |
 | `/api/evaluations` | Utvärderingsformulär-state |
 | `/api/admin/*` | Admin: bulk-template, invite, users |
+| `/api/loops` | GET: lista konsultens loopar med progress-räknare · POST: skapa loop med meddelanden + mottagare + sends |
+| `/api/loops/generate` | POST: AI-genererar mail-serie (Llama-3.3-70B) från ämnesbeskrivning och nyckelinsikter |
+| `/api/loops/[id]` | GET: loopdetalj med meddelanden, mottagare, sends · PATCH: ändra status eller redigera meddelande · DELETE: ta bort loop |
+| `/api/loops/[id]/send-next` | POST: skickar nästa godkända meddelande manuellt via Resend, markerar loop som completed när klart |
+| `/api/loop/[token]/[step]` | GET: publik endpoint (ingen auth) — returnerar ämne, HTML, avsändare för läs-online-sida |
 
 **Finns inte**: Automatisk påminnelsemailing och token-expiry enforcement
+
+---
+
+---
+
+## `/dashboard/loops` — Uppföljningsloopar
+
+- Listsida med alla konsultens loopar, status, progress, "Skicka nästa"-knappar
+- Ny loop: 4-stegs wizard (Innehåll → Mottagare → Generera → Aktivera)
+  - Mottagare importeras från befintliga utvärderingar (där e-post samlas in) eller via manuell inmatning
+  - AI genererar mail-serie baserat på ämnesbeskrivning och nyckelinsikter
+- Detaljvy per loop med "Meddelanden"-flik (godkänn/redigera) och "Översikt"-flik (mottagarlista + progress)
+- Publik läs-online-sida under `/loop/[token]/[step]` (ingen inloggning krävs)
+- 4 databastabeller: `loops`, `loop_messages`, `loop_recipients`, `loop_sends` (med RLS)
 
 ---
 

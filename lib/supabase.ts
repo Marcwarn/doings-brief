@@ -167,3 +167,47 @@ export type DiscoveryResponseOption = {
   response_id: string
   option_label: string
 }
+
+export type Loop = {
+  id: string
+  user_id: string
+  title: string
+  topic_description: string
+  context_notes: string
+  linked_dispatch_id: string | null
+  token: string
+  status: 'draft' | 'active' | 'paused' | 'completed'
+  created_at: string
+  updated_at: string
+}
+
+export type LoopMessage = {
+  id: string
+  loop_id: string
+  order_index: number
+  subject: string
+  body_html: string
+  body_text: string
+  status: 'draft' | 'approved'
+  sent_at: string | null
+  created_at: string
+}
+
+export type LoopRecipient = {
+  id: string
+  loop_id: string
+  name: string
+  email: string
+  source: 'brief' | 'manual' | null
+  created_at: string
+}
+
+export type LoopSend = {
+  id: string
+  loop_id: string
+  message_id: string
+  recipient_id: string
+  sent_at: string | null
+  status: 'pending' | 'sent' | 'failed'
+  created_at: string
+}

@@ -44,6 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/evaluations/new',   label: 'Utvärdering',    Icon: ChartIcon },
     { href: '/dashboard/send',          label: 'Debrief',       Icon: HomeIcon },
     { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
+    { href: '/dashboard/loops',         label: 'Loopar',         Icon: RepeatIcon },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
 
@@ -171,6 +172,14 @@ const CompassIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
     <circle cx="12" cy="12" r="9" />
     <path d="M15.8 8.2l-2.4 7.2-7.2 2.4 2.4-7.2 7.2-2.4z" />
+  </svg>
+)
+const RepeatIcon = ({ size = 16, color = 'currentColor' }: IconProps) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <polyline points="17 1 21 5 17 9"/>
+    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+    <polyline points="7 23 3 19 7 15"/>
+    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
   </svg>
 )
 const LogoutIcon = () => (
