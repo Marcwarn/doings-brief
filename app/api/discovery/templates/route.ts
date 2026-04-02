@@ -50,7 +50,7 @@ type NormalizedChoiceOption = {
 }
 
 type NormalizedQuestion = {
-  type: 'open' | 'choice' | 'scale'
+  type: 'open' | 'choice' | 'scale' | 'likert'
   text: string
   orderIndex: number
   maxChoices: number | null
@@ -120,7 +120,7 @@ function normalizeQuestions(value: unknown) {
     }
 
     const item = rawItem as RawQuestion
-    const type = item.type === 'choice' || item.type === 'scale' ? item.type : 'open'
+    const type = item.type === 'choice' || item.type === 'scale' || item.type === 'likert' ? item.type : 'open'
     const text = asTrimmedString(item.text)
 
     if (!text) {
