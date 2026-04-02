@@ -11,7 +11,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname()
   const [profile, setProfile] = useState<Profile | null>(null)
   const sb = createClient()
-
   useEffect(() => {
     sb.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.replace('/login'); return }
@@ -41,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard/evaluations/new',   label: 'Utvärdering',    Icon: ChartIcon },
+    { href: '/dashboard/evaluations',       label: 'Utvärdering',    Icon: ChartIcon },
     { href: '/dashboard/send',          label: 'Debrief',       Icon: HomeIcon },
     { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
     { href: '/dashboard/loops',         label: 'Loopar',         Icon: RepeatIcon },
