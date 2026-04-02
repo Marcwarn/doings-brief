@@ -64,7 +64,7 @@ export default function LoopDetailPage() {
       .then(r => r.json())
       .then(payload => {
         if (payload.error) { setError(payload.error); setLoading(false); return }
-        setLoop(payload.loop)
+        setLoop({ ...payload.loop, messages: payload.messages || [], recipients: payload.recipients || [], sends: payload.sends || [] })
         setLoading(false)
       })
       .catch(() => { setError('Kunde inte hämta loopen'); setLoading(false) })

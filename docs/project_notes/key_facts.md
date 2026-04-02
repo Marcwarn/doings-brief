@@ -23,7 +23,7 @@ Operational facts that are easy to forget and critical to get right.
 | **Batch-utskick** | Skicka inbjudan till flera klienter på en gång (dispatch) | — |
 | **Evaluerings-formulär** | Separat flöde under `/evaluation` för att samla in feedback | — |
 | **Admin-panel** | Bulk-template, invite, users-hantering | — |
-| **Loopar** `/dashboard/loops` | Post-leverans uppföljningssekvenser. AI genererar mail-serie (Llama-3.3-70B), konsult skickar manuellt steg för steg. Mottagare importeras från utvärderingar (där emails samlas in) eller anges manuellt. Publik läs-online-sida `/loop/[token]/[step]`. 4 nya DB-tabeller: `loops`, `loop_messages`, `loop_recipients`, `loop_sends`. | Ingen automatisk schemaläggning — allt är manuellt |
+| **Loopar** `/dashboard/loops` | Post-leverans uppföljningssekvenser. AI genererar mail-serie (Llama-3.3-70B), konsult skickar manuellt steg för steg. Mottagare importeras från utvärderingar (där emails samlas in) eller anges manuellt. Detaljvy med Översikt- och Meddelanden-flik, progress-tabell mottagare×steg, godkänn/redigera meddelanden. Publik läs-online-sida `/loop/[token]/[step]`. 4 nya DB-tabeller: `loops`, `loop_messages`, `loop_recipients`, `loop_sends`. Migration: `supabase/migrations/20260402120000_loops_initial.sql`. | Ingen automatisk schemaläggning — allt är manuellt |
 | **Error boundary** | Saknas i `/app/dashboard/` — kraschar hela sidan vid ohanterat React-fel | — |
 
 ---
