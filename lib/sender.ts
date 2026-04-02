@@ -4,10 +4,8 @@
 
 const SENDER_API_BASE = 'https://api.sender.net/v2'
 
-function getSenderKey(): string {
-  const key = process.env.SENDER_API_KEY
-  if (!key) throw new Error('SENDER_API_KEY not configured')
-  return key
+function getSenderKey(): string | null {
+  return process.env.SENDER_API_KEY ?? null
 }
 
 export type SenderGroup = {
@@ -23,10 +21,12 @@ export async function addSubscriberToGroup(opts: {
   groupId: string
 }): Promise<{ ok: boolean; error?: string }> {
   try {
+    const key = getSenderKey()
+    if (!key) return { ok: false, error: 'SENDER_API_KEY not configured' }
     const res = await fetch(`${SENDER_API_BASE}/subscribers`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${getSenderKey()}`,
+        'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
@@ -79,9 +79,11 @@ export async function createSenderGroup(name: string): Promise<{ id: string; nam
 /** List all groups in the sender.net account. */
 export async function listSenderGroups(): Promise<SenderGroup[]> {
   try {
+    const key = getSenderKey()
+    if (!key) return []
     const res = await fetch(`${SENDER_API_BASE}/groups`, {
       headers: {
-        'Authorization': `Bearer ${getSenderKey()}`,
+        'Authorization': `Bearer ${key}`,
         'Accept': 'application/json',
       },
     })

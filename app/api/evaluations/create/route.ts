@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Obehörig' }, { status: 401 })
     }
 
     const { data: profile } = await admin
