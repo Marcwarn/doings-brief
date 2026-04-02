@@ -8,6 +8,7 @@ import {
   getEvaluationQuestionMetaKey,
   getEvaluationTokenKey,
 } from '@/lib/evaluations'
+import { createSenderGroup } from '@/lib/sender'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,6 +143,14 @@ export async function POST(req: NextRequest) {
     const token = randomUUID()
     const createdAt = new Date().toISOString()
 
+    // Auto-create a matching group in sender.net if configured
+    let senderGroupId: string | null = null
+    if (process.env.SENDER_API_KEY) {
+      const groupName = `${normalizedCustomer} — ${normalizedLabel}`
+      const group = await createSenderGroup(groupName)
+      if (group?.id) senderGroupId = group.id
+    }
+
     const metadata: EvaluationMetadata = {
       id: evaluationId,
       token,
@@ -152,7 +161,7 @@ export async function POST(req: NextRequest) {
       collectEmail: resolvedCollectEmail,
       createdBy: user.id,
       createdAt,
-      senderGroupId: null,
+      senderGroupId,
     }
 
     const rows = [

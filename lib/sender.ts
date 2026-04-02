@@ -46,6 +46,36 @@ export async function addSubscriberToGroup(opts: {
   }
 }
 
+/** Create a new group in the sender.net account. Returns the group id, or null on failure. */
+export async function createSenderGroup(name: string): Promise<{ id: string; name: string } | null> {
+  try {
+    const key = process.env.SENDER_API_KEY
+    if (!key) return null
+    const res = await fetch(`${SENDER_API_BASE}/groups`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({ title: name }),
+    })
+    if (!res.ok) {
+      console.error('sender.net create group failed:', res.status, await res.text().catch(() => ''))
+      return null
+    }
+    const data = await res.json()
+    const g = data?.data ?? data
+    return {
+      id: String(g.id ?? g.hash ?? ''),
+      name: String(g.title ?? g.name ?? name),
+    }
+  } catch (err) {
+    console.error('sender.net create group error:', err)
+    return null
+  }
+}
+
 /** List all groups in the sender.net account. */
 export async function listSenderGroups(): Promise<SenderGroup[]> {
   try {
