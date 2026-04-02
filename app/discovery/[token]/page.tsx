@@ -496,15 +496,15 @@ export default function DiscoveryPublicPage() {
                   {question.type === 'likert' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                       {[
-                        { axis: 'agreement' as const, label: question.text + ' – Nuläge (0–4)', minLabel: 'Strongly disagree', maxLabel: 'Strongly agree' },
-                        { axis: 'importance' as const, label: question.text + ' – Vikt (0–4)', minLabel: 'Not important', maxLabel: 'Very important' },
+                        { axis: 'agreement' as const, label: question.text + ' – Nuläge (1–5)', minLabel: 'Strongly disagree', maxLabel: 'Strongly agree' },
+                        { axis: 'importance' as const, label: question.text + ' – Vikt (1–5)', minLabel: 'Not important', maxLabel: 'Very important' },
                       ].map(({ axis, label, minLabel, maxLabel }) => {
                         const axisValue = answers[question.id + '_' + axis]
                         return (
                           <div key={axis}>
                             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 10 }}>{label}</div>
                             <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                              {[0, 1, 2, 3, 4].map(n => {
+                              {[1, 2, 3, 4, 5].map(n => {
                                 const sel = axisValue === String(n)
                                 return (
                                   <button
