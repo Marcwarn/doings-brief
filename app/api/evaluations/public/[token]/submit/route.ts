@@ -131,6 +131,13 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       )
     }
 
+        // Also add to the "New subscribers" master group to trigger automation
+        if (normalizedEmail) {
+                addSubscriberToGroup({ email: normalizedEmail, groupId: 'elkNql' }).catch(err =>
+                          console.error('sender.net new-subscribers group error:', err)
+                        )
+        }
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('evaluation submit error:', error)
