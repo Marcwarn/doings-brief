@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:reset": "bash scripts/dev-reset.sh",
+    "verify:ui": "bash scripts/verify-ui.sh",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
