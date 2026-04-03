@@ -56,7 +56,7 @@ export default function EvaluationDetailPage() {
   // sender.net groups state (for Uppföljning tab)
   const [senderGroups, setSenderGroups] = useState<{ id: string; name: string }[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
-  const [groupsConfigured, setGroupsConfigured] = useState(false)
+  const [groupsConfigured, setGroupsConfigured] = useState<boolean | null>(null)
 
   useEffect(() => {
     fetch(`/api/evaluations/${id}`)
@@ -75,7 +75,7 @@ export default function EvaluationDetailPage() {
   // Load sender.net groups when loop tab opens
   useEffect(() => {
     if (view !== 'loop') return
-    if (senderGroups.length > 0 || loadingGroups) return
+    if (groupsConfigured !== null || loadingGroups) return
     setLoadingGroups(true)
     fetch('/api/sender/groups')
       .then(r => r.json())
@@ -85,7 +85,7 @@ export default function EvaluationDetailPage() {
         setLoadingGroups(false)
       })
       .catch(() => setLoadingGroups(false))
-  }, [view, senderGroups.length, loadingGroups])
+  }, [view, groupsConfigured, loadingGroups])
 
   const publicUrl = useMemo(() => (
     payload ? `${window.location.origin}/evaluation/${payload.evaluation.token}` : ''
@@ -382,12 +382,16 @@ function LoopSection({
   senderGroupId: string | null
   groups: { id: string; name: string }[]
   loadingGroups: boolean
-  groupsConfigured: boolean
+  groupsConfigured: boolean | null
   respondentsWithEmail: number
 }) {
   const groupName = groups.find(g => g.id === senderGroupId)?.name || null
 
-  if (!groupsConfigured && !loadingGroups) {
+  if (groupsConfigured === null || loadingGroups) {
+    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar…</p>
+  }
+
+  if (!groupsConfigured) {
     return (
       <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
         <strong>Kundflödet i sender.net är inte aktivt.</strong><br />
@@ -403,11 +407,6 @@ function LoopSection({
       </div>
     )
   }
-
-  if (loadingGroups) {
-    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar…</p>
-  }
-
   if (!senderGroupId) {
     return (
       <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
