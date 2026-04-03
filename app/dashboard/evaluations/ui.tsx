@@ -4,8 +4,8 @@ export function EvaluationSubnav({ active }: { active: 'overview' | 'new' }) {
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
       {[
-        { href: '/dashboard/evaluations/new', label: 'Skapa utvärdering', key: 'new' },
-        { href: '/dashboard/evaluations', label: 'Översikt', key: 'overview' },
+        { href: '/dashboard/utvardering/skapa', label: 'Skapa utvärdering', key: 'new' },
+        { href: '/dashboard/utvardering', label: 'Översikt', key: 'overview' },
       ].map(item => (
         <Link
           key={item.href}

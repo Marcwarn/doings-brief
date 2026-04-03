@@ -46,7 +46,7 @@ export default function EvaluationsPage() {
             Skapa QR-baserade utvärderingar för utbildningar och följ inkomna svar per tillfälle.
           </p>
         </div>
-        <Link href="/dashboard/evaluations/new" style={primaryLinkStyle}>
+        <Link href="/dashboard/utvardering/skapa" style={primaryLinkStyle}>
           Skapa utvärdering
         </Link>
       </div>
@@ -74,7 +74,7 @@ export default function EvaluationsPage() {
                       {evaluation.customer} · {evaluation.questionSetName || 'Utvärderingsfrågor'}
                     </div>
                   </div>
-                  <Link href={`/dashboard/evaluations/${evaluation.id}`} style={secondaryLinkStyle}>
+                  <Link href={`/dashboard/utvardering/${evaluation.id}`} style={secondaryLinkStyle}>
                     Öppna
                   </Link>
                 </div>

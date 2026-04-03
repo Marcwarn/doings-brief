@@ -20,7 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return
       }
 
-      const response = await fetch('/api/brief-access', { cache: 'no-store' })
+      const response = await fetch('/api/auth/session', { cache: 'no-store' })
       if (!response.ok) {
         await sb.auth.signOut()
         clearLoginScopeCookie()
@@ -40,10 +40,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const nav = [
-    { href: '/dashboard/evaluations',       label: 'Utvärdering',    Icon: ChartIcon },
-    { href: '/dashboard/send',          label: 'Debrief',       Icon: HomeIcon },
-    { href: '/dashboard/discovery',     label: 'Discovery',      Icon: CompassIcon },
-    { href: '/dashboard/loops',         label: 'Loopar',         Icon: RepeatIcon },
+    { href: '/dashboard/utvardering/skapa', label: 'Utvärdering', Icon: ChartIcon, match: '/dashboard/utvardering' },
+    { href: '/dashboard/debrief/skapa',     label: 'Debrief',    Icon: HomeIcon, match: '/dashboard/debrief' },
+    { href: '/dashboard/discovery/skapa',   label: 'Discovery',  Icon: CompassIcon, match: '/dashboard/discovery' },
+    { href: '/dashboard/loopar',            label: 'Loopar',     Icon: RepeatIcon, match: '/dashboard/loopar' },
     ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin', Icon: ShieldIcon }] : []),
   ]
 
@@ -88,8 +88,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}>
             Verktyg
           </div>
-          {nav.map(({ href, label, Icon }) => {
-            const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          {nav.map(({ href, label, Icon, match }) => {
+            const activeRoot = match || href
+            const active = pathname === href || (activeRoot !== '/dashboard' && pathname.startsWith(activeRoot))
             return (
               <Link key={href} href={href} style={{
                 display: 'flex', alignItems: 'center', gap: 10,

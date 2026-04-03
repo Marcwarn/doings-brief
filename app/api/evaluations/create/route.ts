@@ -8,7 +8,7 @@ import {
   getEvaluationQuestionMetaKey,
   getEvaluationTokenKey,
 } from '@/lib/evaluations'
-import { createSenderGroup } from '@/lib/sender'
+import { ensureSenderGroup } from '@/lib/sender'
 
 export const dynamic = 'force-dynamic'
 
@@ -143,11 +143,11 @@ export async function POST(req: NextRequest) {
     const token = randomUUID()
     const createdAt = new Date().toISOString()
 
-    // Auto-create a matching group in sender.net if configured
+    // Reuse or create a customer-specific sender.net group so all training responses
+    // for the same customer flow into the same automation bucket.
     let senderGroupId: string | null = null
     if (process.env.SENDER_API_KEY) {
-      const groupName = `${normalizedCustomer} — ${normalizedLabel}`
-      const group = await createSenderGroup(groupName)
+      const group = await ensureSenderGroup(normalizedCustomer)
       if (group?.id) senderGroupId = group.id
     }
 

@@ -23,9 +23,9 @@ export default function LoginPage() {
         return
       }
 
-      const response = await fetch('/api/brief-access', { cache: 'no-store' })
+      const response = await fetch('/api/auth/session', { cache: 'no-store' })
       if (response.ok) {
-        router.replace('/dashboard/evaluations/new')
+        router.replace('/dashboard/utvardering/skapa')
       } else {
         await createClient().auth.signOut()
       }
@@ -40,16 +40,16 @@ export default function LoginPage() {
       setError('Fel e-post eller lösenord.')
       setLoading(false)
     } else {
-      const accessResponse = await fetch('/api/brief-access', { cache: 'no-store' })
-      if (!accessResponse.ok) {
+      const sessionResponse = await fetch('/api/auth/session', { cache: 'no-store' })
+      if (!sessionResponse.ok) {
         await createClient().auth.signOut()
-        setError('Du har inte tillgång till Brief ännu.')
+        setError('Kunde inte läsa in ditt konto.')
         setLoading(false)
         return
       }
 
       setLoginScopeCookie(remember)
-      router.replace('/dashboard/evaluations/new')
+      router.replace('/dashboard/utvardering/skapa')
     }
   }
 

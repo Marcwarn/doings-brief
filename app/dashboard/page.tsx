@@ -7,7 +7,7 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace('/dashboard/evaluations/new')
+    router.replace('/dashboard/utvardering/skapa')
   }, [router])
 
   return (

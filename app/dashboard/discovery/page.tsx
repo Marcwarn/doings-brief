@@ -7,9 +7,9 @@ import { InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 
 type DiscoveryQuestion =
   | { type: 'open'; text: string }
-  | { type: 'scale'; text: string }
+  | { type: 'scale'; text: string; minLabel: string; maxLabel: string }
   | { type: 'choice'; text: string; max: number; options: string[] }
-  | { type: 'likert'; text: string }
+  | { type: 'likert'; text: string; minLabel: string; maxLabel: string }
 
 type DiscoveryCategory = {
   id: string
@@ -59,7 +59,7 @@ type DiscoveryTemplateDetail = {
       orderIndex: number
       questions: Array<{
         id: string
-        type: 'open' | 'choice' | 'scale'
+        type: 'open' | 'choice' | 'scale' | 'likert'
         text: string
         orderIndex: number
         maxChoices: number | null
@@ -382,7 +382,12 @@ function buildDefaultCategories(mode: AudienceMode): DiscoveryCategory[] {
   })
 }
 
-type CategoryState = Record<number, string | string[]>
+type LikertAnswerState = {
+  agreement?: string
+  importance?: string
+}
+
+type CategoryState = Record<number, string | string[] | LikertAnswerState>
 
 function answeredCount(category: DiscoveryCategory, answers: CategoryState) {
   return category.questions.reduce((count, question, index) => {
@@ -390,6 +395,10 @@ function answeredCount(category: DiscoveryCategory, answers: CategoryState) {
     if (question.type === 'scale' && typeof value === 'string' && value) return count + 1
     if (question.type === 'open' && typeof value === 'string' && value.trim().length > 2) return count + 1
     if (question.type === 'choice' && Array.isArray(value) && value.length > 0) return count + 1
+    if (question.type === 'likert' && value && typeof value === 'object' && !Array.isArray(value)) {
+      const likert = value as LikertAnswerState
+      if (likert.agreement && likert.importance) return count + 1
+    }
     return count
   }, 0)
 }
@@ -846,7 +855,21 @@ export default function DiscoveryPage() {
             }
 
             if (question.type === 'scale') {
-              return { type: 'scale' as const, text: question.text }
+              return {
+                type: 'scale' as const,
+                text: question.text,
+                minLabel: question.scaleMinLabel || 'Håller inte alls',
+                maxLabel: question.scaleMaxLabel || 'Håller helt',
+              }
+            }
+
+            if (question.type === 'likert') {
+              return {
+                type: 'likert' as const,
+                text: question.text,
+                minLabel: question.scaleMinLabel || 'Håller inte med',
+                maxLabel: question.scaleMaxLabel || 'Håller med',
+              }
             }
 
             return { type: 'open' as const, text: question.text }
@@ -932,10 +955,10 @@ export default function DiscoveryPage() {
               text: question.text,
               orderIndex: questionIndex,
               maxChoices: question.type === 'choice' ? question.max : null,
-              scaleMin: question.type === 'scale' ? 1 : null,
-              scaleMax: question.type === 'scale' ? 5 : null,
-              scaleMinLabel: question.type === 'scale' ? 'Håller inte alls' : null,
-              scaleMaxLabel: question.type === 'scale' ? 'Håller helt' : null,
+              scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
+              scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
+              scaleMinLabel: question.type === 'scale' || question.type === 'likert' ? question.minLabel : null,
+              scaleMaxLabel: question.type === 'scale' || question.type === 'likert' ? question.maxLabel : null,
               options: question.type === 'choice'
                 ? question.options.map(option => ({ label: option }))
                 : [],
@@ -1026,6 +1049,22 @@ export default function DiscoveryPage() {
       ...prev,
       [categoryId]: { ...prev[categoryId], [questionIndex]: value },
     }))
+  }
+
+  function setLikert(categoryId: string, questionIndex: number, axis: 'agreement' | 'importance', value: string) {
+    setAnswers(prev => {
+      const current = prev[categoryId]?.[questionIndex]
+      const nextValue = current && typeof current === 'object' && !Array.isArray(current)
+        ? { ...(current as LikertAnswerState) }
+        : {}
+
+      nextValue[axis] = value
+
+      return {
+        ...prev,
+        [categoryId]: { ...prev[categoryId], [questionIndex]: nextValue },
+      }
+    })
   }
 
   async function copyShareUrl(url: string) {
@@ -1162,6 +1201,23 @@ export default function DiscoveryPage() {
     }))
   }
 
+  function updateScaleLabels(categoryId: string, questionIndex: number, field: 'minLabel' | 'maxLabel', value: string) {
+    setBuilderCategories(prev => prev.map(category => {
+      if (category.id !== categoryId) return category
+      return {
+        ...category,
+        questions: category.questions.map((question, index) => {
+          if (index !== questionIndex) return question
+          if (question.type !== 'scale' && question.type !== 'likert') return question
+          return {
+            ...question,
+            [field]: value,
+          }
+        }),
+      }
+    }))
+  }
+
   function addQuestion(categoryId: string) {
     setBuilderCategories(prev => prev.map(category => {
       if (category.id !== categoryId) return category
@@ -1205,8 +1261,20 @@ export default function DiscoveryPage() {
           if (i !== questionIndex) return q
           if (newType === 'choice') return { type: 'choice' as const, text: q.text, max: 2, options: ['Alt 1', 'Alt 2'] }
           if (newType === 'open') return { type: 'open' as const, text: q.text }
-          if (newType === 'scale') return { type: 'scale' as const, text: q.text }
-          return { type: 'likert' as const, text: q.text }
+          if (newType === 'scale') {
+            return {
+              type: 'scale' as const,
+              text: q.text,
+              minLabel: 'Håller inte alls',
+              maxLabel: 'Håller helt',
+            }
+          }
+          return {
+            type: 'likert' as const,
+            text: q.text,
+            minLabel: 'Håller inte med',
+            maxLabel: 'Håller med',
+          }
         }),
       }
     }))
@@ -1755,8 +1823,28 @@ export default function DiscoveryPage() {
                       )}
 
                       {question.type === 'likert' && (
-                        <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: 'rgba(198,35,104,0.06)', border: '1px solid rgba(198,35,104,0.15)', fontSize: 12, color: 'var(--text-2)' }}>
-                          <strong>Likert-påstående:</strong> Respondenterna svarar på två skalor (1–5): <em>Håller inte alls → Håller helt</em> och <em>Inte viktigt → Mycket viktigt</em>. Gap-insikt beräknas automatiskt.
+                        <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(198,35,104,0.06)', border: '1px solid rgba(198,35,104,0.15)', fontSize: 12, color: 'var(--text-2)' }}>
+                            <strong>Likert-påstående:</strong> Skriv frågan som ett påstående, till exempel <em>Din chef ger dig ansvar</em>. Respondenten väljer först grad av instämmande och därefter hur viktigt påståendet är.
+                          </div>
+                          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                            <Field label="Vänster etikett">
+                              <input
+                                value={question.minLabel}
+                                onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'minLabel', event.target.value)}
+                                placeholder="Håller inte med"
+                                style={editorInputStyle}
+                              />
+                            </Field>
+                            <Field label="Höger etikett">
+                              <input
+                                value={question.maxLabel}
+                                onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'maxLabel', event.target.value)}
+                                placeholder="Håller med"
+                                style={editorInputStyle}
+                              />
+                            </Field>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2029,8 +2117,8 @@ export default function DiscoveryPage() {
                           })}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, fontSize: 11, color: 'var(--text-3)', maxWidth: 250 }}>
-                          <span>Håller inte alls</span>
-                          <span>Håller helt</span>
+                          <span>{question.minLabel}</span>
+                          <span>{question.maxLabel}</span>
                         </div>
                       </>
                     )}
@@ -2087,30 +2175,86 @@ export default function DiscoveryPage() {
                     )}
 
                     {question.type === 'likert' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div>
-                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Enighet</div>
-                          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
-                            {[1, 2, 3, 4, 5].map(n => (
-                              <div key={n} style={{ width: 40, height: 40, borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>{n}</div>
-                            ))}
+                      (() => {
+                        const likertValue = value && typeof value === 'object' && !Array.isArray(value)
+                          ? value as LikertAnswerState
+                          : {}
+                        const agreementValue = likertValue.agreement || ''
+                        const importanceValue = likertValue.importance || ''
+                        const hasAgreement = Boolean(agreementValue)
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                            <div>
+                              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Hur mycket håller du med?</div>
+                              <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                                {[1, 2, 3, 4, 5].map(n => {
+                                  const selected = agreementValue === String(n)
+                                  return (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      onClick={() => setLikert(activeCategory.id, questionIndex, 'agreement', String(n))}
+                                      style={{
+                                        width: 54,
+                                        height: 54,
+                                        borderRadius: 12,
+                                        border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                                        background: selected ? 'var(--accent)' : 'transparent',
+                                        color: selected ? '#fff' : 'var(--text-2)',
+                                        fontSize: 16,
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      {n}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 310 }}>
+                                <span>{question.minLabel}</span>
+                                <span>{question.maxLabel}</span>
+                              </div>
+                            </div>
+
+                            {hasAgreement && (
+                              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Hur viktigt är detta?</div>
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                                  {[1, 2, 3, 4, 5].map(n => {
+                                    const selected = importanceValue === String(n)
+                                    return (
+                                      <button
+                                        key={n}
+                                        type="button"
+                                        onClick={() => setLikert(activeCategory.id, questionIndex, 'importance', String(n))}
+                                        style={{
+                                          width: 54,
+                                          height: 54,
+                                          borderRadius: 12,
+                                          border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
+                                          background: selected ? 'var(--accent)' : 'transparent',
+                                          color: selected ? '#fff' : 'var(--text-2)',
+                                          fontSize: 16,
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        {n}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 310 }}>
+                                  <span>Inte viktigt</span>
+                                  <span>Mycket viktigt</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 240 }}>
-                            <span>Håller inte alls</span><span>Håller helt</span>
-                          </div>
-                        </div>
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
-                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Hur viktigt är detta?</div>
-                          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
-                            {[1, 2, 3, 4, 5].map(n => (
-                              <div key={n} style={{ width: 40, height: 40, borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: 'var(--text-2)' }}>{n}</div>
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 240 }}>
-                            <span>Inte viktigt</span><span>Mycket viktigt</span>
-                          </div>
-                        </div>
-                      </div>
+                        )
+                      })()
                     )}
                   </article>
                 )

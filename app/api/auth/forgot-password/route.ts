@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hasBriefAccess } from '@/lib/brief-access'
 import { getResendClient, getSupabaseAdminClient } from '@/lib/server-clients'
 
 export const dynamic = 'force-dynamic'
@@ -83,11 +82,6 @@ export async function POST(req: NextRequest) {
 
     const existingUser = (usersData?.users || []).find(user => user.email?.trim().toLowerCase() === normalizedEmail)
     if (!existingUser?.id) {
-      return NextResponse.json({ ok: true })
-    }
-
-    const allowed = await hasBriefAccess(supabaseAdmin, existingUser.id)
-    if (!allowed) {
       return NextResponse.json({ ok: true })
     }
 

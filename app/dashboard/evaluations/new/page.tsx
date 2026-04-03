@@ -816,7 +816,7 @@ function EvaluationPublishCard({
           <button type="button" onClick={onDownloadQr} style={ghostButtonStyle}>
             Ladda ner QR som PNG
           </button>
-          <Link href={`/dashboard/evaluations/${created.evaluation.id}`} style={secondaryLinkStyle}>
+          <Link href={`/dashboard/utvardering/${created.evaluation.id}`} style={secondaryLinkStyle}>
             Öppna översikt
           </Link>
         </div>

@@ -37,7 +37,7 @@ export default function AdminPage() {
   useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
-      const response = await fetch('/api/brief-access', { cache: 'no-store' })
+      const response = await fetch('/api/auth/session', { cache: 'no-store' })
       const payload = await response.json().catch(() => null)
       if (!response.ok || payload?.profile?.role !== 'admin') { router.replace('/dashboard'); return }
       void loadProfiles()

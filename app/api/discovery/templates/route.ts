@@ -129,10 +129,10 @@ function normalizeQuestions(value: unknown) {
 
     const options = type === 'choice' ? normalizeChoiceOptions(item.options) : []
     const maxChoices = type === 'choice' ? asIntegerOrNull(item.maxChoices) : null
-    const scaleMin = type === 'scale' ? asIntegerOrNull(item.scaleMin) : null
-    const scaleMax = type === 'scale' ? asIntegerOrNull(item.scaleMax) : null
-    const scaleMinLabel = type === 'scale' ? asOptionalTrimmedString(item.scaleMinLabel) : null
-    const scaleMaxLabel = type === 'scale' ? asOptionalTrimmedString(item.scaleMaxLabel) : null
+    const scaleMin = type === 'scale' || type === 'likert' ? asIntegerOrNull(item.scaleMin) : null
+    const scaleMax = type === 'scale' || type === 'likert' ? asIntegerOrNull(item.scaleMax) : null
+    const scaleMinLabel = type === 'scale' || type === 'likert' ? asOptionalTrimmedString(item.scaleMinLabel) : null
+    const scaleMaxLabel = type === 'scale' || type === 'likert' ? asOptionalTrimmedString(item.scaleMaxLabel) : null
 
     if (type === 'choice') {
       if (options.length === 0) {
@@ -144,7 +144,7 @@ function normalizeQuestions(value: unknown) {
       }
     }
 
-    if (type === 'scale') {
+    if (type === 'scale' || type === 'likert') {
       if (scaleMin === null || scaleMax === null || scaleMax < scaleMin) {
         return { questions: [] as NormalizedQuestion[], error: `Skalfråga ${index + 1} måste ha giltiga gränser.` }
       }

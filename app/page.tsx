@@ -17,7 +17,7 @@ export default function RootPage() {
           router.replace('/login')
           return
         }
-        router.replace('/dashboard/evaluations/new')
+        router.replace('/dashboard/utvardering/skapa')
       } else {
         router.replace('/login')
       }

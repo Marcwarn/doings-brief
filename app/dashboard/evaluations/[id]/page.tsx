@@ -132,7 +132,7 @@ export default function EvaluationDetailPage() {
         throw new Error(nextPayload?.error || 'Kunde inte ta bort utvärderingen.')
       }
 
-      router.push('/dashboard/evaluations')
+      router.push('/dashboard/utvardering')
       router.refresh()
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Kunde inte ta bort utvärderingen.')
@@ -145,7 +145,7 @@ export default function EvaluationDetailPage() {
   if (error || !payload) {
     return (
       <div style={{ padding: '40px 44px', maxWidth: 920 }}>
-        <Link href="/dashboard/evaluations" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 12.5 }}>
+        <Link href="/dashboard/utvardering" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 12.5 }}>
           Tillbaka till utvärderingar
         </Link>
         <div style={{ marginTop: 20 }}>
@@ -205,7 +205,7 @@ export default function EvaluationDetailPage() {
   return (
     <div style={{ padding: '40px 44px', maxWidth: 1120, animation: 'fadeUp 0.35s ease both' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 12.5 }}>
-        <Link href="/dashboard/evaluations" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Utvärdering</Link>
+        <Link href="/dashboard/utvardering" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Utvärdering</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
         <span style={{ color: 'var(--text)', fontWeight: 500 }}>{evaluation.label}</span>
       </div>
@@ -390,7 +390,7 @@ function LoopSection({
   if (!groupsConfigured && !loadingGroups) {
     return (
       <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
-        <strong>Automatisk uppföljning är inte aktiv.</strong><br />
+        <strong>Kundflödet i sender.net är inte aktivt.</strong><br />
         <span style={{ fontWeight: 400 }}>SENDER_API_KEY saknas i Vercel. Lägg till den för att aktivera.</span>
       </div>
     )
@@ -399,7 +399,7 @@ function LoopSection({
   if (!collectEmail) {
     return (
       <div style={{ padding: '14px 16px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>
-        Den här utvärderingen samlar inte in e-post — automatisk uppföljning är inte tillgänglig.
+        Den här utvärderingen samlar inte in e-post, så inga deltagare kan kopplas till kundens uppföljningsflöde.
       </div>
     )
   }
@@ -411,7 +411,7 @@ function LoopSection({
   if (!senderGroupId) {
     return (
       <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
-        Ingen uppföljningsgrupp är kopplad. Detta kan hända om sender.net var otillgänglig när utvärderingen skapades.
+        Ingen kundgrupp är kopplad ännu. Detta händer oftast om sender.net var otillgänglig när utvärderingen skapades.
       </div>
     )
   }
@@ -421,7 +421,7 @@ function LoopSection({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
         <span style={{ fontSize: 18, lineHeight: 1 }}>✓</span>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>Automatisk uppföljning är aktiv</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>Kundens uppföljningsflöde är aktivt</div>
           <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>{groupName || senderGroupId}</div>
         </div>
       </div>
@@ -430,17 +430,17 @@ function LoopSection({
         <StatusTile
           label="Deltagare med e-post"
           value={String(respondentsWithEmail)}
-          sub="har lagts till i uppföljningen"
+          sub="kan föras in i kundens automatisering"
         />
         <StatusTile
           label="Nästa steg"
           value="Automatiskt"
-          sub="sender.net hanterar utskicken"
+          sub="kundspecifika utskick sköts i sender.net"
         />
       </div>
 
       <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
-        Varje deltagare som svarar med sin e-post läggs automatiskt till i sender.net och triggar din uppföljningssekvens — inget mer behöver göras här.
+        Varje deltagare som svarar med sin e-post läggs till i kundens grupp i sender.net. Det är den gruppen som ska bära utbildningens fortsatta uppföljning, inte en global nyhetsbrevslista.
       </p>
     </div>
   )

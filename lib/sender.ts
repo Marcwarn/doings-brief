@@ -76,6 +76,19 @@ export async function createSenderGroup(name: string): Promise<{ id: string; nam
   }
 }
 
+export async function ensureSenderGroup(name: string): Promise<{ id: string; name: string } | null> {
+  const normalizedName = name.trim()
+  if (!normalizedName) return null
+
+  const existingGroups = await listSenderGroups()
+  const existing = existingGroups.find(group => group.name.trim().toLowerCase() === normalizedName.toLowerCase())
+  if (existing) {
+    return { id: existing.id, name: existing.name }
+  }
+
+  return createSenderGroup(normalizedName)
+}
+
 /** List all groups in the sender.net account. */
 export async function listSenderGroups(): Promise<SenderGroup[]> {
   try {

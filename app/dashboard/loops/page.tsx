@@ -82,7 +82,7 @@ export default function LoopsPage() {
             Skicka uppföljningsmail i sekvens efter utbildningar och workshops. Välj nästa steg manuellt.
           </p>
         </div>
-        <Link href="/dashboard/loops/new" style={primaryLinkStyle}>
+        <Link href="/dashboard/loopar/skapa" style={primaryLinkStyle}>
           Ny loop
         </Link>
       </div>
@@ -99,7 +99,7 @@ export default function LoopsPage() {
           <p style={{ margin: '8px 0 20px', fontSize: 13, color: 'var(--text-3)' }}>
             Skapa en loop för att börja skicka uppföljningsmail till deltagare.
           </p>
-          <Link href="/dashboard/loops/new" style={primaryLinkStyle}>
+          <Link href="/dashboard/loopar/skapa" style={primaryLinkStyle}>
             Skapa loop
           </Link>
         </div>
@@ -120,7 +120,7 @@ export default function LoopsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                  <Link href={`/dashboard/loops/${loop.id}`} style={secondaryLinkStyle}>
+                  <Link href={`/dashboard/loopar/${loop.id}`} style={secondaryLinkStyle}>
                     Öppna
                   </Link>
                   {loop.status === 'active' && loop.nextMessageOrderIndex !== null && (

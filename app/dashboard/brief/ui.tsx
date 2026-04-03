@@ -7,7 +7,7 @@ export function BriefSubnav({ active }: { active: BriefSubnavKey | BriefSubnavDi
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
       {[
-        { href: '/dashboard/send', label: 'Nytt utskick', key: 'send' },
+        { href: '/dashboard/debrief/skapa', label: 'Nytt utskick', key: 'send' },
         { href: '/dashboard/question-sets', label: 'Frågor', key: 'question-sets' },
         { href: '/dashboard/briefs', label: 'Översikt', key: 'overview' },
       ].map(item => (

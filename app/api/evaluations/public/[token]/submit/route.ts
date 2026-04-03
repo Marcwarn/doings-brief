@@ -124,19 +124,12 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       return NextResponse.json({ error: 'Kunde inte spara svaret.' }, { status: 500 })
     }
 
-    // Add to sender.net group if configured — fire-and-forget, never blocks submission
+    // Add to the customer's sender.net group — fire-and-forget, never blocks submission.
     if (evaluation.senderGroupId && normalizedEmail) {
       addSubscriberToGroup({ email: normalizedEmail, groupId: evaluation.senderGroupId }).catch(err =>
         console.error('sender.net subscribe error:', err)
       )
     }
-
-        // Also add to the "New subscribers" master group to trigger automation
-        if (normalizedEmail) {
-                addSubscriberToGroup({ email: normalizedEmail, groupId: 'elkNql' }).catch(err =>
-                          console.error('sender.net new-subscribers group error:', err)
-                        )
-        }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

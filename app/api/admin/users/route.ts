@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseRequestClient } from '@/lib/server-auth'
 import { getSupabaseAdminClient } from '@/lib/server-clients'
-import { hasBriefAccess, listBriefAccessRecords, listInferredBriefUserIds } from '@/lib/brief-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,9 +19,7 @@ async function requireAdmin() {
     .eq('id', user.id)
     .single()
 
-  const allowed = await hasBriefAccess(admin, user.id)
-
-  if (error || profile?.role !== 'admin' || !allowed) {
+  if (error || profile?.role !== 'admin') {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   }
 
@@ -34,19 +31,9 @@ export async function GET() {
     const auth = await requireAdmin()
     if ('error' in auth) return auth.error
 
-    const [accessRecords, inferredUserIds] = await Promise.all([
-      listBriefAccessRecords(auth.admin),
-      listInferredBriefUserIds(auth.admin),
-    ])
-    const allowedUserIds = Array.from(new Set([
-      ...accessRecords.filter(record => record.enabled !== false).map(record => record.userId),
-      ...Array.from(inferredUserIds),
-    ]))
-
     const { data, error } = await auth.admin
       .from('profiles')
       .select('*')
-      .in('id', allowedUserIds.length > 0 ? allowedUserIds : ['00000000-0000-0000-0000-000000000000'])
       .order('created_at')
 
     if (error) {

@@ -158,7 +158,7 @@ export default function NewLoopPage() {
       })
       const payload = await res.json()
       if (payload.error) { setCreateError(payload.error); return }
-      router.push(`/dashboard/loops/${payload.loopId}`)
+      router.push(`/dashboard/loopar/${payload.loopId}`)
     } catch {
       setCreateError('Nätverksfel, försök igen')
     } finally {

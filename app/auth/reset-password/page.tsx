@@ -37,7 +37,7 @@ function ResetInner() {
       setLoading(false)
     } else {
       setDone(true)
-      setTimeout(() => router.replace('/dashboard/evaluations/new'), 2000)
+      setTimeout(() => router.replace('/dashboard/utvardering/skapa'), 2000)
     }
   }
 
