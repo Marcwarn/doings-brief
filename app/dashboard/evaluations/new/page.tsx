@@ -20,6 +20,30 @@ type CreatedPayload = {
   publicUrl: string
 }
 
+type EvaluationEditorPayload = {
+  evaluation: {
+    id: string
+    token: string
+    label: string
+    customer: string
+    questionSetId: string
+    questionSetName: string | null
+    collectEmail: boolean
+    createdAt: string
+  }
+  questionSet: {
+    id: string
+    name: string
+    description: string | null
+  } | null
+  questions: Array<{
+    id: string
+    text: string
+    order_index: number
+    type: EvaluationQuestionType
+  }>
+}
+
 type EvaluationWorkspaceTab = 'questions' | 'setup' | 'publish'
 type EvaluationDraftQuestion = {
   text: string
@@ -74,6 +98,7 @@ const evaluationStarterQuestionBank = evaluationQuestionStarters.flatMap(starter
 
 export default function NewEvaluationPage() {
   const sb = createClient()
+  const [editId, setEditId] = useState('')
   const [customers, setCustomers] = useState<string[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [customer, setCustomer] = useState('')
@@ -85,6 +110,7 @@ export default function NewEvaluationPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedPayload | null>(null)
+  const [loadedEditId, setLoadedEditId] = useState<string | null>(null)
   const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
   const [activeTab, setActiveTab] = useState<EvaluationWorkspaceTab>('questions')
   const [expandedStarterIds, setExpandedStarterIds] = useState<string[]>([])
@@ -104,6 +130,12 @@ export default function NewEvaluationPage() {
     () => new Set(customQuestions.map(question => question.starterKey).filter(Boolean)),
     [customQuestions],
   )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    setEditId(params.get('edit')?.trim() || '')
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -127,6 +159,39 @@ export default function NewEvaluationPage() {
       setLoading(false)
     })
   }, [sb])
+
+  useEffect(() => {
+    if (!editId || loading || loadedEditId === editId) return
+
+    fetch(`/api/evaluations/${editId}`)
+      .then(async response => {
+        const payload = await response.json().catch(() => null) as EvaluationEditorPayload | null
+        if (!response.ok || !payload) {
+          throw new Error((payload as { error?: string } | null)?.error || 'Kunde inte läsa utvärderingen för redigering.')
+        }
+
+        setCustomer(payload.evaluation.customer || '')
+        setLabel(payload.evaluation.label || '')
+        setCollectEmail(payload.evaluation.collectEmail !== false)
+        setCustomQuestionSetName(
+          payload.evaluation.questionSetName
+          || payload.questionSet?.name
+          || 'Utvärderingsfrågor'
+        )
+        setCustomQuestions(
+          (payload.questions || [])
+            .sort((a, b) => a.order_index - b.order_index)
+            .map(question => ({
+              text: question.text,
+              type: question.type === 'scale_1_5' ? 'scale_1_5' : 'text',
+            })),
+        )
+        setLoadedEditId(editId)
+      })
+      .catch(err => {
+        setError(err instanceof Error ? err.message : 'Kunde inte läsa utvärderingen för redigering.')
+      })
+  }, [editId, loading, loadedEditId])
 
   useEffect(() => {
     if (!customQuestionSetName.trim() && label.trim()) {
@@ -238,8 +303,8 @@ export default function NewEvaluationPage() {
     }
 
     setSaving(true)
-    const response = await fetch('/api/evaluations/create', {
-      method: 'POST',
+    const response = await fetch(editId ? `/api/evaluations/${editId}` : '/api/evaluations/create', {
+      method: editId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         customer: customer.trim(),
@@ -253,7 +318,7 @@ export default function NewEvaluationPage() {
     const payload = await response.json().catch(() => null)
 
     if (!response.ok) {
-      setError(payload?.error || 'Kunde inte skapa utvärderingen.')
+      setError(payload?.error || (editId ? 'Kunde inte spara utvärderingen.' : 'Kunde inte skapa utvärderingen.'))
       setSaving(false)
       return
     }
@@ -283,10 +348,12 @@ export default function NewEvaluationPage() {
     <div style={pageShellStyle}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-          Skapa utvärdering
+          {editId ? 'Redigera utvärdering' : 'Skapa utvärdering'}
         </h1>
         <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, maxWidth: 700 }}>
-          Välj kund, formulera frågorna och skapa sedan en publik länk med QR-kod för deltagarna.
+          {editId
+            ? 'Justera kund, frågor och upplägg för den här utvärderingen och spara tillbaka ändringarna.'
+            : 'Välj kund, formulera frågorna och skapa sedan en publik länk med QR-kod för deltagarna.'}
         </p>
       </div>
 
@@ -569,7 +636,9 @@ export default function NewEvaluationPage() {
                   Publicering
                 </div>
                 <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
-                  När du skapar utvärderingen genereras en publik länk och QR-kod här i publiceringssteget. Därifrån kan du kopiera länken, ladda ner QR-koden och öppna uppföljningen.
+                  {editId
+                    ? 'När du sparar uppdateras den befintliga publika länken och QR-koden fortsätter att peka på samma utvärdering.'
+                    : 'När du skapar utvärderingen genereras en publik länk och QR-kod här i publiceringssteget. Därifrån kan du kopiera länken, ladda ner QR-koden och öppna uppföljningen.'}
                 </div>
               </div>
 
@@ -578,7 +647,7 @@ export default function NewEvaluationPage() {
                   Kontrollera frågorna och previewn först. Publiceringen använder exakt det upplägg du ser till höger.
                 </div>
                 <button type="submit" disabled={saving} style={submitButtonStyle(saving)}>
-                  {saving ? 'Skapar…' : 'Skapa länk och QR'}
+                  {saving ? (editId ? 'Sparar…' : 'Skapar…') : (editId ? 'Spara ändringar' : 'Skapa länk och QR')}
                 </button>
               </div>
 

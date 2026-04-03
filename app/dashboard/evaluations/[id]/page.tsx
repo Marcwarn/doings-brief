@@ -222,6 +222,9 @@ export default function EvaluationDetailPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <MetricPill label="Frågor" value={questions.length} />
           <MetricPill label="Svar" value={responses.length} tone="ok" />
+          <Link href={`/dashboard/utvardering/skapa?edit=${evaluation.id}`} style={ghostLinkStyle}>
+            Redigera
+          </Link>
           <button onClick={() => navigator.clipboard.writeText(publicUrl)} style={ghostButtonStyle}>Kopiera länk</button>
           <a href={publicUrl} target="_blank" rel="noreferrer" style={ghostLinkStyle}>Öppna deltagarvy</a>
           <button onClick={() => void downloadQrPng()} style={ghostButtonStyle}>Ladda ner QR som PNG</button>
@@ -382,21 +385,21 @@ function LoopSection({
   senderGroupId: string | null
   groups: { id: string; name: string }[]
   loadingGroups: boolean
-  groupsConfigured: boolean | null
+  groupsConfigured: boolean
   respondentsWithEmail: number
 }) {
   const groupName = groups.find(g => g.id === senderGroupId)?.name || null
 
-  if (groupsConfigured === null || loadingGroups) {
-    return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar…</p>
-  }
+    if (groupsConfigured === null || loadingGroups) {
+      return <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Laddar…</p>
+    }
 
-  if (!groupsConfigured) {
-    return (
-      <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
-        <strong>Kundflödet i sender.net är inte aktivt.</strong><br />
-        <span style={{ fontWeight: 400 }}>SENDER_API_KEY saknas i Vercel. Lägg till den för att aktivera.</span>
-      </div>
+    if (!groupsConfigured) {
+      return (
+        <div style={{ padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#92400e', lineHeight: 1.6 }}>
+          <strong>Kundflödet i sender.net är inte aktivt.</strong><br />
+          <span style={{ fontWeight: 400 }}>SENDER_API_KEY saknas i Vercel. Lägg till den för att aktivera.</span>
+        </div>
     )
   }
 
