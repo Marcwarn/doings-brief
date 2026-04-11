@@ -81,7 +81,18 @@ Varje utvärdering ska dessutom kunna ha en enkel uppföljningsplan:
 - steg 2 efter 30 dagar
 - steg 3 efter 90 dagar
 
-Varje steg ska kunna kopplas till en sender-mall och visas med tydlig status i Doings Brief.
+Varje steg ska kunna ha en tydlig typ och visas med tydlig status i Doings Brief.
+
+Viktiga stegtyper:
+
+- `message`
+  - ett rent uppföljningsmejl
+- `message_link`
+  - ett uppföljningsmejl som leder vidare till en resurs, sida eller handling
+- `message_questions`
+  - ett uppföljningsmejl som leder vidare till uppföljningsfrågor
+
+Det sista alternativet är viktigt. Uppföljningsfrågor ska inte betraktas som en missad idé eller tillfällig copy, utan som en faktisk planerad produktmöjlighet.
 
 ---
 
@@ -108,9 +119,12 @@ Fält:
 - `id uuid primary key`
 - `evaluation_id text not null`
 - `step_order int not null`
+- `step_type text not null default 'message'`
 - `delay_days int not null`
 - `sender_template_id text null`
 - `sender_template_name text null`
+- `target_url text null`
+- `question_set_id text null`
 - `active boolean not null default true`
 - `scheduled_for timestamptz null`
 - `sent_at timestamptz null`
@@ -124,6 +138,12 @@ Statusvärden i v1:
 - `scheduled`
 - `sent`
 - `failed`
+
+Stegtyper i v1/v2:
+
+- `message`
+- `message_link`
+- `message_questions`
 
 ## Ny tabell: `evaluation_followup_deliveries`
 
@@ -179,6 +199,7 @@ Doings Brief ska inte försöka spegla hela sender.net. Systemet behöver bara s
 - säkra att rätt grupper finns
 - lägga till deltagare i rätt grupper
 - välja mall per uppföljningssteg
+- stödja olika stegtyper
 - logga att steg skickades
 
 ---
@@ -212,6 +233,7 @@ Ansvar:
 - hämta alla uppföljningssteg för en utvärdering
 - skapa nya steg
 - uppdatera befintliga steg i bulk eller ett i taget
+- spara stegtyp, vald mall och eventuell vidarekoppling
 
 ### `POST /api/evaluations/[id]/followup/send`
 
@@ -252,10 +274,17 @@ Behåll fliken `Uppföljning`, men gör den till en enkel uppföljningsyta.
 
 Per steg:
 
+- `Typ`: exempelvis `Meddelande`, `Meddelande med länk`, `Meddelande med frågor`
 - `Skicka efter`: exempelvis `7 dagar`
 - `Mall`: vald sender-mall
 - `Aktiv`: ja/nej
 - `Status`: utkast, planerad, skickad, misslyckad
+
+Om steget är `Meddelande med frågor`:
+
+- användaren ska förstå att mottagaren kommer vidare till ett kort uppföljningsformulär
+- detta ska senare kopplas till en riktig frågebank eller ett nytt lättviktsflöde i Doings Brief
+- detta får inte simuleras i UI-copy utan riktig backendmodell
 
 3. Enkel logg
 
@@ -286,7 +315,7 @@ Bygg först en halvautomatisk version.
 Det innebär:
 
 - konsulten skapar 1-3 steg i Doings Brief
-- varje steg får antal dagar + mall
+- varje steg får typ + antal dagar + mall
 - systemet räknar fram när steget ska gå
 - konsulten kan trycka `Skicka nu`
 - systemet loggar exakt vilka mottagare som fick steget
@@ -319,6 +348,23 @@ Först då bör full automation aktiveras.
 8. Bygg enkel `Uppföljning`-UI i utvärderingsdetaljen
 9. Lägg till enkel leveranslogg
 10. Lägg till schemalagd körning först när v1 används och förstås av konsulterna
+
+## Nästa produktnivå
+
+Efter första UI-versionen ska nästa verkliga produktsteg vara att formalisera stegtyper i både modell och UX.
+
+Det betyder:
+
+- det ska vara möjligt att välja vad ett steg faktiskt är till för
+- inte bara när det ska skickas
+
+Rekommenderad ordning:
+
+1. `message`
+2. `message_link`
+3. `message_questions`
+
+På så sätt kan uppföljningen växa utan att hela systemet låses till rena sender-mejl.
 
 ---
 

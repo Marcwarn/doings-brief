@@ -9,6 +9,7 @@ Målet är att icke-tekniska konsulter ska kunna:
 - samla in deltagare via QR-kod
 - förstå att e-postadresserna går in i uppföljningen
 - lägga upp 1-3 enkla uppföljningssteg
+- förstå vad varje steg är till för
 - välja rätt mall för varje steg
 - se vad som har skickats och till vilka
 
@@ -105,6 +106,7 @@ Detta är huvudytan.
 Varje steg visas som ett lugnt kort eller en enkel rad med:
 
 - `Steg 1`
+- `Typ`
 - `Skickas efter`
 - val för fördröjning:
   - `7 dagar`
@@ -113,6 +115,14 @@ Varje steg visas som ett lugnt kort eller en enkel rad med:
   - eventuellt `Anpassat`
 - `Mall`
 - val av mall från sender.net
+
+Stegtyper som produkten ska planera för:
+
+- `Meddelande`
+- `Meddelande med länk`
+- `Meddelande med frågor`
+
+Användaren ska inte behöva se interna tekniska skillnader. Stegtypen ska bara förklara vilket slags uppföljning det här är.
 
 Under varje steg:
 
@@ -159,6 +169,8 @@ Den ska aldrig vara editor.
 
 Mallen ägs i sender.net. Doings Brief väljer och förhandsvisar.
 
+Den ska också visa mottagarens upplevelse, inte konsultens uppsättning.
+
 ## Tomläge
 
 Om ingen mall är vald:
@@ -177,15 +189,13 @@ Visa:
 - renderad preview av mejlet
 - gärna tydlig men diskret ram runt previewn
 
-Diskret länk:
+Visa inte i previewn:
 
+- stegnummer som intern arbetsmarkör
+- mallnamn
+- teknisk status
+- länkar som bara konsulten ska använda
 - `Öppna i sender`
-- eller `Redigera mall i sender`
-
-Poängen är:
-
-- Doings Brief styr flödet
-- sender.net äger innehållet
 
 ---
 
@@ -205,7 +215,7 @@ Skäl:
 Redigering av mall:
 
 - sker i sender.net
-- öppnas via länk från Doings Brief
+- öppnas från vänstersidan eller annan konsultyta, inte från mottagarpreviewn
 
 Doings Brief behöver i v1 bara:
 
@@ -224,6 +234,16 @@ När användaren markerar ett steg:
 När användaren väljer en mall:
 
 - preview uppdateras direkt
+
+När användaren väljer stegtyp:
+
+- previewn ska följa mottagarupplevelsen för just den typen
+
+Exempel:
+
+- `Meddelande`: preview visar bara mejlet
+- `Meddelande med länk`: preview visar mejlet och en tydlig CTA
+- `Meddelande med frågor`: preview visar mejlet men får inte lova ett formulär om det ännu inte finns definierat
 
 När användaren lägger till ett nytt steg:
 
@@ -251,6 +271,7 @@ Använd:
 
 - `Uppföljning`
 - `Steg`
+- `Typ`
 - `Skickas efter`
 - `Mall`
 - `Förhandsvisning`
@@ -315,6 +336,7 @@ Den tekniska logiken får finnas i backend, men UI:t ska vara produktlogiskt.
 V1 ska hålla sig till:
 
 - max tre steg
+- enkla stegtyper
 - mallval från sender.net
 - preview till höger
 - enkel statusöverblick

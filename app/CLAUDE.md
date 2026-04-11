@@ -106,6 +106,7 @@ Separat flöde från brief — används för att samla in feedback från kliente
 - `SENDER_API_KEY` env var krävs för att aktivera sender.net-integrationen (`lib/sender.ts`, `GET /api/sender/groups`)
 - Planerad vidareutveckling för kundspecifik och global uppföljning finns i `docs/specs/evaluation-followup.md`
 - UX-riktning för samma flöde finns i `docs/specs/evaluation-followup-ux.md`
+- Produktlogik för olika uppföljningssteg finns i `docs/specs/evaluation-followup-step-types.md`
 
 ---
 

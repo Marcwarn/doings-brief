@@ -52,6 +52,7 @@ type EvaluationDraftQuestion = {
 }
 
 type FollowupDelayPreset = 7 | 30 | 90
+type FollowupStepType = 'message' | 'message_link' | 'message_questions'
 
 type FollowupTemplateOption = {
   id: string
@@ -67,6 +68,7 @@ type FollowupStepDraft = {
   id: string
   label: string
   active: boolean
+  stepType: FollowupStepType
   delayDays: FollowupDelayPreset
   templateId: string
 }
@@ -123,8 +125,8 @@ const followupTemplateOptions: FollowupTemplateOption[] = [
     subject: 'Hur har veckan efter utbildningen landat för dig?',
     eyebrow: 'Uppföljning efter utbildningen',
     headline: 'En kort återblick efter första veckan.',
-    body: 'Vi vill gärna fånga hur innehållet har landat i vardagen och vad som redan börjat göra skillnad. Det här utskicket hjälper konsulten att förstå vad som behöver följas upp vidare.',
-    cta: 'Svara på tre korta frågor',
+    body: 'Vi vill gärna följa upp hur innehållet har landat i vardagen och vad som redan börjat göra skillnad. Det här mejlet ska kännas som en lugn fortsättning på utbildningen, inte som ännu ett administrativt moment.',
+    cta: 'Öppna uppföljningen',
   },
   {
     id: 'action-month-1',
@@ -132,8 +134,8 @@ const followupTemplateOptions: FollowupTemplateOption[] = [
     subject: 'Vad har ni hunnit omsätta sedan utbildningen?',
     eyebrow: 'En månad senare',
     headline: 'Fånga nästa steg medan energin fortfarande finns kvar.',
-    body: 'Det här utskicket passar när ni vill förstå vad deltagarna faktiskt har testat, var de möter motstånd och vilket stöd som skulle hjälpa mest just nu.',
-    cta: 'Dela nuläget',
+    body: 'Det här utskicket passar när ni vill öppna för fortsatt rörelse efter utbildningen och hålla dialogen levande. Fokus här är inte formulärlogik, utan att skapa ett naturligt nästa steg för deltagaren.',
+    cta: 'Fortsätt här',
   },
   {
     id: 'impact-quarter-1',
@@ -141,15 +143,21 @@ const followupTemplateOptions: FollowupTemplateOption[] = [
     subject: 'Vad har utbildningen lett till över tid?',
     eyebrow: 'Tre månader senare',
     headline: 'Samla signaler om effekt, hållbarhet och fortsatt behov.',
-    body: 'Använd det här steget för att knyta ihop utbildningen med faktisk utveckling över tid. Passar när kunden vill se om arbetssätt, ledarskap eller beteenden verkligen har satt sig.',
-    cta: 'Följ upp effekten',
+    body: 'Använd det här steget för att knyta ihop utbildningen med faktisk utveckling över tid. Det ska kännas relevant och mänskligt, utan att lova en interaktion som ännu inte är bestämd i detalj.',
+    cta: 'Se nästa steg',
   },
 ]
 
 const initialFollowupSteps: FollowupStepDraft[] = [
-  { id: 'step-1', label: 'Steg 1', active: true, delayDays: 7, templateId: 'reflection-week-1' },
-  { id: 'step-2', label: 'Steg 2', active: false, delayDays: 30, templateId: 'action-month-1' },
-  { id: 'step-3', label: 'Steg 3', active: false, delayDays: 90, templateId: 'impact-quarter-1' },
+  { id: 'step-1', label: 'Steg 1', active: true, stepType: 'message_questions', delayDays: 7, templateId: 'reflection-week-1' },
+  { id: 'step-2', label: 'Steg 2', active: false, stepType: 'message_link', delayDays: 30, templateId: 'action-month-1' },
+  { id: 'step-3', label: 'Steg 3', active: false, stepType: 'message', delayDays: 90, templateId: 'impact-quarter-1' },
+]
+
+const followupStepTypeOptions: Array<{ value: FollowupStepType; label: string }> = [
+  { value: 'message', label: 'Meddelande' },
+  { value: 'message_link', label: 'Meddelande med länk' },
+  { value: 'message_questions', label: 'Meddelande med frågor' },
 ]
 
 export default function NewEvaluationPage() {
@@ -772,6 +780,7 @@ export default function NewEvaluationPage() {
                   {followupSteps.map(step => {
                     const selected = step.id === activeFollowupStepId
                     const resolvedTemplate = followupTemplateOptions.find(template => template.id === step.templateId)
+                    const resolvedType = followupStepTypeOptions.find(option => option.value === step.stepType)?.label || 'Meddelande'
                     return (
                       <button
                         key={step.id}
@@ -789,6 +798,9 @@ export default function NewEvaluationPage() {
                             <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
                               {step.active ? `Skickas ${step.delayDays} dagar efter utbildningen` : 'Inte aktiverat ännu'}
                             </div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
+                              {resolvedType}
+                            </div>
                           </div>
                           <span style={{
                             ...followupStatusPillStyle,
@@ -799,7 +811,23 @@ export default function NewEvaluationPage() {
                           </span>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(0, 1fr)', gap: 10, marginTop: 14 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
+                          <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                            <span style={tinyLabelStyle}>Typ</span>
+                            <select
+                              value={step.stepType}
+                              onChange={event => updateFollowupStep(step.id, {
+                                stepType: event.target.value as FollowupStepType,
+                                active: true,
+                              })}
+                              style={compactInputStyle}
+                            >
+                              {followupStepTypeOptions.map(option => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          </label>
+
                           <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
                             <span style={tinyLabelStyle}>Skickas efter</span>
                             <select
@@ -1133,53 +1161,67 @@ function EvaluationFollowupPreviewCard({
         background: 'linear-gradient(180deg, #131111 0%, #131111 230px, rgba(247,244,241,0.9) 230px, rgba(247,244,241,0.96) 100%)',
       }}>
         <div style={previewHeroStyle}>
-          <div style={previewEyebrowStyle}>Uppföljning</div>
-          <div style={previewTitleStyle}>{step.label}</div>
+          <div style={previewEyebrowStyle}>Förhandsvisning</div>
+          <div style={previewTitleStyle}>Så här kan nästa mejl kännas</div>
           <div style={previewDescriptionStyle}>
-            Förhandsvisningen visar hur nästa mejl kan kännas för deltagaren när du väljer mall och skicktid.
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
-            <PreviewPill>{customer}</PreviewPill>
-            <PreviewPill>{training}</PreviewPill>
-            <PreviewPill>{step.delayDays} dagar efter utbildningen</PreviewPill>
+            Högersidan ska visa själva utskicket, inte hur det är uppsatt. Därför visas här en ren mottagarvy av den mall du väljer.
           </div>
         </div>
 
         <div style={previewBodyStyle}>
-          <div style={previewMetaRowStyle}>
-            <div style={previewMetaCardStyle}>
-              <div style={previewMetaLabelStyle}>Aktivt steg</div>
-              <div style={previewMetaValueStyle}>{step.active ? step.label : 'Inte aktiverat'}</div>
-            </div>
-            <div style={previewMetaCardStyle}>
-              <div style={previewMetaLabelStyle}>Mall i sender</div>
-              <div style={previewMetaValueStyle}>{template?.name || 'Ingen mall vald'}</div>
-            </div>
-          </div>
-
           {template ? (
             <div style={previewQuestionCardStyle}>
-              <div style={{ display: 'grid', gap: 10 }}>
-                <div style={previewQuestionBadgeStyle}>{template.eyebrow}</div>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Ämnesrad</div>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{
+                  display: 'grid',
+                  gap: 8,
+                  paddingBottom: 14,
+                  borderBottom: '1px solid rgba(14,14,12,0.08)',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    Ämnesrad
+                  </div>
                   <div style={{ fontSize: 18, color: 'var(--text)', lineHeight: 1.35, fontWeight: 600 }}>
                     {template.subject}
                   </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                    Från Doings till deltagare från {customer || 'vald kund'}
+                  </div>
                 </div>
+
+                <div>
+                  <div style={previewQuestionBadgeStyle}>{template.eyebrow}</div>
+                </div>
+
                 <div style={previewTextAreaStyle}>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginBottom: 12 }}>
+                    Hej,
+                  </div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 14 }}>
                     {template.headline}
                   </div>
                   <div style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.7 }}>
                     {template.body}
                   </div>
+                  {step.stepType === 'message_link' && (
+                    <div style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.7, marginTop: 14 }}>
+                      I det här steget leder knappen vidare till nästa resurs eller nästa handling.
+                    </div>
+                  )}
+                  {step.stepType === 'message_questions' && (
+                    <div style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.7, marginTop: 14 }}>
+                      I det här steget leder knappen vidare till en kort uppföljning. Själva frågeflödet behöver senare definieras och byggas som riktig funktion, inte bara som copy.
+                    </div>
+                  )}
+                  <div style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.7, marginTop: 14 }}>
+                    Hälsningar,<br />
+                    Doings
+                  </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button type="button" style={previewPrimaryButtonStyle}>{template.cta}</button>
-                <a href="#sender-template" style={previewSecondaryLinkStyle}>Öppna i sender</a>
               </div>
             </div>
           ) : (
@@ -1190,10 +1232,10 @@ function EvaluationFollowupPreviewCard({
 
           <div style={previewMiniReviewStyle}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
-              Vad som händer
+              Om den här previewn
             </div>
             <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
-              Deltagare som lämnar e-post i utvärderingen blir underlag för uppföljningen. I nästa steg ska den här ytan visa verklig sender-preview och enkel historik över vad som har skickats.
+              Previewn ska visa det deltagaren möter, inte intern uppsättning. Val som stegnummer, skicktid och mallnamn hör hemma i vänstersidan där konsulten arbetar.
             </div>
           </div>
         </div>
@@ -1622,13 +1664,6 @@ const previewSecondaryButtonStyle: React.CSSProperties = {
   border: '1px solid var(--border)',
 }
 
-const previewSecondaryLinkStyle: React.CSSProperties = {
-  ...previewSecondaryButtonStyle,
-  textDecoration: 'none',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-}
 
 const previewMiniReviewStyle: React.CSSProperties = {
   borderRadius: 18,
