@@ -73,6 +73,8 @@ type FollowupStepDraft = {
   templateId: string
 }
 
+type FollowupDeliveryMode = 'manual' | 'automatic'
+
 const evaluationQuestionStarters = [
   {
     id: 'reflection',
@@ -149,7 +151,7 @@ const followupTemplateOptions: FollowupTemplateOption[] = [
 ]
 
 const initialFollowupSteps: FollowupStepDraft[] = [
-  { id: 'step-1', label: 'Steg 1', active: true, stepType: 'message_questions', delayDays: 7, templateId: 'reflection-week-1' },
+  { id: 'step-1', label: 'Steg 1', active: false, stepType: 'message_questions', delayDays: 7, templateId: 'reflection-week-1' },
   { id: 'step-2', label: 'Steg 2', active: false, stepType: 'message_link', delayDays: 30, templateId: 'action-month-1' },
   { id: 'step-3', label: 'Steg 3', active: false, stepType: 'message', delayDays: 90, templateId: 'impact-quarter-1' },
 ]
@@ -180,6 +182,7 @@ export default function NewEvaluationPage() {
   const [expandedStarterIds, setExpandedStarterIds] = useState<string[]>([])
   const [followupSteps, setFollowupSteps] = useState<FollowupStepDraft[]>(initialFollowupSteps)
   const [activeFollowupStepId, setActiveFollowupStepId] = useState(initialFollowupSteps[0].id)
+  const [followupDeliveryMode, setFollowupDeliveryMode] = useState<FollowupDeliveryMode>('manual')
 
   const qrUrl = useMemo(() => (
     created ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(created.publicUrl)}` : ''
@@ -756,7 +759,7 @@ export default function NewEvaluationPage() {
                 </div>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
-                    Deltagare som svarar med e-post kan få uppföljning efter utbildningen. Du ställer in stegen här, medan själva utskicken senare går via sender.net.
+                    Deltagare som svarar med e-post kan få uppföljning efter utbildningen. Det här är frivilligt. Du kan lämna uppföljningen tom och ändå publicera utvärderingen.
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
                     <MiniInfoCard label="Kund" value={previewCustomer} />
@@ -766,119 +769,205 @@ export default function NewEvaluationPage() {
                 </div>
               </div>
 
-              <div style={{ ...subtlePanelStyle, display: 'grid', gap: 12 }}>
-                <div>
-                  <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
-                    Steg
+              {activeFollowupStepsCount === 0 ? (
+                <div style={{ ...subtlePanelStyle, display: 'grid', gap: 14 }}>
+                  <div>
+                    <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
+                      Uppföljning
+                    </div>
+                    <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.65 }}>
+                      Vill du följa upp deltagarna med mejl efter utbildningen kan du lägga till steg här. Om inte, lämnar du bara detta tomt.
+                    </div>
                   </div>
-                  <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
-                    Håll det kort och tydligt. Välj när utskicket ska gå och vilken mall som ska användas. Du kan aktivera upp till tre steg.
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                    Du kan börja med ett enda steg och bygga vidare senare.
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFollowupStep('step-1', { active: true })
+                        setActiveFollowupStepId('step-1')
+                      }}
+                      style={followupPrimaryButtonStyle}
+                    >
+                      Lägg till uppföljning
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <div style={{ ...subtlePanelStyle, display: 'grid', gap: 12 }}>
+                  <div>
+                    <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
+                      Steg
+                    </div>
+                    <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                      Håll det kort och tydligt. Välj när utskicket ska gå och vilken mall som ska användas. Du kan aktivera upp till tre steg.
+                    </div>
+                  </div>
 
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {followupSteps.map(step => {
-                    const selected = step.id === activeFollowupStepId
-                    const resolvedTemplate = followupTemplateOptions.find(template => template.id === step.templateId)
-                    const resolvedType = followupStepTypeOptions.find(option => option.value === step.stepType)?.label || 'Meddelande'
-                    return (
-                      <button
-                        key={step.id}
-                        type="button"
-                        onClick={() => setActiveFollowupStepId(step.id)}
-                        style={{
-                          ...followupStepCardStyle,
-                          borderColor: selected ? 'rgba(198,35,104,0.28)' : 'rgba(14,14,12,0.08)',
-                          background: selected ? 'rgba(198,35,104,0.06)' : 'rgba(255,255,255,0.86)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
-                          <div>
-                            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{step.label}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
-                              {step.active ? `Skickas ${step.delayDays} dagar efter utbildningen` : 'Inte aktiverat ännu'}
-                            </div>
-                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
-                              {resolvedType}
-                            </div>
+                  <div style={{
+                    display: 'grid',
+                    gap: 10,
+                    padding: '12px 14px',
+                    borderRadius: 14,
+                    border: '1px solid rgba(14,14,12,0.08)',
+                    background: 'rgba(255,255,255,0.78)',
+                  }}>
+                    <div style={tinyLabelStyle}>Hur ska uppföljningen skickas?</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {[
+                        {
+                          key: 'manual' as const,
+                          label: 'Skicka manuellt',
+                          description: 'Konsulten bestämmer när varje steg går ut.',
+                        },
+                        {
+                          key: 'automatic' as const,
+                          label: 'Skicka automatiskt',
+                          description: 'Systemet skickar stegen enligt den tidsplan du ställer in.',
+                        },
+                      ].map(option => (
+                        <button
+                          key={option.key}
+                          type="button"
+                          onClick={() => setFollowupDeliveryMode(option.key)}
+                          style={{
+                            ...deliveryModeButtonStyle,
+                            background: followupDeliveryMode === option.key ? 'rgba(198,35,104,0.08)' : 'rgba(255,255,255,0.9)',
+                            borderColor: followupDeliveryMode === option.key ? 'rgba(198,35,104,0.26)' : 'rgba(14,14,12,0.08)',
+                          }}
+                        >
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{option.label}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5, marginTop: 4 }}>
+                            {option.description}
                           </div>
-                          <span style={{
-                            ...followupStatusPillStyle,
-                            background: step.active ? 'rgba(198,35,104,0.1)' : 'rgba(14,14,12,0.06)',
-                            color: step.active ? 'var(--accent)' : 'var(--text-3)',
-                          }}>
-                            {step.active ? 'Aktivt' : 'Av'}
-                          </span>
-                        </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      {followupDeliveryMode === 'automatic'
+                        ? 'Automatiskt läge ska senare använda tidsplanen för att skicka utan manuellt handpålägg. Loggen behöver då tydligt visa vad som gått iväg av sig självt.'
+                        : 'Manuellt läge passar när konsulten vill tajma varje steg själv eller invänta rätt läge efter utbildningen.'}
+                    </div>
+                  </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
-                          <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
-                            <span style={tinyLabelStyle}>Typ</span>
-                            <select
-                              value={step.stepType}
-                              onChange={event => updateFollowupStep(step.id, {
-                                stepType: event.target.value as FollowupStepType,
-                                active: true,
-                              })}
-                              style={compactInputStyle}
-                            >
-                              {followupStepTypeOptions.map(option => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                              ))}
-                            </select>
-                          </label>
+                  {followupDeliveryMode === 'automatic' && (
+                    <div style={automaticModeNoticeStyle}>
+                      <div style={{ ...eyebrowLabelStyle, marginBottom: 8, color: '#7c2d12' }}>
+                        Automatiskt läge
+                      </div>
+                      <div style={{ fontSize: 13.5, color: '#7c2d12', lineHeight: 1.65 }}>
+                        När detta läge byggs klart ska systemet själv skicka aktiva steg enligt din tidsplan. För konsulten behöver det därför bli tydligt vad som är planerat, vad som redan har gått ut och om något behöver pausas.
+                      </div>
+                    </div>
+                  )}
 
-                          <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
-                            <span style={tinyLabelStyle}>Skickas efter</span>
-                            <select
-                              value={step.delayDays}
-                              onChange={event => updateFollowupStep(step.id, {
-                                delayDays: Number(event.target.value) as FollowupDelayPreset,
-                                active: true,
-                              })}
-                              style={compactInputStyle}
-                            >
-                              <option value={7}>7 dagar</option>
-                              <option value={30}>30 dagar</option>
-                              <option value={90}>90 dagar</option>
-                            </select>
-                          </label>
-
-                          <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
-                            <span style={tinyLabelStyle}>Mall</span>
-                            <select
-                              value={step.templateId}
-                              onChange={event => updateFollowupStep(step.id, {
-                                templateId: event.target.value,
-                                active: true,
-                              })}
-                              style={compactInputStyle}
-                            >
-                              {followupTemplateOptions.map(template => (
-                                <option key={template.id} value={template.id}>{template.name}</option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                          <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
-                            {resolvedTemplate ? resolvedTemplate.name : 'Ingen mall vald'}
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {followupSteps.map(step => {
+                      const selected = step.id === activeFollowupStepId
+                      const resolvedTemplate = followupTemplateOptions.find(template => template.id === step.templateId)
+                      const resolvedType = followupStepTypeOptions.find(option => option.value === step.stepType)?.label || 'Meddelande'
+                      return (
+                        <button
+                          key={step.id}
+                          type="button"
+                          onClick={() => setActiveFollowupStepId(step.id)}
+                          style={{
+                            ...followupStepCardStyle,
+                            borderColor: selected ? 'rgba(198,35,104,0.28)' : 'rgba(14,14,12,0.08)',
+                            background: selected ? 'rgba(198,35,104,0.06)' : 'rgba(255,255,255,0.86)',
+                            opacity: step.active ? 1 : 0.72,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{step.label}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
+                            {step.active ? `Skickas ${step.delayDays} dagar efter utbildningen` : 'Inte aktiverat ännu'}
                           </div>
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}>
-                            <input
-                              type="checkbox"
-                              checked={step.active}
-                              onChange={event => updateFollowupStep(step.id, { active: event.target.checked })}
-                            />
-                            Aktivt steg
-                          </label>
-                        </div>
-                      </button>
-                    )
-                  })}
+                          <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3 }}>
+                            {resolvedType}
+                              </div>
+                            </div>
+                            <span style={{
+                              ...followupStatusPillStyle,
+                              background: step.active ? 'rgba(198,35,104,0.1)' : 'rgba(14,14,12,0.06)',
+                              color: step.active ? 'var(--accent)' : 'var(--text-3)',
+                            }}>
+                              {step.active ? 'Aktivt' : 'Av'}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
+                            <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                              <span style={tinyLabelStyle}>Typ</span>
+                              <select
+                                value={step.stepType}
+                                onChange={event => updateFollowupStep(step.id, {
+                                  stepType: event.target.value as FollowupStepType,
+                                  active: true,
+                                })}
+                                style={compactInputStyle}
+                              >
+                                {followupStepTypeOptions.map(option => (
+                                  <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                              <span style={tinyLabelStyle}>Skickas efter</span>
+                              <select
+                                value={step.delayDays}
+                                onChange={event => updateFollowupStep(step.id, {
+                                  delayDays: Number(event.target.value) as FollowupDelayPreset,
+                                  active: true,
+                                })}
+                                style={compactInputStyle}
+                              >
+                                <option value={7}>7 dagar</option>
+                                <option value={30}>30 dagar</option>
+                                <option value={90}>90 dagar</option>
+                              </select>
+                            </label>
+
+                            <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                              <span style={tinyLabelStyle}>Mall</span>
+                              <select
+                                value={step.templateId}
+                                onChange={event => updateFollowupStep(step.id, {
+                                  templateId: event.target.value,
+                                  active: true,
+                                })}
+                                style={compactInputStyle}
+                              >
+                                {followupTemplateOptions.map(template => (
+                                  <option key={template.id} value={template.id}>{template.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                              {resolvedTemplate ? resolvedTemplate.name : 'Ingen mall vald'}
+                            </div>
+                            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}>
+                              <input
+                                type="checkbox"
+                                checked={step.active}
+                                onChange={event => updateFollowupStep(step.id, { active: event.target.checked })}
+                              />
+                              Aktivt steg
+                            </label>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div style={{ ...subtlePanelStyle, display: 'grid', gap: 10 }}>
                 <div style={{ ...eyebrowLabelStyle, marginBottom: 2 }}>
@@ -890,7 +979,9 @@ export default function NewEvaluationPage() {
                     : `${activeFollowupStepsCount} steg planerade. Första aktiva steg går ${Math.min(...followupSteps.filter(step => step.active).map(step => step.delayDays))} dagar efter utbildningen.`}
                 </div>
                 <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                  När sender.net-kopplingen är fullt inkopplad ska samma yta även visa vad som har skickats och till vilka, utan att du behöver lämna utvärderingen.
+                  {followupDeliveryMode === 'automatic'
+                    ? 'Automatiskt läge ska senare kunna skicka enligt plan och sedan visa exakt vad som har gått ut och till vilka, utan att du behöver lämna utvärderingen.'
+                    : 'När sender.net-kopplingen är fullt inkopplad ska samma yta även visa vad som har skickats och till vilka, utan att du behöver lämna utvärderingen.'}
                 </div>
               </div>
             </div>
@@ -1429,6 +1520,35 @@ const followupLaunchButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
   transition: 'background 0.18s, border-color 0.18s, color 0.18s',
   boxShadow: '0 10px 24px rgba(14,14,12,0.05)',
+}
+
+const followupPrimaryButtonStyle: React.CSSProperties = {
+  padding: '12px 16px',
+  borderRadius: 12,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'var(--text)',
+  color: '#fff',
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const deliveryModeButtonStyle: React.CSSProperties = {
+  display: 'block',
+  flex: '1 1 220px',
+  textAlign: 'left',
+  padding: '12px 14px',
+  borderRadius: 14,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.9)',
+  cursor: 'pointer',
+}
+
+const automaticModeNoticeStyle: React.CSSProperties = {
+  padding: '14px 16px',
+  borderRadius: 14,
+  border: '1px solid #fdba74',
+  background: '#fff7ed',
 }
 
 const panelStyle: React.CSSProperties = {
