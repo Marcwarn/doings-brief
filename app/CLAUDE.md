@@ -40,8 +40,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - Brief-subnaven är nu förenklad till `Nytt utskick`, `Översikt` och `Frågebatterier`, medan kunder och utskick fångas upp under översikten
 - Den synliga produktetiketten i dashboarden är nu `Debrief`, och sidomenyns huvudlänk går direkt till `Nytt utskick` i stället för översikten
 - Debrief ska alltid öppna i vänsterfliken `Nytt utskick`, inte i översikt eller frågor
-
-**Saknas**: `app/dashboard/error.tsx` (ingen error boundary — okänt React-fel kraschar hela sidan)
+- Dashboard-segmentet har nu en egen `error.tsx` som fångar React-fel och ger användaren möjlighet att försöka igen eller gå tillbaka
 
 ---
 
@@ -175,4 +174,3 @@ Separat flöde från brief — används för att samla in feedback från kliente
 1. **Automatiska påminnelser** — manuell påminnelse finns, men ingen scheduler eller overdue-logik
 2. **Token-expiry** — inbjudningslänkar gäller för evigt trots att copy säger 30 dagar
 3. **Autosave** — klient förlorar svar om webbläsaren stängs
-4. **Error boundary** — `app/dashboard/error.tsx` saknas

@@ -28,11 +28,6 @@ Reminder email support exists, but it is manually triggered from the dashboard. 
 Types in `lib/supabase.ts` are hand-maintained. If the database schema changes, the types drift silently.
 **Effort**: Medium — configure `supabase gen types typescript` in CI to regenerate types and fail on diff.
 
-### No Error Boundary in Dashboard
-
-Uncaught React errors in the consultant dashboard will crash the entire page. No `error.tsx` file is present in `app/dashboard/`.
-**Effort**: Small — add `app/dashboard/error.tsx` following Next.js 14 error boundary pattern.
-
 ### Playwright Tests Not Isolated
 
 Smoke tests use a shared production account and real production data. A test that creates a batch dispatch leaves real data behind.
