@@ -75,6 +75,16 @@ Running log of significant decisions made during development. For formal archite
 - the main candidate for this redesign is `/dashboard/send`
 - `Utvärdering` should not be forced into the same shape until its own workflow is specified more clearly
 
+## 2026-04-11 — Evaluation Should Be the Hub for Post-Training Follow-Up
+
+- `Utvärdering` is not only a feedback form; it is the intake point for post-training follow-up
+- sender.net should remain an infrastructure layer, not the main user-facing workflow
+- the consultant experience should stay inside Doings Brief: collect participants, define a few follow-up steps, and review what has been sent
+- follow-up should support two audience levels:
+  - a customer-specific group for the exact training cohort
+  - a global training-participants group for broader future outreach
+- the concrete implementation direction is documented in `docs/specs/evaluation-followup.md`
+
 ## 2026-03-30 — Next.js Was Upgraded to a Patched 14.2.x Release
 
 - the app was upgraded from `next@14.2.5` to `next@14.2.35`

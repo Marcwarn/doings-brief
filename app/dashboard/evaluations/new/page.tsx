@@ -44,11 +44,31 @@ type EvaluationEditorPayload = {
   }>
 }
 
-type EvaluationWorkspaceTab = 'questions' | 'setup' | 'publish'
+type EvaluationWorkspaceTab = 'questions' | 'setup' | 'publish' | 'followup'
 type EvaluationDraftQuestion = {
   text: string
   type: EvaluationQuestionType
   starterKey?: string
+}
+
+type FollowupDelayPreset = 7 | 30 | 90
+
+type FollowupTemplateOption = {
+  id: string
+  name: string
+  subject: string
+  eyebrow: string
+  headline: string
+  body: string
+  cta: string
+}
+
+type FollowupStepDraft = {
+  id: string
+  label: string
+  active: boolean
+  delayDays: FollowupDelayPreset
+  templateId: string
 }
 
 const evaluationQuestionStarters = [
@@ -96,6 +116,42 @@ const evaluationStarterQuestionBank = evaluationQuestionStarters.flatMap(starter
   }))
 ))
 
+const followupTemplateOptions: FollowupTemplateOption[] = [
+  {
+    id: 'reflection-week-1',
+    name: 'Reflektion efter första veckan',
+    subject: 'Hur har veckan efter utbildningen landat för dig?',
+    eyebrow: 'Uppföljning efter utbildningen',
+    headline: 'En kort återblick efter första veckan.',
+    body: 'Vi vill gärna fånga hur innehållet har landat i vardagen och vad som redan börjat göra skillnad. Det här utskicket hjälper konsulten att förstå vad som behöver följas upp vidare.',
+    cta: 'Svara på tre korta frågor',
+  },
+  {
+    id: 'action-month-1',
+    name: 'Nästa steg efter en månad',
+    subject: 'Vad har ni hunnit omsätta sedan utbildningen?',
+    eyebrow: 'En månad senare',
+    headline: 'Fånga nästa steg medan energin fortfarande finns kvar.',
+    body: 'Det här utskicket passar när ni vill förstå vad deltagarna faktiskt har testat, var de möter motstånd och vilket stöd som skulle hjälpa mest just nu.',
+    cta: 'Dela nuläget',
+  },
+  {
+    id: 'impact-quarter-1',
+    name: 'Effekt efter tre månader',
+    subject: 'Vad har utbildningen lett till över tid?',
+    eyebrow: 'Tre månader senare',
+    headline: 'Samla signaler om effekt, hållbarhet och fortsatt behov.',
+    body: 'Använd det här steget för att knyta ihop utbildningen med faktisk utveckling över tid. Passar när kunden vill se om arbetssätt, ledarskap eller beteenden verkligen har satt sig.',
+    cta: 'Följ upp effekten',
+  },
+]
+
+const initialFollowupSteps: FollowupStepDraft[] = [
+  { id: 'step-1', label: 'Steg 1', active: true, delayDays: 7, templateId: 'reflection-week-1' },
+  { id: 'step-2', label: 'Steg 2', active: false, delayDays: 30, templateId: 'action-month-1' },
+  { id: 'step-3', label: 'Steg 3', active: false, delayDays: 90, templateId: 'impact-quarter-1' },
+]
+
 export default function NewEvaluationPage() {
   const sb = createClient()
   const [editId, setEditId] = useState('')
@@ -114,6 +170,8 @@ export default function NewEvaluationPage() {
   const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
   const [activeTab, setActiveTab] = useState<EvaluationWorkspaceTab>('questions')
   const [expandedStarterIds, setExpandedStarterIds] = useState<string[]>([])
+  const [followupSteps, setFollowupSteps] = useState<FollowupStepDraft[]>(initialFollowupSteps)
+  const [activeFollowupStepId, setActiveFollowupStepId] = useState(initialFollowupSteps[0].id)
 
   const qrUrl = useMemo(() => (
     created ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(created.publicUrl)}` : ''
@@ -130,6 +188,9 @@ export default function NewEvaluationPage() {
     () => new Set(customQuestions.map(question => question.starterKey).filter(Boolean)),
     [customQuestions],
   )
+  const activeFollowupStep = followupSteps.find(step => step.id === activeFollowupStepId) || followupSteps[0]
+  const activeFollowupTemplate = followupTemplateOptions.find(template => template.id === activeFollowupStep?.templateId) || null
+  const activeFollowupStepsCount = followupSteps.filter(step => step.active).length
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -279,6 +340,12 @@ export default function NewEvaluationPage() {
     setError(null)
   }
 
+  function updateFollowupStep(stepId: string, patch: Partial<FollowupStepDraft>) {
+    setFollowupSteps(prev => prev.map(step => (
+      step.id === stepId ? { ...step, ...patch } : step
+    )))
+  }
+
   async function createEvaluation(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -381,26 +448,42 @@ export default function NewEvaluationPage() {
 
       <div style={workspaceStyle}>
         <form onSubmit={createEvaluation} style={editorPanelStyle}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-            {[
-              { key: 'questions' as const, label: 'Frågor' },
-              { key: 'setup' as const, label: 'Upplägg' },
-              { key: 'publish' as const, label: 'Publicera' },
-            ].map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                style={{
-                  ...workspaceTabButtonStyle,
-                  color: activeTab === tab.key ? 'var(--text)' : 'var(--text-2)',
-                  background: activeTab === tab.key ? 'rgba(14,14,12,0.06)' : 'rgba(255,255,255,0.88)',
-                  borderColor: activeTab === tab.key ? 'rgba(14,14,12,0.12)' : 'var(--border)',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { key: 'questions' as const, label: 'Frågor' },
+                { key: 'setup' as const, label: 'Upplägg' },
+                { key: 'publish' as const, label: 'Publicera' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  style={{
+                    ...workspaceTabButtonStyle,
+                    color: activeTab === tab.key ? 'var(--text)' : 'var(--text-2)',
+                    background: activeTab === tab.key ? 'rgba(14,14,12,0.06)' : 'rgba(255,255,255,0.88)',
+                    borderColor: activeTab === tab.key ? 'rgba(14,14,12,0.12)' : 'var(--border)',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('followup')}
+              style={{
+                ...followupLaunchButtonStyle,
+                color: activeTab === 'followup' ? '#fff' : 'var(--text)',
+                background: activeTab === 'followup'
+                  ? 'linear-gradient(135deg, #151312 0%, #2a2523 100%)'
+                  : 'rgba(255,255,255,0.92)',
+                borderColor: activeTab === 'followup' ? 'rgba(21,19,18,0.4)' : 'rgba(14,14,12,0.08)',
+              }}
+            >
+              Uppföljning
+            </button>
           </div>
 
           {activeTab === 'questions' && (
@@ -656,19 +739,156 @@ export default function NewEvaluationPage() {
               )}
             </div>
           )}
+
+          {activeTab === 'followup' && (
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div style={subtlePanelStyle}>
+                <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
+                  Mottagare
+                </div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.6 }}>
+                    Deltagare som svarar med e-post kan få uppföljning efter utbildningen. Du ställer in stegen här, medan själva utskicken senare går via sender.net.
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+                    <MiniInfoCard label="Kund" value={previewCustomer} />
+                    <MiniInfoCard label="Utbildning" value={previewQuestionSource} />
+                    <MiniInfoCard label="Svarsläge" value={collectEmail ? 'Med e-post' : 'Anonymt'} />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ ...subtlePanelStyle, display: 'grid', gap: 12 }}>
+                <div>
+                  <div style={{ ...eyebrowLabelStyle, marginBottom: 8 }}>
+                    Steg
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                    Håll det kort och tydligt. Välj när utskicket ska gå och vilken mall som ska användas. Du kan aktivera upp till tre steg.
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {followupSteps.map(step => {
+                    const selected = step.id === activeFollowupStepId
+                    const resolvedTemplate = followupTemplateOptions.find(template => template.id === step.templateId)
+                    return (
+                      <button
+                        key={step.id}
+                        type="button"
+                        onClick={() => setActiveFollowupStepId(step.id)}
+                        style={{
+                          ...followupStepCardStyle,
+                          borderColor: selected ? 'rgba(198,35,104,0.28)' : 'rgba(14,14,12,0.08)',
+                          background: selected ? 'rgba(198,35,104,0.06)' : 'rgba(255,255,255,0.86)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                          <div>
+                            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{step.label}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
+                              {step.active ? `Skickas ${step.delayDays} dagar efter utbildningen` : 'Inte aktiverat ännu'}
+                            </div>
+                          </div>
+                          <span style={{
+                            ...followupStatusPillStyle,
+                            background: step.active ? 'rgba(198,35,104,0.1)' : 'rgba(14,14,12,0.06)',
+                            color: step.active ? 'var(--accent)' : 'var(--text-3)',
+                          }}>
+                            {step.active ? 'Aktivt' : 'Av'}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(0, 1fr)', gap: 10, marginTop: 14 }}>
+                          <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                            <span style={tinyLabelStyle}>Skickas efter</span>
+                            <select
+                              value={step.delayDays}
+                              onChange={event => updateFollowupStep(step.id, {
+                                delayDays: Number(event.target.value) as FollowupDelayPreset,
+                                active: true,
+                              })}
+                              style={compactInputStyle}
+                            >
+                              <option value={7}>7 dagar</option>
+                              <option value={30}>30 dagar</option>
+                              <option value={90}>90 dagar</option>
+                            </select>
+                          </label>
+
+                          <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                            <span style={tinyLabelStyle}>Mall</span>
+                            <select
+                              value={step.templateId}
+                              onChange={event => updateFollowupStep(step.id, {
+                                templateId: event.target.value,
+                                active: true,
+                              })}
+                              style={compactInputStyle}
+                            >
+                              {followupTemplateOptions.map(template => (
+                                <option key={template.id} value={template.id}>{template.name}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                            {resolvedTemplate ? resolvedTemplate.name : 'Ingen mall vald'}
+                          </div>
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-2)' }}>
+                            <input
+                              type="checkbox"
+                              checked={step.active}
+                              onChange={event => updateFollowupStep(step.id, { active: event.target.checked })}
+                            />
+                            Aktivt steg
+                          </label>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={{ ...subtlePanelStyle, display: 'grid', gap: 10 }}>
+                <div style={{ ...eyebrowLabelStyle, marginBottom: 2 }}>
+                  Överblick
+                </div>
+                <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.65 }}>
+                  {activeFollowupStepsCount === 0
+                    ? 'Ingen uppföljning är aktiv ännu.'
+                    : `${activeFollowupStepsCount} steg planerade. Första aktiva steg går ${Math.min(...followupSteps.filter(step => step.active).map(step => step.delayDays))} dagar efter utbildningen.`}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                  När sender.net-kopplingen är fullt inkopplad ska samma yta även visa vad som har skickats och till vilka, utan att du behöver lämna utvärderingen.
+                </div>
+              </div>
+            </div>
+          )}
         </form>
 
         <aside style={previewRailStyle}>
           <div style={previewRailInnerStyle}>
-            <EvaluationPreviewCard
-              title={previewTitle}
-              customer={previewCustomer}
-              questionSource={previewQuestionSource}
-              collectEmail={collectEmail}
-              questions={previewQuestions}
-              activeQuestionIndex={activePreviewQuestionIndex}
-              onSelectQuestion={setActivePreviewQuestionIndex}
-            />
+            {activeTab === 'followup' ? (
+              <EvaluationFollowupPreviewCard
+                customer={previewCustomer}
+                training={previewTitle}
+                step={activeFollowupStep}
+                template={activeFollowupTemplate}
+              />
+            ) : (
+              <EvaluationPreviewCard
+                title={previewTitle}
+                customer={previewCustomer}
+                questionSource={previewQuestionSource}
+                collectEmail={collectEmail}
+                questions={previewQuestions}
+                activeQuestionIndex={activePreviewQuestionIndex}
+                onSelectQuestion={setActivePreviewQuestionIndex}
+              />
+            )}
           </div>
         </aside>
       </div>
@@ -894,6 +1114,110 @@ function EvaluationPublishCard({
   )
 }
 
+function EvaluationFollowupPreviewCard({
+  customer,
+  training,
+  step,
+  template,
+}: {
+  customer: string
+  training: string
+  step: FollowupStepDraft
+  template: FollowupTemplateOption | null
+}) {
+  return (
+    <div style={previewSurfaceStyle}>
+      <div style={{
+        ...previewFrameStyle,
+        minHeight: 820,
+        background: 'linear-gradient(180deg, #131111 0%, #131111 230px, rgba(247,244,241,0.9) 230px, rgba(247,244,241,0.96) 100%)',
+      }}>
+        <div style={previewHeroStyle}>
+          <div style={previewEyebrowStyle}>Uppföljning</div>
+          <div style={previewTitleStyle}>{step.label}</div>
+          <div style={previewDescriptionStyle}>
+            Förhandsvisningen visar hur nästa mejl kan kännas för deltagaren när du väljer mall och skicktid.
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
+            <PreviewPill>{customer}</PreviewPill>
+            <PreviewPill>{training}</PreviewPill>
+            <PreviewPill>{step.delayDays} dagar efter utbildningen</PreviewPill>
+          </div>
+        </div>
+
+        <div style={previewBodyStyle}>
+          <div style={previewMetaRowStyle}>
+            <div style={previewMetaCardStyle}>
+              <div style={previewMetaLabelStyle}>Aktivt steg</div>
+              <div style={previewMetaValueStyle}>{step.active ? step.label : 'Inte aktiverat'}</div>
+            </div>
+            <div style={previewMetaCardStyle}>
+              <div style={previewMetaLabelStyle}>Mall i sender</div>
+              <div style={previewMetaValueStyle}>{template?.name || 'Ingen mall vald'}</div>
+            </div>
+          </div>
+
+          {template ? (
+            <div style={previewQuestionCardStyle}>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div style={previewQuestionBadgeStyle}>{template.eyebrow}</div>
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Ämnesrad</div>
+                  <div style={{ fontSize: 18, color: 'var(--text)', lineHeight: 1.35, fontWeight: 600 }}>
+                    {template.subject}
+                  </div>
+                </div>
+                <div style={previewTextAreaStyle}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--text)', lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 14 }}>
+                    {template.headline}
+                  </div>
+                  <div style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.7 }}>
+                    {template.body}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button type="button" style={previewPrimaryButtonStyle}>{template.cta}</button>
+                <a href="#sender-template" style={previewSecondaryLinkStyle}>Öppna i sender</a>
+              </div>
+            </div>
+          ) : (
+            <div style={previewEmptyStyle}>
+              Välj en mall i vänsterpanelen för att se hur uppföljningen ser ut för deltagaren.
+            </div>
+          )}
+
+          <div style={previewMiniReviewStyle}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
+              Vad som händer
+            </div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+              Deltagare som lämnar e-post i utvärderingen blir underlag för uppföljningen. I nästa steg ska den här ytan visa verklig sender-preview och enkel historik över vad som har skickats.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MiniInfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{
+      borderRadius: 14,
+      border: '1px solid rgba(14,14,12,0.08)',
+      background: 'rgba(255,255,255,0.88)',
+      padding: '12px 14px',
+    }}>
+      <div style={tinyLabelStyle}>{label}</div>
+      <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.45 }}>
+        {value}
+      </div>
+    </div>
+  )
+}
+
 function PreviewPill({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -1053,6 +1377,18 @@ const workspaceTabButtonStyle: React.CSSProperties = {
   transition: 'background 0.18s, border-color 0.18s, color 0.18s',
 }
 
+const followupLaunchButtonStyle: React.CSSProperties = {
+  padding: '10px 16px',
+  borderRadius: 999,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.92)',
+  fontSize: 12.5,
+  fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'background 0.18s, border-color 0.18s, color 0.18s',
+  boxShadow: '0 10px 24px rgba(14,14,12,0.05)',
+}
+
 const panelStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.9)',
   borderRadius: 24,
@@ -1067,6 +1403,44 @@ const subtlePanelStyle: React.CSSProperties = {
   borderRadius: 16,
   border: '1px solid rgba(14,14,12,0.08)',
   background: 'rgba(250,248,246,0.9)',
+}
+
+const followupStepCardStyle: React.CSSProperties = {
+  display: 'block',
+  width: '100%',
+  textAlign: 'left',
+  borderRadius: 18,
+  border: '1px solid rgba(14,14,12,0.08)',
+  background: 'rgba(255,255,255,0.86)',
+  padding: '16px 16px 14px',
+  cursor: 'pointer',
+}
+
+const followupStatusPillStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  padding: '6px 10px',
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+}
+
+const compactInputStyle: React.CSSProperties = {
+  ...inputStyle,
+  padding: '11px 12px',
+  borderRadius: 10,
+  fontSize: 12.5,
+}
+
+const tinyLabelStyle: React.CSSProperties = {
+  fontSize: 10.5,
+  fontWeight: 700,
+  color: 'var(--text-3)',
+  letterSpacing: '0.04em',
+  textTransform: 'uppercase',
+  marginBottom: 6,
 }
 
 const fieldLabelStyle: React.CSSProperties = {
@@ -1246,6 +1620,14 @@ const previewSecondaryButtonStyle: React.CSSProperties = {
   background: 'var(--surface)',
   color: 'var(--text)',
   border: '1px solid var(--border)',
+}
+
+const previewSecondaryLinkStyle: React.CSSProperties = {
+  ...previewSecondaryButtonStyle,
+  textDecoration: 'none',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 }
 
 const previewMiniReviewStyle: React.CSSProperties = {

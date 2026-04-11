@@ -98,11 +98,14 @@ Separat flöde från brief — används för att samla in feedback från kliente
 - En utvärdering kan nu tas bort från detaljvyn tillsammans med inkomna svar och tillhörande frågeupplägg, men bara om frågorna inte används av någon annan utvärdering
 - Dashboardens huvudlänk för `Utvärdering` går nu direkt till skapaflödet i stället för översikten
 - Utvärdering ska alltid öppna i vänsterfliken först, via skapaflödet och inte via översikten
+- Skapaflödet har nu en egen `Uppföljning`-yta i samma split-workspace, där vänster sida ställer in steg och höger sida visar mall-preview
 - Detaljvyn har en "Uppföljning"-flik som visar kopplad sender.net-grupp
-- När en utvärdering skapas skapas en matchande grupp i sender.net **automatiskt** med namnet `{kund} — {tillfälle}` — inget manuellt steg krävs
+- När en utvärdering skapas försöker systemet säkra en matchande grupp i sender.net automatiskt utifrån kunden
 - `senderGroupId` sparas direkt på utvärderingens metadata vid skapande
 - Varje inlämning med e-post lägger automatiskt till deltagaren i gruppen och triggar automationen i sender.net
 - `SENDER_API_KEY` env var krävs för att aktivera sender.net-integrationen (`lib/sender.ts`, `GET /api/sender/groups`)
+- Planerad vidareutveckling för kundspecifik och global uppföljning finns i `docs/specs/evaluation-followup.md`
+- UX-riktning för samma flöde finns i `docs/specs/evaluation-followup-ux.md`
 
 ---
 
