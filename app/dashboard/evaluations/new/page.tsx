@@ -44,7 +44,7 @@ type EvaluationEditorPayload = {
   }>
 }
 
-type EvaluationWorkspaceTab = 'questions' | 'setup' | 'publish' | 'followup'
+type EvaluationWorkspaceTab = 'setup' | 'questions' | 'publish' | 'followup'
 type EvaluationDraftQuestion = {
   text: string
   type: EvaluationQuestionType
@@ -71,6 +71,11 @@ type FollowupStepDraft = {
   stepType: FollowupStepType
   delayDays: FollowupDelayPreset
   templateId: string
+  subject: string
+  eyebrow: string
+  headline: string
+  body: string
+  cta: string
 }
 
 type FollowupDeliveryMode = 'manual' | 'automatic'
@@ -151,9 +156,45 @@ const followupTemplateOptions: FollowupTemplateOption[] = [
 ]
 
 const initialFollowupSteps: FollowupStepDraft[] = [
-  { id: 'step-1', label: 'Steg 1', active: false, stepType: 'message_questions', delayDays: 7, templateId: 'reflection-week-1' },
-  { id: 'step-2', label: 'Steg 2', active: false, stepType: 'message_link', delayDays: 30, templateId: 'action-month-1' },
-  { id: 'step-3', label: 'Steg 3', active: false, stepType: 'message', delayDays: 90, templateId: 'impact-quarter-1' },
+  {
+    id: 'step-1',
+    label: 'Steg 1',
+    active: false,
+    stepType: 'message_questions',
+    delayDays: 7,
+    templateId: 'reflection-week-1',
+    subject: 'Hur har veckan efter utbildningen landat för dig?',
+    eyebrow: 'Uppföljning efter utbildningen',
+    headline: 'En kort återblick efter första veckan.',
+    body: 'Vi vill gärna följa upp hur innehållet har landat i vardagen och vad som redan börjat göra skillnad. Det här mejlet ska kännas som en lugn fortsättning på utbildningen, inte som ännu ett administrativt moment.',
+    cta: 'Öppna uppföljningen',
+  },
+  {
+    id: 'step-2',
+    label: 'Steg 2',
+    active: false,
+    stepType: 'message_link',
+    delayDays: 30,
+    templateId: 'action-month-1',
+    subject: 'Vad har ni hunnit omsätta sedan utbildningen?',
+    eyebrow: 'En månad senare',
+    headline: 'Fånga nästa steg medan energin fortfarande finns kvar.',
+    body: 'Det här utskicket passar när ni vill öppna för fortsatt rörelse efter utbildningen och hålla dialogen levande. Fokus här är inte formulärlogik, utan att skapa ett naturligt nästa steg för deltagaren.',
+    cta: 'Fortsätt här',
+  },
+  {
+    id: 'step-3',
+    label: 'Steg 3',
+    active: false,
+    stepType: 'message',
+    delayDays: 90,
+    templateId: 'impact-quarter-1',
+    subject: 'Vad har utbildningen lett till över tid?',
+    eyebrow: 'Tre månader senare',
+    headline: 'Samla signaler om effekt, hållbarhet och fortsatt behov.',
+    body: 'Använd det här steget för att knyta ihop utbildningen med faktisk utveckling över tid. Det ska kännas relevant och mänskligt, utan att lova en interaktion som ännu inte är bestämd i detalj.',
+    cta: 'Se nästa steg',
+  },
 ]
 
 const followupStepTypeOptions: Array<{ value: FollowupStepType; label: string }> = [
@@ -178,7 +219,7 @@ export default function NewEvaluationPage() {
   const [created, setCreated] = useState<CreatedPayload | null>(null)
   const [loadedEditId, setLoadedEditId] = useState<string | null>(null)
   const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
-  const [activeTab, setActiveTab] = useState<EvaluationWorkspaceTab>('questions')
+  const [activeTab, setActiveTab] = useState<EvaluationWorkspaceTab>('setup')
   const [expandedStarterIds, setExpandedStarterIds] = useState<string[]>([])
   const [followupSteps, setFollowupSteps] = useState<FollowupStepDraft[]>(initialFollowupSteps)
   const [activeFollowupStepId, setActiveFollowupStepId] = useState(initialFollowupSteps[0].id)
@@ -200,7 +241,17 @@ export default function NewEvaluationPage() {
     [customQuestions],
   )
   const activeFollowupStep = followupSteps.find(step => step.id === activeFollowupStepId) || followupSteps[0]
-  const activeFollowupTemplate = followupTemplateOptions.find(template => template.id === activeFollowupStep?.templateId) || null
+  const activeFollowupTemplate = activeFollowupStep
+    ? {
+        id: activeFollowupStep.templateId,
+        name: followupTemplateOptions.find(template => template.id === activeFollowupStep.templateId)?.name || 'Egen mall',
+        subject: activeFollowupStep.subject,
+        eyebrow: activeFollowupStep.eyebrow,
+        headline: activeFollowupStep.headline,
+        body: activeFollowupStep.body,
+        cta: activeFollowupStep.cta,
+      }
+    : null
   const activeFollowupStepsCount = followupSteps.filter(step => step.active).length
 
   useEffect(() => {
@@ -357,6 +408,21 @@ export default function NewEvaluationPage() {
     )))
   }
 
+  function applyFollowupTemplate(stepId: string, templateId: string) {
+    const template = followupTemplateOptions.find(item => item.id === templateId)
+    if (!template) return
+
+    updateFollowupStep(stepId, {
+      templateId,
+      subject: template.subject,
+      eyebrow: template.eyebrow,
+      headline: template.headline,
+      body: template.body,
+      cta: template.cta,
+      active: true,
+    })
+  }
+
   async function createEvaluation(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -431,7 +497,7 @@ export default function NewEvaluationPage() {
         <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, maxWidth: 700 }}>
           {editId
             ? 'Justera kund, frågor och upplägg för den här utvärderingen och spara tillbaka ändringarna.'
-            : 'Välj kund, formulera frågorna och skapa sedan en publik länk med QR-kod för deltagarna.'}
+            : 'Välj kund först, sätt sedan frågor och publicera en publik länk med QR-kod för deltagarna.'}
         </p>
       </div>
 
@@ -448,7 +514,7 @@ export default function NewEvaluationPage() {
         <EvaluationStatCard
           label="Kund"
           value={previewCustomer}
-          text={customer.trim() ? 'kopplad till utvärderingen' : 'lägg till i upplägget'}
+          text={customer.trim() ? 'kopplad till utvärderingen' : 'välj först i flödet'}
         />
         <EvaluationStatCard
           label="Insamling"
@@ -462,8 +528,8 @@ export default function NewEvaluationPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {[
-                { key: 'questions' as const, label: 'Frågor' },
                 { key: 'setup' as const, label: 'Upplägg' },
+                { key: 'questions' as const, label: 'Frågor' },
                 { key: 'publish' as const, label: 'Publicera' },
               ].map(tab => (
                 <button
@@ -670,6 +736,14 @@ export default function NewEvaluationPage() {
 
           {activeTab === 'setup' && (
             <>
+          <div style={{ display: 'grid', gap: 6, marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>
+              Kund och tillfälle
+            </div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
+              Börja med att välja kund och ge tillfället ett tydligt namn. Därefter kan du sätta frågorna och publicera länken.
+            </div>
+          </div>
           <Field label="Kund">
             <>
               <input
@@ -936,10 +1010,7 @@ export default function NewEvaluationPage() {
                               <span style={tinyLabelStyle}>Mall</span>
                               <select
                                 value={step.templateId}
-                                onChange={event => updateFollowupStep(step.id, {
-                                  templateId: event.target.value,
-                                  active: true,
-                                })}
+                                onChange={event => applyFollowupTemplate(step.id, event.target.value)}
                                 style={compactInputStyle}
                               >
                                 {followupTemplateOptions.map(template => (
@@ -962,6 +1033,58 @@ export default function NewEvaluationPage() {
                               Aktivt steg
                             </label>
                           </div>
+
+                          {selected && (
+                            <div style={{ display: 'grid', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(14,14,12,0.08)' }}>
+                              <div style={tinyLabelStyle}>Innehåll i mejlet</div>
+
+                              <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                                <span style={tinyLabelStyle}>Ämnesrad</span>
+                                <input
+                                  value={step.subject}
+                                  onChange={event => updateFollowupStep(step.id, { subject: event.target.value, active: true })}
+                                  style={compactInputStyle}
+                                />
+                              </label>
+
+                              <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                                <span style={tinyLabelStyle}>Liten rubrik</span>
+                                <input
+                                  value={step.eyebrow}
+                                  onChange={event => updateFollowupStep(step.id, { eyebrow: event.target.value, active: true })}
+                                  style={compactInputStyle}
+                                />
+                              </label>
+
+                              <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                                <span style={tinyLabelStyle}>Rubrik</span>
+                                <input
+                                  value={step.headline}
+                                  onChange={event => updateFollowupStep(step.id, { headline: event.target.value, active: true })}
+                                  style={compactInputStyle}
+                                />
+                              </label>
+
+                              <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                                <span style={tinyLabelStyle}>Brödtext</span>
+                                <textarea
+                                  value={step.body}
+                                  onChange={event => updateFollowupStep(step.id, { body: event.target.value, active: true })}
+                                  rows={5}
+                                  style={{ ...compactInputStyle, minHeight: 120, resize: 'vertical' }}
+                                />
+                              </label>
+
+                              <label style={{ display: 'grid', gap: 6, textAlign: 'left' }}>
+                                <span style={tinyLabelStyle}>Knapptext</span>
+                                <input
+                                  value={step.cta}
+                                  onChange={event => updateFollowupStep(step.id, { cta: event.target.value, active: true })}
+                                  style={compactInputStyle}
+                                />
+                              </label>
+                            </div>
+                          )}
                         </button>
                       )
                     })}

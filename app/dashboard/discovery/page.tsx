@@ -423,7 +423,7 @@ export default function DiscoveryPage() {
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [templateQuery, setTemplateQuery] = useState('')
-  const [editorTab, setEditorTab] = useState<'questions' | 'setup' | 'send' | 'data'>('questions')
+  const [editorTab, setEditorTab] = useState<'setup' | 'questions' | 'send' | 'data'>('setup')
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('Perspektiv')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
@@ -1360,8 +1360,8 @@ export default function DiscoveryPage() {
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 {[
-                  { id: 'questions', label: 'Frågor' },
                   { id: 'setup', label: 'Upplägg' },
+                  { id: 'questions', label: 'Frågor' },
                   { id: 'send', label: 'Skicka' },
                   { id: 'data', label: 'Data' },
                 ].map(tab => {
@@ -1370,7 +1370,7 @@ export default function DiscoveryPage() {
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setEditorTab(tab.id as 'questions' | 'setup' | 'send' | 'data')}
+                      onClick={() => setEditorTab(tab.id as 'setup' | 'questions' | 'send' | 'data')}
                       style={{
                         flex: 1,
                         borderRadius: 999,
@@ -1396,10 +1396,10 @@ export default function DiscoveryPage() {
                   <>
                     <div style={{ display: 'grid', gap: 10, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
                       <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        Upplägget
+                        Kund och upplägg
                       </div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                        Här styr du vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
+                        Börja med att välja kund eller organisation. Här styr du också vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>

@@ -34,7 +34,7 @@ type QuestionDraft = {
   text: string
 }
 
-type BriefWorkspaceTab = 'questions' | 'setup' | 'send'
+type BriefWorkspaceTab = 'setup' | 'questions' | 'send'
 
 function titleCaseFromEmail(email: string) {
   return email
@@ -257,7 +257,7 @@ function SendBriefInner() {
   const [sent, setSent]               = useState<SentSession[] | null>(null)
   const [error, setError]             = useState('')
   const [importMessage, setImportMessage] = useState('')
-  const [activeTab, setActiveTab] = useState<BriefWorkspaceTab>('questions')
+  const [activeTab, setActiveTab] = useState<BriefWorkspaceTab>('setup')
   const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
   const [introTitle, setIntroTitle] = useState('Några korta frågor')
   const [introText, setIntroText] = useState('Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.')
@@ -667,7 +667,7 @@ function SendBriefInner() {
 
       <div style={briefStatsRowStyle}>
         <BriefStatCard label="Frågor" value={`${activeQuestions.length}`} text={activeQuestions.length === 1 ? 'fråga i utskicket' : 'frågor i utskicket'} />
-        <BriefStatCard label="Kund" value={clientOrg.trim() || 'Ingen vald'} text={clientOrg.trim() ? 'kopplad till utskicket' : 'lägg till i upplägget'} />
+        <BriefStatCard label="Kund" value={clientOrg.trim() || 'Ingen vald'} text={clientOrg.trim() ? 'kopplad till utskicket' : 'välj först i flödet'} />
         <BriefStatCard label="Mottagare" value={`${parsedRecipientsPreview.length}`} text={parsedRecipientsPreview.length === 1 ? 'person i listan' : 'personer i listan'} />
       </div>
 
@@ -675,8 +675,8 @@ function SendBriefInner() {
         <section style={{ ...panelStyle, padding: '22px 24px', minWidth: 0 }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18 }}>
             {[
-              { key: 'questions' as const, label: 'Frågor' },
               { key: 'setup' as const, label: 'Upplägg' },
+              { key: 'questions' as const, label: 'Frågor' },
               { key: 'send' as const, label: 'Skicka' },
             ].map(tab => (
               <button
@@ -864,10 +864,10 @@ function SendBriefInner() {
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                  Upplägg runt utskicket
+                  Kund och utskick
                 </div>
                 <p style={{ fontSize: 13.5, color: 'var(--text-2)', margin: 0, lineHeight: 1.65 }}>
-                  Lägg den korta kontext som hjälper dig att hitta rätt utskick senare. Detta är internt och syns inte i mottagarens vy.
+                  Börja med att välja kund och sätt ett tydligt internt namn. Det hjälper dig hitta rätt utskick senare och syns inte i mottagarens vy.
                 </p>
               </div>
 
