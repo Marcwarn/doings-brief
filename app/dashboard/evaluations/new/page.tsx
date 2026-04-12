@@ -1182,15 +1182,12 @@ function EvaluationPreviewCard({
     <div style={previewSurfaceStyle}>
       <div style={previewFrameStyle}>
         <div style={previewHeroStyle}>
-          <div style={previewEyebrowStyle}>Deltagarens vy</div>
           <div style={previewTitleStyle}>{resolvedTitle}</div>
           <div style={previewDescriptionStyle}>
             Tack för att du var med. Vi vill gärna fånga hur dagen landade för dig innan du går vidare.
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
             <PreviewPill>{resolvedCustomer}</PreviewPill>
-            <PreviewPill>{questionSource}</PreviewPill>
-            <PreviewPill>{collectEmail ? 'E-post i sista steget' : 'Helt anonymt'}</PreviewPill>
           </div>
         </div>
 
@@ -1311,6 +1308,10 @@ function EvaluationPublishCard({
   qrUrl: string
   onDownloadQr: () => void
 }) {
+  function openQrDisplay() {
+    window.open(`/dashboard/utvardering/${created.evaluation.id}/qr`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div style={publishCardStyle}>
       <div style={{ fontFamily: 'var(--font-display)', fontSize: 21, fontWeight: 700, color: 'var(--text)', marginBottom: 10, letterSpacing: '-0.02em' }}>
@@ -1329,9 +1330,14 @@ function EvaluationPublishCard({
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--text)', wordBreak: 'break-all' }}>{created.publicUrl}</div>
         </div>
-        <div style={publishQrCardStyle}>
+        <button
+          type="button"
+          onClick={openQrDisplay}
+          style={{ ...publishQrCardStyle, cursor: 'pointer' }}
+          title="Öppna QR-koden ensam i ny flik"
+        >
           <img src={qrUrl} alt="QR-kod för utvärdering" style={{ width: 220, height: 220, objectFit: 'contain' }} />
-        </div>
+        </button>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button type="button" onClick={() => navigator.clipboard.writeText(created.publicUrl)} style={ghostButtonStyle}>
             Kopiera länk
@@ -1346,6 +1352,9 @@ function EvaluationPublishCard({
           </a>
           <button type="button" onClick={onDownloadQr} style={ghostButtonStyle}>
             Ladda ner QR som PNG
+          </button>
+          <button type="button" onClick={openQrDisplay} style={ghostButtonStyle}>
+            Visa QR ensam
           </button>
           <Link href={`/dashboard/utvardering/${created.evaluation.id}`} style={secondaryLinkStyle}>
             Öppna översikt
@@ -1375,10 +1384,10 @@ function EvaluationFollowupPreviewCard({
         background: 'linear-gradient(180deg, #131111 0%, #131111 230px, rgba(247,244,241,0.9) 230px, rgba(247,244,241,0.96) 100%)',
       }}>
         <div style={previewHeroStyle}>
-          <div style={previewEyebrowStyle}>Förhandsvisning</div>
-          <div style={previewTitleStyle}>Så här kan nästa mejl kännas</div>
+          <div style={previewEyebrowStyle}>Doings</div>
+          <div style={previewTitleStyle}>{training}</div>
           <div style={previewDescriptionStyle}>
-            Högersidan ska visa själva utskicket, inte hur det är uppsatt. Därför visas här en ren mottagarvy av den mall du väljer.
+            Uppföljning till deltagare från {customer || 'vald kund'}
           </div>
         </div>
 
@@ -1443,15 +1452,6 @@ function EvaluationFollowupPreviewCard({
               Välj en mall i vänsterpanelen för att se hur uppföljningen ser ut för deltagaren.
             </div>
           )}
-
-          <div style={previewMiniReviewStyle}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 8 }}>
-              Om den här previewn
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
-              Previewn ska visa det deltagaren möter, inte intern uppsättning. Val som stegnummer, skicktid och mallnamn hör hemma i vänstersidan där konsulten arbetar.
-            </div>
-          </div>
         </div>
       </div>
     </div>
