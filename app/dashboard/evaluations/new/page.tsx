@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { createClient, type BriefSession, type Profile } from '@/lib/supabase'
 import { EvaluationSubnav, InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
@@ -12,10 +12,11 @@ type CreatedPayload = {
     token: string
     label: string
     customer: string
-    questionSetId: string
+    questionSetId: string | null
     questionSetName: string | null
     collectEmail: boolean
     createdAt: string
+    status?: 'draft' | 'active'
   }
   publicUrl: string
 }
@@ -25,12 +26,24 @@ type EvaluationEditorPayload = {
     id: string
     token: string
     label: string
-    customer: string
-    questionSetId: string
-    questionSetName: string | null
-    collectEmail: boolean
-    createdAt: string
-  }
+      customer: string
+      questionSetId: string | null
+      questionSetName: string | null
+      collectEmail: boolean
+      createdAt: string
+      status?: 'draft' | 'active'
+      draftData?: {
+        customQuestionSetName?: string | null
+        customQuestions?: Array<{
+          text: string
+          type: EvaluationQuestionType
+        }>
+        activeTab?: string | null
+        followupDeliveryMode?: string | null
+        activeFollowupStepId?: string | null
+        followupSteps?: FollowupStepDraft[]
+      } | null
+    }
   questionSet: {
     id: string
     name: string
@@ -205,7 +218,13 @@ const followupStepTypeOptions: Array<{ value: FollowupStepType; label: string }>
 
 export default function NewEvaluationPage() {
   const sb = createClient()
+  const [draftReady, setDraftReady] = useState(false)
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'restored' | 'server-saved'>('idle')
+  const [draftDirty, setDraftDirty] = useState(false)
+  const [persistingDraft, setPersistingDraft] = useState(false)
+  const autosaveTimerRef = useRef<number | null>(null)
   const [editId, setEditId] = useState('')
+  const [draftId, setDraftId] = useState('')
   const [customers, setCustomers] = useState<string[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [customer, setCustomer] = useState('')
@@ -218,6 +237,7 @@ export default function NewEvaluationPage() {
   const [error, setError] = useState<string | null>(null)
   const [created, setCreated] = useState<CreatedPayload | null>(null)
   const [loadedEditId, setLoadedEditId] = useState<string | null>(null)
+  const [loadedDraftId, setLoadedDraftId] = useState<string | null>(null)
   const [activePreviewQuestionIndex, setActivePreviewQuestionIndex] = useState(0)
   const [activeTab, setActiveTab] = useState<EvaluationWorkspaceTab>('setup')
   const [expandedStarterIds, setExpandedStarterIds] = useState<string[]>([])
@@ -258,7 +278,48 @@ export default function NewEvaluationPage() {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
     setEditId(params.get('edit')?.trim() || '')
+    setDraftId(params.get('draft')?.trim() || '')
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (editId || draftId) {
+      setDraftReady(true)
+      return
+    }
+
+    const saved = window.localStorage.getItem('doings:evaluation-draft:new')
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved) as {
+          customer?: string
+          label?: string
+          collectEmail?: boolean
+          customQuestionSetName?: string
+          customQuestions?: EvaluationDraftQuestion[]
+          activeTab?: EvaluationWorkspaceTab
+          followupSteps?: FollowupStepDraft[]
+          followupDeliveryMode?: FollowupDeliveryMode
+          activeFollowupStepId?: string
+        }
+
+        if (typeof draft.customer === 'string') setCustomer(draft.customer)
+        if (typeof draft.label === 'string') setLabel(draft.label)
+        if (typeof draft.collectEmail === 'boolean') setCollectEmail(draft.collectEmail)
+        if (typeof draft.customQuestionSetName === 'string') setCustomQuestionSetName(draft.customQuestionSetName)
+        if (Array.isArray(draft.customQuestions) && draft.customQuestions.length > 0) setCustomQuestions(draft.customQuestions)
+        if (draft.activeTab) setActiveTab(draft.activeTab)
+        if (Array.isArray(draft.followupSteps) && draft.followupSteps.length > 0) setFollowupSteps(draft.followupSteps)
+        if (draft.followupDeliveryMode) setFollowupDeliveryMode(draft.followupDeliveryMode)
+        if (typeof draft.activeFollowupStepId === 'string') setActiveFollowupStepId(draft.activeFollowupStepId)
+        setDraftStatus('restored')
+      } catch {
+        window.localStorage.removeItem('doings:evaluation-draft:new')
+      }
+    }
+
+    setDraftReady(true)
+  }, [editId, draftId])
 
   useEffect(() => {
     Promise.all([
@@ -317,6 +378,52 @@ export default function NewEvaluationPage() {
   }, [editId, loading, loadedEditId])
 
   useEffect(() => {
+    if (!draftId || loading || loadedDraftId === draftId) return
+
+    fetch(`/api/evaluations/${draftId}`)
+      .then(async response => {
+        const payload = await response.json().catch(() => null) as EvaluationEditorPayload | null
+        if (!response.ok || !payload) {
+          throw new Error((payload as { error?: string } | null)?.error || 'Kunde inte läsa utkastet.')
+        }
+
+        setCustomer(payload.evaluation.customer || '')
+        setLabel(payload.evaluation.label === 'Utkast' ? '' : payload.evaluation.label || '')
+        setCollectEmail(payload.evaluation.collectEmail !== false)
+        setCustomQuestionSetName(
+          payload.evaluation.draftData?.customQuestionSetName
+          || payload.evaluation.questionSetName
+          || payload.questionSet?.name
+          || 'Utvärderingsfrågor'
+        )
+        setCustomQuestions(
+          (payload.questions || [])
+            .sort((a, b) => a.order_index - b.order_index)
+            .map(question => ({
+              text: question.text,
+              type: question.type === 'scale_1_5' ? 'scale_1_5' : 'text',
+            })),
+        )
+        if (payload.evaluation.draftData?.activeTab === 'questions' || payload.evaluation.draftData?.activeTab === 'publish' || payload.evaluation.draftData?.activeTab === 'followup') {
+          setActiveTab(payload.evaluation.draftData.activeTab)
+        }
+        if (payload.evaluation.draftData?.followupDeliveryMode === 'automatic' || payload.evaluation.draftData?.followupDeliveryMode === 'manual') {
+          setFollowupDeliveryMode(payload.evaluation.draftData.followupDeliveryMode)
+        }
+        if (Array.isArray(payload.evaluation.draftData?.followupSteps) && payload.evaluation.draftData.followupSteps.length > 0) {
+          setFollowupSteps(payload.evaluation.draftData.followupSteps)
+        }
+        if (typeof payload.evaluation.draftData?.activeFollowupStepId === 'string') {
+          setActiveFollowupStepId(payload.evaluation.draftData.activeFollowupStepId)
+        }
+        setLoadedDraftId(draftId)
+      })
+      .catch(err => {
+        setError(err instanceof Error ? err.message : 'Kunde inte läsa utkastet.')
+      })
+  }, [draftId, loading, loadedDraftId])
+
+  useEffect(() => {
     if (!customQuestionSetName.trim() && label.trim()) {
       setCustomQuestionSetName(`${label.trim()} · utvärderingsfrågor`)
     }
@@ -325,6 +432,143 @@ export default function NewEvaluationPage() {
   useEffect(() => {
     setActivePreviewQuestionIndex(prev => Math.min(prev, Math.max(previewQuestions.length - 1, 0)))
   }, [previewQuestions.length])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !draftReady || editId || created) return
+
+    const draftPayload = JSON.stringify({
+      customer,
+      label,
+      collectEmail,
+      customQuestionSetName,
+      customQuestions,
+      activeTab,
+      followupSteps,
+      followupDeliveryMode,
+      activeFollowupStepId,
+    })
+
+    setDraftDirty(true)
+    setDraftStatus('saving')
+
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+    }
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      window.localStorage.setItem('doings:evaluation-draft:new', draftPayload)
+      setDraftDirty(false)
+      setDraftStatus('saved')
+      autosaveTimerRef.current = null
+    }, 500)
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current)
+      }
+    }
+  }, [
+    draftReady,
+    editId,
+    created,
+    customer,
+    label,
+    collectEmail,
+    customQuestionSetName,
+    customQuestions,
+    activeTab,
+    followupSteps,
+    followupDeliveryMode,
+    activeFollowupStepId,
+  ])
+
+  async function clearDraft() {
+    if (typeof window === 'undefined') return
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    window.localStorage.removeItem('doings:evaluation-draft:new')
+    if (draftId) {
+      await fetch(`/api/evaluations/${draftId}`, { method: 'DELETE' }).catch(() => null)
+      window.location.assign('/dashboard/utvardering/skapa')
+      return
+    }
+    setDraftDirty(false)
+    setDraftStatus('idle')
+  }
+
+  async function saveDraftNow() {
+    if (typeof window === 'undefined' || editId || created || persistingDraft) return
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+
+    const draftPayload = {
+      customer,
+      label,
+      collectEmail,
+      customQuestionSetName,
+      customQuestions,
+      activeTab,
+      followupSteps,
+      followupDeliveryMode,
+      activeFollowupStepId,
+    }
+
+    window.localStorage.setItem('doings:evaluation-draft:new', JSON.stringify(draftPayload))
+    setPersistingDraft(true)
+    setDraftStatus('saving')
+
+    const response = await fetch(draftId ? `/api/evaluations/${draftId}` : '/api/evaluations/create', {
+      method: draftId ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'draft',
+        customer: customer.trim(),
+        label: label.trim(),
+        collectEmail,
+        customQuestionSetName: customQuestionSetName.trim(),
+        customQuestions,
+        draftData: {
+          activeTab,
+          followupSteps,
+          followupDeliveryMode,
+          activeFollowupStepId,
+        },
+      }),
+    })
+    const payload = await response.json().catch(() => null)
+
+    setPersistingDraft(false)
+
+    if (!response.ok) {
+      setError(payload?.error || 'Kunde inte spara utkastet.')
+      return
+    }
+
+    if (!draftId && payload?.evaluation?.id) {
+      const nextId = String(payload.evaluation.id)
+      setDraftId(nextId)
+      setLoadedDraftId(nextId)
+      window.history.replaceState({}, '', `/dashboard/utvardering/skapa?draft=${nextId}`)
+    }
+
+    setDraftDirty(false)
+    setDraftStatus('server-saved')
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!draftDirty) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [draftDirty])
 
   function updateCustomQuestion(index: number, value: string) {
     setCustomQuestions(prev => prev.map((question, questionIndex) => (
@@ -447,16 +691,24 @@ export default function NewEvaluationPage() {
     }
 
     setSaving(true)
-    const response = await fetch(editId ? `/api/evaluations/${editId}` : '/api/evaluations/create', {
-      method: editId ? 'PATCH' : 'POST',
+    const targetId = editId || draftId
+    const response = await fetch(targetId ? `/api/evaluations/${targetId}` : '/api/evaluations/create', {
+      method: targetId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        status: 'active',
         customer: customer.trim(),
         questionSetId: '',
         label: label.trim(),
         collectEmail,
         customQuestionSetName: customQuestionSetName.trim(),
         customQuestions: filteredCustomQuestions,
+        draftData: {
+          activeTab,
+          followupSteps,
+          followupDeliveryMode,
+          activeFollowupStepId,
+        },
       }),
     })
     const payload = await response.json().catch(() => null)
@@ -467,6 +719,7 @@ export default function NewEvaluationPage() {
       return
     }
 
+    clearDraft()
     setCreated(payload)
     setSaving(false)
   }
@@ -492,13 +745,38 @@ export default function NewEvaluationPage() {
     <div style={pageShellStyle}>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-          {editId ? 'Redigera utvärdering' : 'Skapa utvärdering'}
+          {editId ? 'Redigera utvärdering' : draftId ? 'Fortsätt utkast' : 'Skapa utvärdering'}
         </h1>
         <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 6, maxWidth: 700 }}>
           {editId
             ? 'Justera kund, frågor och upplägg för den här utvärderingen och spara tillbaka ändringarna.'
+            : draftId
+            ? 'Det här utkastet är sparat i systemet och kan fortsättas härifrån.'
             : 'Välj kund först, sätt sedan frågor och publicera en publik länk med QR-kod för deltagarna.'}
         </p>
+        {!editId && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+              {draftStatus === 'restored'
+                ? 'Utkast återställt från din webbläsare.'
+                : draftStatus === 'saving'
+                ? 'Sparar utkast…'
+                : draftStatus === 'server-saved'
+                ? 'Utkast sparat i systemet.'
+                : draftStatus === 'saved'
+                ? 'Tillfälligt sparat i den här webbläsaren.'
+                : draftId
+                ? 'Du kan fortsätta här eller spara om utkastet.'
+                : 'Påbörjat arbete sparas tillfälligt i den här webbläsaren tills du sparar utkastet i systemet.'}
+            </div>
+            <button type="button" onClick={() => void saveDraftNow()} disabled={persistingDraft} style={ghostButtonStyle}>
+              {persistingDraft ? 'Sparar…' : 'Spara utkast'}
+            </button>
+            <button type="button" onClick={() => void clearDraft()} style={ghostButtonStyle}>
+              Rensa utkast
+            </button>
+          </div>
+        )}
       </div>
 
       <EvaluationSubnav active="new" />

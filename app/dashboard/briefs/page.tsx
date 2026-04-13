@@ -7,10 +7,18 @@ import { createClient, type BriefSession } from '@/lib/supabase'
 import { BriefSubnav } from '@/app/dashboard/brief/ui'
 import { groupBriefSessions, type BriefBatchLookupMap } from '@/lib/brief-batches'
 
+type BriefDraftListItem = {
+  id: string
+  label: string
+  organisation: string
+  updatedAt: string
+}
+
 export default function BriefsPage() {
   const sb = createClient()
   const router = useRouter()
   const [sessions, setSessions]     = useState<BriefSession[]>([])
+  const [drafts, setDrafts] = useState<BriefDraftListItem[]>([])
   const [batchLookup, setBatchLookup] = useState<BriefBatchLookupMap>({})
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const [loading, setLoading]       = useState(true)
@@ -28,8 +36,17 @@ export default function BriefsPage() {
     setLoading(true)
     const { data: { user } } = await sb.auth.getUser()
     if (!user) { setLoading(false); return }
-    const { data } = await sb.from('brief_sessions').select('*').order('created_at', { ascending: false })
+    const [{ data }, draftsResponse] = await Promise.all([
+      sb.from('brief_sessions').select('*').order('created_at', { ascending: false }),
+      fetch('/api/briefs/drafts').catch(() => null),
+    ])
     setSessions(data || [])
+    if (draftsResponse?.ok) {
+      const payload = await draftsResponse.json().catch(() => null)
+      setDrafts(payload?.drafts || [])
+    } else {
+      setDrafts([])
+    }
     setLoading(false)
   }
 
@@ -197,6 +214,33 @@ export default function BriefsPage() {
           fontSize: 13,
         }}>
           {pageError}
+        </div>
+      )}
+
+      {drafts.length > 0 && (
+        <div style={{ display: 'grid', gap: 10, marginBottom: 18 }}>
+          {drafts.map(draft => (
+            <div key={draft.id} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1px solid var(--border)',
+              background: '#fff7ed',
+            }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{draft.label}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 4 }}>
+                  {draft.organisation || 'Ingen kund vald'} · Utkast sparat {new Date(draft.updatedAt).toLocaleDateString('sv-SE')}
+                </div>
+              </div>
+              <Link href={`/dashboard/send?draft=${draft.id}`} style={secondaryLinkStyle}>
+                Fortsätt utkast
+              </Link>
+            </div>
+          ))}
         </div>
       )}
 
@@ -535,6 +579,18 @@ const bulkDeleteButtonStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 700,
   cursor: 'pointer',
+}
+
+const secondaryLinkStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text)',
+  textDecoration: 'none',
+  fontFamily: 'var(--font-display)',
+  fontSize: 12,
+  fontWeight: 700,
 }
 
 const cancelButtonStyle: React.CSSProperties = {

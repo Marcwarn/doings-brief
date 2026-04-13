@@ -16,12 +16,13 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseRequestClient()
     const admin = getSupabaseAdminClient()
-    const { customer, questionSetId, label, collectEmail, customQuestionSetName, customQuestions } = await req.json()
+    const { customer, questionSetId, label, collectEmail, customQuestionSetName, customQuestions, status, draftData } = await req.json()
 
     const normalizedCustomer = typeof customer === 'string' ? customer.trim() : ''
     const normalizedQuestionSetId = typeof questionSetId === 'string' ? questionSetId.trim() : ''
     const normalizedLabel = typeof label === 'string' ? label.trim() : ''
     const normalizedCustomQuestionSetName = typeof customQuestionSetName === 'string' ? customQuestionSetName.trim() : ''
+    const normalizedStatus = status === 'draft' ? 'draft' : 'active'
     const normalizedCustomQuestions = Array.isArray(customQuestions)
       ? customQuestions
         .map((item, index) => {
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
         .filter((value): value is { text: string; type: 'text' | 'scale_1_5'; orderIndex: number } => Boolean(value))
       : []
 
-    if (!normalizedCustomer || !normalizedLabel) {
+    if (normalizedStatus === 'active' && (!normalizedCustomer || !normalizedLabel)) {
       return NextResponse.json({ error: 'Kund och tillfälle krävs.' }, { status: 400 })
     }
 
@@ -63,10 +64,10 @@ export async function POST(req: NextRequest) {
       ? collectEmail !== false
       : true
 
-    let resolvedQuestionSetId = normalizedQuestionSetId
+    let resolvedQuestionSetId: string | null = normalizedQuestionSetId || null
     let resolvedQuestionSetName: string | null = null
 
-    if (normalizedCustomQuestions.length > 0) {
+    if (normalizedStatus === 'active' && normalizedCustomQuestions.length > 0) {
       if (!normalizedCustomQuestionSetName) {
         return NextResponse.json({ error: 'Ge frågorna ett namn innan du skapar utvärderingen.' }, { status: 400 })
       }
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
 
       resolvedQuestionSetId = createdQuestionSet.id
       resolvedQuestionSetName = createdQuestionSet.name
-    } else {
+    } else if (normalizedStatus === 'active') {
       if (!normalizedQuestionSetId) {
         return NextResponse.json({ error: 'Välj tidigare frågor eller skapa egna frågor.' }, { status: 400 })
       }
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
     // Reuse or create a customer-specific sender.net group so all training responses
     // for the same customer flow into the same automation bucket.
     let senderGroupId: string | null = null
-    if (process.env.SENDER_API_KEY) {
+    if (normalizedStatus === 'active' && process.env.SENDER_API_KEY) {
       const group = await ensureSenderGroup(normalizedCustomer)
       if (group?.id) senderGroupId = group.id
     }
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
     const metadata: EvaluationMetadata = {
       id: evaluationId,
       token,
-      label: normalizedLabel,
+      label: normalizedLabel || 'Utkast',
       customer: normalizedCustomer,
       questionSetId: resolvedQuestionSetId,
       questionSetName: resolvedQuestionSetName,
@@ -162,6 +163,17 @@ export async function POST(req: NextRequest) {
       createdBy: user.id,
       createdAt,
       senderGroupId,
+      status: normalizedStatus,
+      draftData: normalizedStatus === 'draft'
+        ? {
+            customQuestionSetName: normalizedCustomQuestionSetName || null,
+            customQuestions: normalizedCustomQuestions.map(item => ({ text: item.text, type: item.type })),
+            activeTab: typeof draftData?.activeTab === 'string' ? draftData.activeTab : null,
+            followupDeliveryMode: typeof draftData?.followupDeliveryMode === 'string' ? draftData.followupDeliveryMode : null,
+            activeFollowupStepId: typeof draftData?.activeFollowupStepId === 'string' ? draftData.activeFollowupStepId : null,
+            followupSteps: Array.isArray(draftData?.followupSteps) ? draftData.followupSteps : [],
+          }
+        : null,
     }
 
     const rows = [

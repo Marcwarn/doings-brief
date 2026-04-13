@@ -240,6 +240,12 @@ function SendBriefInner() {
   const searchParams = useSearchParams()
   const sb = createClient()
   const fileRef = useRef<HTMLInputElement>(null)
+  const [draftReady, setDraftReady] = useState(false)
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'restored' | 'server-saved'>('idle')
+  const [draftDirty, setDraftDirty] = useState(false)
+  const [persistingDraft, setPersistingDraft] = useState(false)
+  const autosaveTimerRef = useRef<number | null>(null)
+  const [draftId, setDraftId] = useState('')
 
   const [sets, setSets]               = useState<QuestionSet[]>([])
   const [selectedSet, setSelectedSet] = useState<string>('')
@@ -265,6 +271,11 @@ function SendBriefInner() {
   const [contextNote, setContextNote] = useState('')
 
   useEffect(() => {
+    const draftParam = searchParams.get('draft')
+    setDraftId(draftParam?.trim() || '')
+  }, [searchParams])
+
+  useEffect(() => {
     sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.replace('/login'); return }
       const [questionSetsResponse, customersResponse] = await Promise.all([
@@ -284,6 +295,91 @@ function SendBriefInner() {
       setLoading(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (draftId) {
+      setDraftReady(true)
+      return
+    }
+
+    const saved = window.localStorage.getItem('doings:debrief-draft:new')
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved) as {
+          selectedSet?: string
+          customSetName?: string
+          customQuestions?: QuestionDraft[]
+          clientOrg?: string
+          recipientsInput?: string
+          activeTab?: BriefWorkspaceTab
+          activePreviewQuestionIndex?: number
+          introTitle?: string
+          introText?: string
+          internalLabel?: string
+          contextNote?: string
+        }
+
+        if (typeof draft.selectedSet === 'string') setSelectedSet(draft.selectedSet)
+        if (typeof draft.customSetName === 'string') setCustomSetName(draft.customSetName)
+        if (Array.isArray(draft.customQuestions) && draft.customQuestions.length > 0) setCustomQuestions(draft.customQuestions)
+        if (typeof draft.clientOrg === 'string') setClientOrg(draft.clientOrg)
+        if (typeof draft.recipientsInput === 'string') setRecipientsInput(draft.recipientsInput)
+        if (draft.activeTab) setActiveTab(draft.activeTab)
+        if (typeof draft.activePreviewQuestionIndex === 'number') setActivePreviewQuestionIndex(draft.activePreviewQuestionIndex)
+        if (typeof draft.introTitle === 'string') setIntroTitle(draft.introTitle)
+        if (typeof draft.introText === 'string') setIntroText(draft.introText)
+        if (typeof draft.internalLabel === 'string') setInternalLabel(draft.internalLabel)
+        if (typeof draft.contextNote === 'string') setContextNote(draft.contextNote)
+        setDraftStatus('restored')
+      } catch {
+        window.localStorage.removeItem('doings:debrief-draft:new')
+      }
+    }
+
+    setDraftReady(true)
+  }, [draftId])
+
+  useEffect(() => {
+    if (!draftId) return
+
+    fetch(`/api/briefs/drafts/${draftId}`)
+      .then(async response => {
+        const payload = await response.json().catch(() => null)
+        if (!response.ok || !payload?.draft) {
+          throw new Error(payload?.error || 'Kunde inte läsa utkastet.')
+        }
+
+        const draft = payload.draft as {
+          label: string
+          organisation: string
+          introTitle: string
+          introText: string
+          contextNote: string
+          selectedSet: string | null
+          customSetName: string
+          customQuestions: QuestionDraft[]
+          recipientsInput: string
+          activeTab: BriefWorkspaceTab
+          activePreviewQuestionIndex: number
+        }
+
+        setClientOrg(draft.organisation || '')
+        setIntroTitle(draft.introTitle || 'Några korta frågor')
+        setIntroText(draft.introText || '')
+        setContextNote(draft.contextNote || '')
+        setSelectedSet(draft.selectedSet || '')
+        setCustomSetName(draft.customSetName || '')
+        setCustomQuestions(Array.isArray(draft.customQuestions) && draft.customQuestions.length > 0 ? draft.customQuestions : [{ text: '' }, { text: '' }])
+        setRecipientsInput(draft.recipientsInput || '')
+        setActiveTab(draft.activeTab || 'setup')
+        setActivePreviewQuestionIndex(typeof draft.activePreviewQuestionIndex === 'number' ? draft.activePreviewQuestionIndex : 0)
+        setInternalLabel(draft.label === 'Utkast' ? '' : draft.label || '')
+      })
+      .catch(err => {
+        setError(err instanceof Error ? err.message : 'Kunde inte läsa utkastet.')
+      })
+  }, [draftId])
 
   useEffect(() => {
     if (!selectedSet) { setQuestions([]); return }
@@ -309,6 +405,146 @@ function SendBriefInner() {
       setInternalLabel(formatBatchLabel(clientOrg))
     }
   }, [clientOrg, internalLabel])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !draftReady || sent) return
+
+    const draftPayload = JSON.stringify({
+      selectedSet,
+      customSetName,
+      customQuestions,
+      clientOrg,
+      recipientsInput,
+      activeTab,
+      activePreviewQuestionIndex,
+      introTitle,
+      introText,
+      internalLabel,
+      contextNote,
+    })
+
+    setDraftDirty(true)
+    setDraftStatus('saving')
+
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+    }
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      window.localStorage.setItem('doings:debrief-draft:new', draftPayload)
+      setDraftDirty(false)
+      setDraftStatus('saved')
+      autosaveTimerRef.current = null
+    }, 500)
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current)
+      }
+    }
+  }, [
+    draftReady,
+    sent,
+    selectedSet,
+    customSetName,
+    customQuestions,
+    clientOrg,
+    recipientsInput,
+    activeTab,
+    activePreviewQuestionIndex,
+    introTitle,
+    introText,
+    internalLabel,
+    contextNote,
+  ])
+
+  async function clearDraft() {
+    if (typeof window === 'undefined') return
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    window.localStorage.removeItem('doings:debrief-draft:new')
+    if (draftId) {
+      await fetch(`/api/briefs/drafts/${draftId}`, { method: 'DELETE' }).catch(() => null)
+      window.location.assign('/dashboard/send')
+      return
+    }
+    setDraftDirty(false)
+    setDraftStatus('idle')
+  }
+
+  async function saveDraftNow() {
+    if (typeof window === 'undefined' || sent || persistingDraft) return
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+
+    const draftPayload = {
+      selectedSet,
+      customSetName,
+      customQuestions,
+      clientOrg,
+      recipientsInput,
+      activeTab,
+      activePreviewQuestionIndex,
+      introTitle,
+      introText,
+      internalLabel,
+      contextNote,
+    }
+
+    window.localStorage.setItem('doings:debrief-draft:new', JSON.stringify(draftPayload))
+    setPersistingDraft(true)
+    setDraftStatus('saving')
+
+    const response = await fetch('/api/briefs/drafts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: draftId || undefined,
+        label: internalLabel.trim(),
+        organisation: clientOrg.trim(),
+        introTitle,
+        introText,
+        contextNote,
+        selectedSet,
+        customSetName,
+        customQuestions,
+        recipientsInput,
+        activeTab,
+        activePreviewQuestionIndex,
+      }),
+    })
+    const payload = await response.json().catch(() => null)
+    setPersistingDraft(false)
+
+    if (!response.ok || !payload?.draft) {
+      setError(payload?.error || 'Kunde inte spara utkastet.')
+      return
+    }
+
+    if (!draftId && payload.draft.id) {
+      const nextId = String(payload.draft.id)
+      setDraftId(nextId)
+      window.history.replaceState({}, '', `/dashboard/send?draft=${nextId}`)
+    }
+
+    setDraftDirty(false)
+    setDraftStatus('server-saved')
+  }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!draftDirty) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [draftDirty])
 
   const customerSuggestions = storedCustomers
     .filter(customer => {
@@ -582,6 +818,10 @@ function SendBriefInner() {
       console.error('Batch metadata request failed', metadataError)
     })
 
+    clearDraft()
+    if (draftId) {
+      fetch(`/api/briefs/drafts/${draftId}`, { method: 'DELETE' }).catch(() => null)
+    }
     setSent(inviteResults)
     setSending(false)
   }
@@ -656,11 +896,34 @@ function SendBriefInner() {
     <div style={pageShellStyle}>
       <div style={{ marginBottom: 30 }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
-          Nytt utskick
+          {draftId ? 'Fortsätt utkast' : 'Nytt utskick'}
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-2)', marginTop: 10, lineHeight: 1.7, maxWidth: 620 }}>
-          Skicka ett kort underlag till en eller flera personer inför nästa steg.
+          {draftId
+            ? 'Det här utkastet är sparat i systemet och kan fortsättas härifrån.'
+            : 'Skicka ett kort underlag till en eller flera personer inför nästa steg.'}
         </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+            {draftStatus === 'restored'
+              ? 'Utkast återställt från din webbläsare.'
+              : draftStatus === 'saving'
+              ? 'Sparar utkast…'
+              : draftStatus === 'server-saved'
+              ? 'Utkast sparat i systemet.'
+              : draftStatus === 'saved'
+              ? 'Tillfälligt sparat i den här webbläsaren.'
+              : draftId
+              ? 'Du kan fortsätta här eller spara om utkastet.'
+              : 'Påbörjat arbete sparas tillfälligt i den här webbläsaren tills du sparar utkastet i systemet.'}
+          </div>
+          <button type="button" onClick={() => void saveDraftNow()} disabled={persistingDraft} style={ghostActionStyle}>
+            {persistingDraft ? 'Sparar…' : 'Spara utkast'}
+          </button>
+          <button type="button" onClick={() => void clearDraft()} style={ghostActionStyle}>
+            Rensa utkast
+          </button>
+        </div>
       </div>
 
       <BriefSubnav active="send" />
@@ -1020,7 +1283,6 @@ function SendBriefInner() {
         <section style={{ ...panelStyle, padding: 0, overflow: 'hidden', minWidth: 0 }}>
           <div style={briefPreviewShellStyle}>
             <div style={briefPreviewHeroStyle}>
-              <div style={previewEyebrowStyle}>Mottagarens vy</div>
               <h2 style={{ margin: '0 0 10px', fontFamily: 'var(--font-display)', fontSize: 36, lineHeight: 1.02, letterSpacing: '-0.03em', color: '#fff', maxWidth: 520 }}>
                 {introTitle.trim() || 'Några korta frågor'}
               </h2>
@@ -1029,20 +1291,11 @@ function SendBriefInner() {
               </p>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 20 }}>
                 <PreviewPill>{clientOrg.trim() || 'Ingen kund vald ännu'}</PreviewPill>
-                <PreviewPill>{activeQuestions.length || 0} frågor</PreviewPill>
-                <PreviewPill>{parsedRecipientsPreview.length || 0} mottagare</PreviewPill>
               </div>
             </div>
 
             <div style={briefPreviewContentStyle}>
               <div style={{ display: 'grid', gap: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', paddingTop: 10 }}>
-                  <div />
-                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', lineHeight: 1.2, paddingBottom: 2 }}>
-                    Fråga {activeQuestions.length > 0 ? `${previewQuestionIndex + 1}` : '0'} av {activeQuestions.length || 0}
-                  </div>
-                </div>
-
                 <div style={{ height: 6, borderRadius: 999, background: 'rgba(14,14,12,0.08)', overflow: 'hidden' }}>
                   <div style={{ width: activeQuestions.length > 0 ? `${Math.max(18, Math.round(((previewQuestionIndex + 1) / activeQuestions.length) * 100))}%` : '0%', height: '100%', background: 'var(--accent)' }} />
                 </div>
@@ -1068,7 +1321,6 @@ function SendBriefInner() {
                 )}
 
                 <div style={previewQuestionCardStyle}>
-                  <div style={previewQuestionBadgeStyle}>Fråga {activeQuestions.length > 0 ? previewQuestionIndex + 1 : 1}</div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: 1.18, color: 'var(--text)', letterSpacing: '-0.02em' }}>
                     {activeQuestions[previewQuestionIndex] || 'Lägg till minst en fråga för att se hur briefen kommer att kännas för mottagaren.'}
                   </div>
@@ -1077,16 +1329,6 @@ function SendBriefInner() {
                   </div>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <button type="button" style={previewPrimaryButtonStyle}>Börja svara</button>
-                    <button type="button" style={previewSecondaryButtonStyle}>Tillbaka</button>
-                  </div>
-                </div>
-
-                <div style={previewMiniReviewStyle}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 10 }}>
-                    Känslan i slutet
-                  </div>
-                  <div style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.65 }}>
-                    Efter sista frågan kan mottagaren snabbt se över sina svar och skicka in dem. Briefen ska kännas kort, tydlig och respektfull mot tiden.
                   </div>
                 </div>
               </div>

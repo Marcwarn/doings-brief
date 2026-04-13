@@ -48,6 +48,10 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       return NextResponse.json({ error: 'Ogiltig utvärdering.' }, { status: 500 })
     }
 
+    if (evaluation.status !== 'active') {
+      return NextResponse.json({ error: 'Utvärderingen är inte publicerad ännu.' }, { status: 404 })
+    }
+
     const normalizedEmail = evaluation.collectEmail && typeof email === 'string'
       ? normalizeEvaluationEmail(email)
       : ''

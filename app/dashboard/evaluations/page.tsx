@@ -9,11 +9,12 @@ type EvaluationListItem = {
   token: string
   label: string
   customer: string
-  questionSetId: string
+  questionSetId: string | null
   questionSetName: string | null
   createdBy: string
   createdAt: string
   responseCount: number
+  status: 'draft' | 'active'
 }
 
 export default function EvaluationsPage() {
@@ -71,16 +72,23 @@ export default function EvaluationsPage() {
                       {evaluation.label}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6 }}>
-                      {evaluation.customer} · {evaluation.questionSetName || 'Utvärderingsfrågor'}
+                      {evaluation.customer || 'Ingen kund vald'} · {evaluation.questionSetName || 'Utvärderingsfrågor'}
                     </div>
                   </div>
-                  <Link href={`/dashboard/utvardering/${evaluation.id}`} style={secondaryLinkStyle}>
-                    Öppna
+                  <Link
+                    href={evaluation.status === 'draft' ? `/dashboard/utvardering/skapa?draft=${evaluation.id}` : `/dashboard/utvardering/${evaluation.id}`}
+                    style={secondaryLinkStyle}
+                  >
+                    {evaluation.status === 'draft' ? 'Fortsätt' : 'Öppna'}
                   </Link>
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <MetaPill label="Svar" value={`${evaluation.responseCount}`} tone="ok" />
+                  <MetaPill
+                    label={evaluation.status === 'draft' ? 'Status' : 'Svar'}
+                    value={evaluation.status === 'draft' ? 'Utkast' : `${evaluation.responseCount}`}
+                    tone={evaluation.status === 'draft' ? 'draft' : 'ok'}
+                  />
                   <MetaPill label="Skapad" value={formatDate(evaluation.createdAt)} />
                 </div>
               </div>
@@ -151,15 +159,15 @@ const cardStyle: React.CSSProperties = {
   boxShadow: '0 12px 32px rgba(16,24,40,0.04)',
 }
 
-function MetaPill({ label, value, tone = 'muted' }: { label: string; value: string; tone?: 'muted' | 'ok' }) {
+function MetaPill({ label, value, tone = 'muted' }: { label: string; value: string; tone?: 'muted' | 'ok' | 'draft' }) {
   return (
     <div style={{
       padding: '8px 12px',
       borderRadius: 999,
       border: '1px solid var(--border)',
-      background: tone === 'ok' ? '#f0fdf4' : 'rgba(14,14,12,0.03)',
+      background: tone === 'ok' ? '#f0fdf4' : tone === 'draft' ? '#fff7ed' : 'rgba(14,14,12,0.03)',
       fontSize: 12.5,
-      color: tone === 'ok' ? '#166534' : 'var(--text-2)',
+      color: tone === 'ok' ? '#166534' : tone === 'draft' ? '#9a3412' : 'var(--text-2)',
       fontWeight: 600,
     }}>
       {label}: {value}

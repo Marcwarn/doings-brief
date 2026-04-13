@@ -37,6 +37,10 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
       return NextResponse.json({ error: 'Ogiltig utvärdering.' }, { status: 500 })
     }
 
+    if (evaluation.status !== 'active' || !evaluation.questionSetId) {
+      return NextResponse.json({ error: 'Utvärderingen är inte publicerad ännu.' }, { status: 404 })
+    }
+
     const [{ data: questions, error: questionError }, { data: questionMetaRow }] = await Promise.all([
       admin
         .from('questions')

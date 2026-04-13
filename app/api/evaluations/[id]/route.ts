@@ -50,25 +50,31 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     }
 
     const [{ data: questionSet }, { data: questions }, { data: responseRows, error: responseError }, { data: questionMetaRow }] = await Promise.all([
-      admin
-        .from('question_sets')
-        .select('id, name, description')
-        .eq('id', evaluation.questionSetId)
-        .single(),
-      admin
-        .from('questions')
-        .select('id, text, order_index')
-        .eq('question_set_id', evaluation.questionSetId)
-        .order('order_index'),
+      evaluation.questionSetId
+        ? admin
+            .from('question_sets')
+            .select('id, name, description')
+            .eq('id', evaluation.questionSetId)
+            .single()
+        : Promise.resolve({ data: null }),
+      evaluation.questionSetId
+        ? admin
+            .from('questions')
+            .select('id, text, order_index')
+            .eq('question_set_id', evaluation.questionSetId)
+            .order('order_index')
+        : Promise.resolve({ data: [] }),
       admin
         .from('settings')
         .select('value')
         .like('key', `${getEvaluationResponsePrefix(evaluation.id)}%`),
-      admin
-        .from('settings')
-        .select('value')
-        .eq('key', getEvaluationQuestionMetaKey(evaluation.questionSetId))
-        .single(),
+      evaluation.questionSetId
+        ? admin
+            .from('settings')
+            .select('value')
+            .eq('key', getEvaluationQuestionMetaKey(evaluation.questionSetId))
+            .single()
+        : Promise.resolve({ data: null }),
     ])
 
     if (responseError) {
@@ -83,13 +89,22 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       .filter((value): value is NonNullable<typeof value> => Boolean(value))
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
 
+    const fallbackQuestions = (evaluation.draftData?.customQuestions || []).map((question, index) => ({
+      id: `draft-${index}`,
+      text: question.text,
+      order_index: index,
+      type: question.type,
+    }))
+
     return NextResponse.json({
       evaluation,
       questionSet: questionSet || null,
-      questions: (questions || []).map(question => ({
-        ...question,
-        type: typeByQuestionId.get(question.id) || 'text',
-      })),
+      questions: evaluation.questionSetId
+        ? (questions || []).map(question => ({
+            ...question,
+            type: typeByQuestionId.get(question.id) || 'text',
+          }))
+        : fallbackQuestions,
       responses,
     })
   } catch (error) {
@@ -122,6 +137,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const normalizedCustomQuestionSetName = typeof body.customQuestionSetName === 'string'
       ? body.customQuestionSetName.trim()
       : ''
+    const normalizedStatus = body.status === 'draft' ? 'draft' : 'active'
     const normalizedCustomQuestions = Array.isArray(body.customQuestions)
       ? body.customQuestions
         .map((item, index) => {
@@ -141,7 +157,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const wantsQuestionUpdate = normalizedCustomQuestions !== null
 
-    if (!normalizedCustomer || !normalizedLabel) {
+    if (normalizedStatus === 'active' && (!normalizedCustomer || !normalizedLabel)) {
       return NextResponse.json({ error: 'Kund och tillfälle krävs.' }, { status: 400 })
     }
 
@@ -156,9 +172,41 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       resolvedCollectEmail = body.collectEmail
     }
 
+    let resolvedQuestionSetId = evaluation.questionSetId
     let resolvedQuestionSetName = evaluation.questionSetName
 
-    if (wantsQuestionUpdate) {
+    if (normalizedStatus === 'active' && wantsQuestionUpdate && !resolvedQuestionSetId) {
+      if (!normalizedCustomQuestionSetName) {
+        return NextResponse.json({ error: 'Ge frågorna ett namn innan du sparar utvärderingen.' }, { status: 400 })
+      }
+
+      if (normalizedCustomQuestions.length === 0) {
+        return NextResponse.json({ error: 'Lägg till minst en fråga i utvärderingen.' }, { status: 400 })
+      }
+
+      const { data: createdQuestionSet, error: questionSetCreateError } = await admin
+        .from('question_sets')
+        .insert({
+          user_id: user.id,
+          name: normalizedCustomQuestionSetName,
+          description: 'Skapad från utkast i utvärderingsflödet',
+        })
+        .select('id, name')
+        .single()
+
+      if (questionSetCreateError || !createdQuestionSet) {
+        return NextResponse.json({ error: 'Kunde inte skapa frågorna för utvärderingen.' }, { status: 500 })
+      }
+
+      resolvedQuestionSetId = createdQuestionSet.id
+      resolvedQuestionSetName = createdQuestionSet.name
+    }
+
+    if (normalizedStatus === 'active' && wantsQuestionUpdate) {
+      if (!resolvedQuestionSetId) {
+        return NextResponse.json({ error: 'Frågeupplägget kunde inte skapas.' }, { status: 500 })
+      }
+
       if (!normalizedCustomQuestionSetName) {
         return NextResponse.json({ error: 'Ge frågorna ett namn innan du sparar utvärderingen.' }, { status: 400 })
       }
@@ -170,7 +218,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const { error: questionSetUpdateError } = await admin
         .from('question_sets')
         .update({ name: normalizedCustomQuestionSetName })
-        .eq('id', evaluation.questionSetId)
+        .eq('id', resolvedQuestionSetId)
 
       if (questionSetUpdateError) {
         return NextResponse.json({ error: 'Kunde inte uppdatera frågornas namn.' }, { status: 500 })
@@ -179,7 +227,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const { error: questionDeleteError } = await admin
         .from('questions')
         .delete()
-        .eq('question_set_id', evaluation.questionSetId)
+        .eq('question_set_id', resolvedQuestionSetId)
 
       if (questionDeleteError) {
         return NextResponse.json({ error: 'Kunde inte uppdatera utvärderingens frågor.' }, { status: 500 })
@@ -188,7 +236,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const { data: questionInsertRows, error: questionInsertError } = await admin
         .from('questions')
         .insert(normalizedCustomQuestions.map((item, index) => ({
-          question_set_id: evaluation.questionSetId,
+          question_set_id: resolvedQuestionSetId,
           text: item.text,
           order_index: index,
         })))
@@ -207,7 +255,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const { error: questionMetaError } = await admin
         .from('settings')
         .upsert({
-          key: getEvaluationQuestionMetaKey(evaluation.questionSetId),
+          key: getEvaluationQuestionMetaKey(resolvedQuestionSetId),
           value: JSON.stringify(questionMetaRows),
           updated_at: new Date().toISOString(),
         })
@@ -222,15 +270,37 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = {
       ...evaluation,
       customer: normalizedCustomer,
-      label: normalizedLabel,
+      label: normalizedLabel || 'Utkast',
       collectEmail: resolvedCollectEmail,
+      questionSetId: resolvedQuestionSetId,
       questionSetName: resolvedQuestionSetName,
       senderGroupId: 'senderGroupId' in body
         ? (typeof body.senderGroupId === 'string' && body.senderGroupId.trim() ? body.senderGroupId.trim() : null)
         : evaluation.senderGroupId,
+      status: normalizedStatus,
+      draftData: {
+        customQuestionSetName: normalizedCustomQuestionSetName || resolvedQuestionSetName || null,
+        customQuestions: normalizedCustomQuestions === null
+          ? (evaluation.draftData?.customQuestions || [])
+          : normalizedCustomQuestions.map(item => ({ text: item.text, type: item.type })),
+        activeTab: typeof body.draftData?.activeTab === 'string' ? body.draftData.activeTab : evaluation.draftData?.activeTab || null,
+        followupDeliveryMode: typeof body.draftData?.followupDeliveryMode === 'string'
+          ? body.draftData.followupDeliveryMode
+          : evaluation.draftData?.followupDeliveryMode || null,
+        activeFollowupStepId: typeof body.draftData?.activeFollowupStepId === 'string'
+          ? body.draftData.activeFollowupStepId
+          : evaluation.draftData?.activeFollowupStepId || null,
+        followupSteps: Array.isArray(body.draftData?.followupSteps)
+          ? body.draftData.followupSteps
+          : evaluation.draftData?.followupSteps || [],
+      },
     }
 
-    const { error } = await admin.from('settings').upsert({ key, value: JSON.stringify(updated) })
+    if (normalizedStatus === 'active') {
+      updated.draftData = updated.draftData
+    }
+
+    const { error } = await admin.from('settings').upsert({ key, value: JSON.stringify(updated), updated_at: new Date().toISOString() })
     if (error) return NextResponse.json({ error: 'Kunde inte uppdatera utvärderingen.' }, { status: 500 })
 
     return NextResponse.json({
@@ -299,18 +369,21 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
       .map(row => parseEvaluationResponse(row.value))
       .filter((value): value is NonNullable<typeof value> => Boolean(value))
 
-    const questionSetStillUsed = (allEvaluationRows || [])
+    const questionSetStillUsed = evaluation.questionSetId ? (allEvaluationRows || [])
       .map(row => parseEvaluationMetadata(row.value))
       .filter((value): value is NonNullable<typeof value> => Boolean(value))
       .some(item => item.id !== evaluation.id && item.questionSetId === evaluation.questionSetId)
+      : false
 
     const settingsKeys = [
       getEvaluationKey(evaluation.id),
       getEvaluationTokenKey(evaluation.token),
-      getEvaluationQuestionMetaKey(evaluation.questionSetId),
       ...responses.map(response => getEvaluationParticipantKey(evaluation.id, response.email)),
       ...(responseRows || []).map(row => row.key),
     ]
+    if (evaluation.questionSetId) {
+      settingsKeys.push(getEvaluationQuestionMetaKey(evaluation.questionSetId))
+    }
 
     const uniqueSettingsKeys = Array.from(new Set(
       questionSetStillUsed
@@ -330,7 +403,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
       }
     }
 
-    if (!questionSetStillUsed) {
+    if (evaluation.questionSetId && !questionSetStillUsed) {
       const { error: questionDeleteError } = await admin
         .from('questions')
         .delete()
@@ -356,7 +429,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
       ok: true,
       deletedEvaluationId: evaluation.id,
       deletedResponses: responses.length,
-      deletedQuestionSet: !questionSetStillUsed,
+      deletedQuestionSet: Boolean(evaluation.questionSetId) && !questionSetStillUsed,
     })
   } catch (error) {
     console.error('evaluation delete error:', error)

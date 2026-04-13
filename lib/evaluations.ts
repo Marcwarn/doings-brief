@@ -6,6 +6,20 @@ export const EVALUATION_QUESTION_META_PREFIX = 'evaluation_question_meta:'
 
 export type EvaluationQuestionType = 'text' | 'scale_1_5'
 
+export type EvaluationDraftQuestion = {
+  text: string
+  type: EvaluationQuestionType
+}
+
+export type EvaluationDraftData = {
+  customQuestionSetName: string | null
+  customQuestions: EvaluationDraftQuestion[]
+  activeTab: string | null
+  followupDeliveryMode: string | null
+  activeFollowupStepId: string | null
+  followupSteps: unknown[]
+}
+
 export type EvaluationQuestionMeta = {
   questionId: string
   orderIndex: number
@@ -17,12 +31,14 @@ export type EvaluationMetadata = {
   token: string
   label: string
   customer: string
-  questionSetId: string
+  questionSetId: string | null
   questionSetName: string | null
   collectEmail: boolean
   createdBy: string
   createdAt: string
   senderGroupId: string | null
+  status: 'draft' | 'active'
+  draftData: EvaluationDraftData | null
 }
 
 export type EvaluationAnswer = {
@@ -106,24 +122,60 @@ export function parseEvaluationMetadata(raw: string | null | undefined) {
       || typeof parsed.token !== 'string'
       || typeof parsed.label !== 'string'
       || typeof parsed.customer !== 'string'
-      || typeof parsed.questionSetId !== 'string'
       || typeof parsed.createdBy !== 'string'
       || typeof parsed.createdAt !== 'string'
     ) {
       return null
     }
 
+    const rawDraftData = parsed.draftData && typeof parsed.draftData === 'object'
+      ? parsed.draftData as Record<string, unknown>
+      : null
+
+    const draftQuestions = Array.isArray(rawDraftData?.customQuestions)
+      ? rawDraftData.customQuestions
+          .map(item => {
+            if (!item || typeof item !== 'object') return null
+            const candidate = item as Record<string, unknown>
+            const text = typeof candidate.text === 'string' ? candidate.text.trim() : ''
+            if (!text) return null
+
+            return {
+              text,
+              type: candidate.type === 'scale_1_5' ? 'scale_1_5' : 'text',
+            } satisfies EvaluationDraftQuestion
+          })
+          .filter((value): value is EvaluationDraftQuestion => Boolean(value))
+      : []
+
     return {
       id: parsed.id,
       token: parsed.token,
       label: parsed.label,
       customer: parsed.customer,
-      questionSetId: parsed.questionSetId,
+      questionSetId: typeof parsed.questionSetId === 'string' && parsed.questionSetId.trim() ? parsed.questionSetId.trim() : null,
       questionSetName: typeof parsed.questionSetName === 'string' && parsed.questionSetName.trim() ? parsed.questionSetName.trim() : null,
       collectEmail: parsed.collectEmail !== false,
       createdBy: parsed.createdBy,
       createdAt: parsed.createdAt,
       senderGroupId: typeof parsed.senderGroupId === 'string' && parsed.senderGroupId.trim() ? parsed.senderGroupId.trim() : null,
+      status: parsed.status === 'draft' ? 'draft' : 'active',
+      draftData: rawDraftData
+        ? {
+            customQuestionSetName: typeof rawDraftData.customQuestionSetName === 'string' && rawDraftData.customQuestionSetName.trim()
+              ? rawDraftData.customQuestionSetName.trim()
+              : null,
+            customQuestions: draftQuestions,
+            activeTab: typeof rawDraftData.activeTab === 'string' && rawDraftData.activeTab.trim() ? rawDraftData.activeTab.trim() : null,
+            followupDeliveryMode: typeof rawDraftData.followupDeliveryMode === 'string' && rawDraftData.followupDeliveryMode.trim()
+              ? rawDraftData.followupDeliveryMode.trim()
+              : null,
+            activeFollowupStepId: typeof rawDraftData.activeFollowupStepId === 'string' && rawDraftData.activeFollowupStepId.trim()
+              ? rawDraftData.activeFollowupStepId.trim()
+              : null,
+            followupSteps: Array.isArray(rawDraftData.followupSteps) ? rawDraftData.followupSteps : [],
+          }
+        : null,
     } satisfies EvaluationMetadata
   } catch {
     return null
