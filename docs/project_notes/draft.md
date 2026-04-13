@@ -36,3 +36,7 @@
   - läsa in riktiga mallar från sender.net
   - spara uppföljningssteg på utvärderingen
   - definiera verkligt beteende för `Meddelande med frågor`
+
+- Ny Discovery-riktning dokumenterad:
+  - `docs/specs/discovery-admin-experience.md`
+  - fokus är kund-först adminläge, tydligare Discovery-case per kund, bättre visualiseringar och starkare intern premiumkänsla

@@ -936,43 +936,7 @@ export default function DiscoveryPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/discovery/templates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: currentTemplateId,
-          name: templateName,
-          introTitle,
-          introText,
-          audienceMode,
-          status,
-          sections: builderCategories.filter(category => category.enabled).map((category, categoryIndex) => ({
-            label: category.label,
-            description: category.desc,
-            orderIndex: categoryIndex,
-            questions: category.questions.map((question, questionIndex) => ({
-              type: question.type,
-              text: question.text,
-              orderIndex: questionIndex,
-              maxChoices: question.type === 'choice' ? question.max : null,
-              scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
-              scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
-              scaleMinLabel: question.type === 'scale' || question.type === 'likert' ? question.minLabel : null,
-              scaleMaxLabel: question.type === 'scale' || question.type === 'likert' ? question.maxLabel : null,
-              options: question.type === 'choice'
-                ? question.options.map(option => ({ label: option }))
-                : [],
-            })),
-          })),
-        }),
-      })
-
-      const payload = await response.json().catch(() => null)
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Kunde inte spara upplägget.')
-      }
-
-      const savedTemplateId = typeof payload?.templateId === 'string' ? payload.templateId : currentTemplateId
+      const savedTemplateId = await persistCurrentTemplate(status)
       setCurrentTemplateId(savedTemplateId || null)
       setSaveState('saved')
       await loadTemplateList(savedTemplateId || undefined)
@@ -1008,11 +972,19 @@ export default function DiscoveryPage() {
     setSending(true)
 
     try {
+      const savedTemplateId = await persistCurrentTemplate('active')
+      if (!savedTemplateId) {
+        throw new Error('Kunde inte spara den senaste versionen av discoveryt innan utskick.')
+      }
+
+      setCurrentTemplateId(savedTemplateId)
+      await loadTemplateList(savedTemplateId)
+
       const response = await fetch('/api/discovery/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          templateId: currentTemplateId,
+          templateId: savedTemplateId,
           organisation: clientOrganisation,
           responseMode,
           recipients,
@@ -1042,6 +1014,46 @@ export default function DiscoveryPage() {
     } finally {
       setSending(false)
     }
+  }
+
+  async function persistCurrentTemplate(status: 'draft' | 'active') {
+    const response = await fetch('/api/discovery/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentTemplateId,
+        name: templateName,
+        introTitle,
+        introText,
+        audienceMode,
+        status,
+        sections: builderCategories.filter(category => category.enabled).map((category, categoryIndex) => ({
+          label: category.label,
+          description: category.desc,
+          orderIndex: categoryIndex,
+          questions: category.questions.map((question, questionIndex) => ({
+            type: question.type,
+            text: question.text,
+            orderIndex: questionIndex,
+            maxChoices: question.type === 'choice' ? question.max : null,
+            scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
+            scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
+            scaleMinLabel: question.type === 'scale' || question.type === 'likert' ? question.minLabel : null,
+            scaleMaxLabel: question.type === 'scale' || question.type === 'likert' ? question.maxLabel : null,
+            options: question.type === 'choice'
+              ? question.options.map(option => ({ label: option }))
+              : [],
+          })),
+        })),
+      }),
+    })
+
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      throw new Error(payload?.error || 'Kunde inte spara upplägget.')
+    }
+
+    return typeof payload?.templateId === 'string' ? payload.templateId : currentTemplateId
   }
 
   function setScale(categoryId: string, questionIndex: number, value: string) {
@@ -2433,6 +2445,7 @@ function DiscoveryDataCanvas({
   analysisCached: boolean
   analysisStatus: DiscoveryAiStatus | null
 }) {
+  const [dataView, setDataView] = useState<'overview' | 'answers' | 'insights'>('overview')
   const selectedCustomerGroup = selectedSessionId.startsWith('customer:')
     ? customerGroups.find(group => `customer:${group.key}` === selectedSessionId) || null
     : null
@@ -2680,6 +2693,30 @@ function DiscoveryDataCanvas({
             ))}
           </div>
 
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setDataView('overview')}
+              style={dataView === 'overview' ? activeDataTabStyle : inactiveDataTabButtonStyle}
+            >
+              Översikt
+            </button>
+            <button
+              type="button"
+              onClick={() => setDataView('answers')}
+              style={dataView === 'answers' ? activeDataTabStyle : inactiveDataTabButtonStyle}
+            >
+              Svar
+            </button>
+            <button
+              type="button"
+              onClick={() => setDataView('insights')}
+              style={dataView === 'insights' ? activeDataTabStyle : inactiveDataTabButtonStyle}
+            >
+              Insikter
+            </button>
+          </div>
+
           <div style={summaryGridStyle}>
             <DataSummaryCard label="Inbjudna" value={`${overview.invitedCount}`} sublabel="För vald kund" />
             <DataSummaryCard label="Svar inkomna" value={`${overview.submittedCount}`} sublabel="För vald kund" />
@@ -2689,16 +2726,16 @@ function DiscoveryDataCanvas({
             <DataSummaryCard label="Olika perspektiv" value={`${overview.splitCount}`} sublabel="Teman med splittring" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(300px, 0.75fr)', gap: 18, alignItems: 'start' }}>
+          {dataView === 'overview' && (
             <div style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={dataSectionLabelStyle}>Teman</div>
-                      <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                      Temakorten hjälper dig hitta var just den här kundens discovery ger tydliga signaler och var det fortfarande finns olika perspektiv.
-                      </div>
+                  <div>
+                    <div style={dataSectionLabelStyle}>Översikt</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Temakorten hjälper dig hitta var just den här kundens discovery ger tydliga signaler, var det finns splittring och vad som bör läsas vidare.
                     </div>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -2755,15 +2792,19 @@ function DiscoveryDataCanvas({
                   })}
                 </div>
               </section>
+            </div>
+          )}
 
+          {dataView === 'answers' && (
+            <div style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={dataSectionLabelStyle}>Råsvar</div>
-                      <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                      Råsvaren är bevislagret bakom sammanfattningen för den valda kunden.
-                      </div>
+                  <div>
+                    <div style={dataSectionLabelStyle}>Svar</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Här läser du underlaget bakom discoveryt. Filtrera på tema för att fokusera samtalet eller öppna ett enskilt svar i sin helhet.
                     </div>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gap: 10 }}>
@@ -2831,12 +2872,14 @@ function DiscoveryDataCanvas({
                 </div>
               </section>
             </div>
+          )}
 
+          {dataView === 'insights' && (
             <aside style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
-                <div style={dataSectionLabelStyle}>Analysvyer</div>
+                <div style={dataSectionLabelStyle}>Insikter</div>
                 <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6, marginTop: 4 }}>
-                  AI-analysen använder samma urval som datavyn och ska hjälpa dig läsa materialet ur ett tydligt perspektiv utan att tappa kontakten med råsvaren.
+                  Här tolkar du materialet för vald kund. AI-analysen ska hjälpa dig se mönster och skillnader, men alltid med tydlig väg tillbaka till råsvaren.
                 </div>
                 <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
                   {discoveryAnalysisLenses.map(label => {
@@ -2990,7 +3033,7 @@ function DiscoveryDataCanvas({
                 </div>
               </section>
             </aside>
-          </div>
+          )}
         </div>
       </div>
     </section>

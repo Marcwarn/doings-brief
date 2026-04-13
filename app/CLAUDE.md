@@ -72,6 +72,7 @@ Helt byggd och polerad. Rör inte utan tydlig anledning.
 - `Discovery` har nu dokumenterad riktlinje för målgruppsanpassning: vissa teman ska vara gemensamma, medan andra senare bör få varianter för ledare kontra blandade grupper
 - `Discovery` har nu en dokumenterad spec för en framtida `Data`-flik med visualiseringar, råsvar och fasta AI-analyslinser
 - `Discovery` har nu en separat AI-spec för `Data` som definierar analyslinser, JSON-output, promptregler och hur observation ska skiljas från tolkning
+- `Discovery` har nu också en separat adminspec för kundcentrerad översikt, case-vyer, visualiseringar och premium-känsla i internläget: `docs/specs/discovery-admin-experience.md`
 - `Data`-fliken visar nu en första riktig datavy med filter, översiktskort, temakort och råsvar för det sparade discovery-upplägget
 - `/api/discovery/data/[id]` aggregerar sessions, sektionstäckning och råsvar för datavyn
 - `Data` och AI-analysen i Discovery tar nu hänsyn till anonymt läge och grupperar fortsatt kund först
