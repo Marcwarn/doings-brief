@@ -858,8 +858,8 @@ export default function DiscoveryPage() {
               return {
                 type: 'scale' as const,
                 text: question.text,
-                minLabel: question.scaleMinLabel || 'Håller inte alls',
-                maxLabel: question.scaleMaxLabel || 'Håller helt',
+                minLabel: question.scaleMinLabel || 'I låg grad',
+                maxLabel: question.scaleMaxLabel || 'I hög grad',
               }
             }
 
@@ -867,8 +867,8 @@ export default function DiscoveryPage() {
               return {
                 type: 'likert' as const,
                 text: question.text,
-                minLabel: question.scaleMinLabel || 'Håller inte med',
-                maxLabel: question.scaleMaxLabel || 'Håller med',
+                minLabel: question.scaleMinLabel || 'Inte alls enig',
+                maxLabel: question.scaleMaxLabel || 'Mycket enig',
               }
             }
 
@@ -1265,15 +1265,15 @@ export default function DiscoveryPage() {
             return {
               type: 'scale' as const,
               text: q.text,
-              minLabel: 'Håller inte alls',
-              maxLabel: 'Håller helt',
+              minLabel: 'I låg grad',
+              maxLabel: 'I hög grad',
             }
           }
           return {
             type: 'likert' as const,
             text: q.text,
-            minLabel: 'Håller inte med',
-            maxLabel: 'Håller med',
+            minLabel: 'Inte alls enig',
+            maxLabel: 'Mycket enig',
           }
         }),
       }
@@ -1832,7 +1832,7 @@ export default function DiscoveryPage() {
                               <input
                                 value={question.minLabel}
                                 onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'minLabel', event.target.value)}
-                                placeholder="Håller inte med"
+                                placeholder="Inte alls enig"
                                 style={editorInputStyle}
                               />
                             </Field>
@@ -1840,7 +1840,7 @@ export default function DiscoveryPage() {
                               <input
                                 value={question.maxLabel}
                                 onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'maxLabel', event.target.value)}
-                                placeholder="Håller med"
+                                placeholder="Mycket enig"
                                 style={editorInputStyle}
                               />
                             </Field>
