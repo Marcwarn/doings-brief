@@ -820,7 +820,7 @@ export default function NewEvaluationPage() {
                 : 'Dina ändringar sparas automatiskt medan du arbetar.'}
             </div>
             <button type="button" onClick={() => void saveDraftNow()} disabled={persistingDraft} style={ghostButtonStyle}>
-              {persistingDraft ? 'Sparar…' : 'Spara i systemet'}
+              {persistingDraft ? 'Sparar…' : 'Spara som utkast'}
             </button>
             <button type="button" onClick={() => void clearDraft()} style={ghostButtonStyle}>
               Börja om
