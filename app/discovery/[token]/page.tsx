@@ -49,6 +49,28 @@ type LikertAnswer = {
   importance?: string
 }
 
+function decodeLikertLabels(minLabel: string | null, maxLabel: string | null) {
+  const defaults = {
+    agreementMinLabel: minLabel || 'Inte alls enig',
+    agreementMaxLabel: maxLabel || 'Mycket enig',
+    importanceMinLabel: 'Inte viktigt',
+    importanceMaxLabel: 'Mycket viktigt',
+  }
+
+  try {
+    const parsedMin = minLabel ? JSON.parse(minLabel) as { agreement?: unknown; importance?: unknown } : null
+    const parsedMax = maxLabel ? JSON.parse(maxLabel) as { agreement?: unknown; importance?: unknown } : null
+    return {
+      agreementMinLabel: typeof parsedMin?.agreement === 'string' && parsedMin.agreement.trim() ? parsedMin.agreement : defaults.agreementMinLabel,
+      agreementMaxLabel: typeof parsedMax?.agreement === 'string' && parsedMax.agreement.trim() ? parsedMax.agreement : defaults.agreementMaxLabel,
+      importanceMinLabel: typeof parsedMin?.importance === 'string' && parsedMin.importance.trim() ? parsedMin.importance : defaults.importanceMinLabel,
+      importanceMaxLabel: typeof parsedMax?.importance === 'string' && parsedMax.importance.trim() ? parsedMax.importance : defaults.importanceMaxLabel,
+    }
+  } catch {
+    return defaults
+  }
+}
+
 type AnswerState = Record<string, string | string[] | LikertAnswer>
 
 function answeredCount(section: PublicDiscoveryPayload['template']['sections'][number], answers: AnswerState) {
@@ -430,6 +452,7 @@ export default function DiscoveryPublicPage() {
                       const likertValue = value && typeof value === 'object' && !Array.isArray(value)
                         ? value as LikertAnswer
                         : {}
+                      const likertLabels = decodeLikertLabels(question.scaleMinLabel, question.scaleMaxLabel)
                       const agreementValue = likertValue.agreement || ''
                       const importanceValue = likertValue.importance || ''
                       const hasAgreement = Boolean(agreementValue)
@@ -454,8 +477,8 @@ export default function DiscoveryPublicPage() {
                               })}
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', maxWidth: 320 }}>
-                              <span>{question.scaleMinLabel || 'Håller inte med'}</span>
-                              <span>{question.scaleMaxLabel || 'Håller med'}</span>
+                              <span>{likertLabels.agreementMinLabel}</span>
+                              <span>{likertLabels.agreementMaxLabel}</span>
                             </div>
                           </div>
 
@@ -478,8 +501,8 @@ export default function DiscoveryPublicPage() {
                                 })}
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', maxWidth: 320 }}>
-                                <span>Inte viktigt</span>
-                                <span>Mycket viktigt</span>
+                                <span>{likertLabels.importanceMinLabel}</span>
+                                <span>{likertLabels.importanceMaxLabel}</span>
                               </div>
                             </div>
                           )}

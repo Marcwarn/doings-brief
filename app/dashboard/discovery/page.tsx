@@ -9,7 +9,7 @@ type DiscoveryQuestion =
   | { type: 'open'; text: string }
   | { type: 'scale'; text: string; minLabel: string; maxLabel: string }
   | { type: 'choice'; text: string; max: number; options: string[] }
-  | { type: 'likert'; text: string; minLabel: string; maxLabel: string }
+  | { type: 'likert'; text: string; minLabel: string; maxLabel: string; importanceMinLabel: string; importanceMaxLabel: string }
 
 type DiscoveryCategory = {
   id: string
@@ -67,6 +67,8 @@ type DiscoveryTemplateDetail = {
         scaleMax: number | null
         scaleMinLabel: string | null
         scaleMaxLabel: string | null
+        likertImportanceMinLabel?: string | null
+        likertImportanceMaxLabel?: string | null
         options: Array<{
           id: string
           label: string
@@ -74,6 +76,49 @@ type DiscoveryTemplateDetail = {
         }>
       }>
     }>
+  }
+}
+
+function encodeLikertLabels(
+  agreementMinLabel: string | null,
+  agreementMaxLabel: string | null,
+  importanceMinLabel: string | null,
+  importanceMaxLabel: string | null
+) {
+  return {
+    scaleMinLabel: JSON.stringify({
+      axis: 'agreement',
+      agreement: agreementMinLabel,
+      importance: importanceMinLabel,
+    }),
+    scaleMaxLabel: JSON.stringify({
+      axis: 'agreement',
+      agreement: agreementMaxLabel,
+      importance: importanceMaxLabel,
+    }),
+  }
+}
+
+function decodeLikertLabelPair(minLabel: string | null, maxLabel: string | null) {
+  const defaults = {
+    agreementMinLabel: minLabel || 'Inte alls enig',
+    agreementMaxLabel: maxLabel || 'Mycket enig',
+    importanceMinLabel: 'Inte viktigt',
+    importanceMaxLabel: 'Mycket viktigt',
+  }
+
+  try {
+    const parsedMin = minLabel ? JSON.parse(minLabel) as { agreement?: unknown; importance?: unknown } : null
+    const parsedMax = maxLabel ? JSON.parse(maxLabel) as { agreement?: unknown; importance?: unknown } : null
+
+    return {
+      agreementMinLabel: typeof parsedMin?.agreement === 'string' && parsedMin.agreement.trim() ? parsedMin.agreement : defaults.agreementMinLabel,
+      agreementMaxLabel: typeof parsedMax?.agreement === 'string' && parsedMax.agreement.trim() ? parsedMax.agreement : defaults.agreementMaxLabel,
+      importanceMinLabel: typeof parsedMin?.importance === 'string' && parsedMin.importance.trim() ? parsedMin.importance : defaults.importanceMinLabel,
+      importanceMaxLabel: typeof parsedMax?.importance === 'string' && parsedMax.importance.trim() ? parsedMax.importance : defaults.importanceMaxLabel,
+    }
+  } catch {
+    return defaults
   }
 }
 
@@ -864,11 +909,14 @@ export default function DiscoveryPage() {
             }
 
             if (question.type === 'likert') {
+              const likertLabels = decodeLikertLabelPair(question.scaleMinLabel, question.scaleMaxLabel)
               return {
                 type: 'likert' as const,
                 text: question.text,
-                minLabel: question.scaleMinLabel || 'Inte alls enig',
-                maxLabel: question.scaleMaxLabel || 'Mycket enig',
+                minLabel: likertLabels.agreementMinLabel,
+                maxLabel: likertLabels.agreementMaxLabel,
+                importanceMinLabel: likertLabels.importanceMinLabel,
+                importanceMaxLabel: likertLabels.importanceMaxLabel,
               }
             }
 
@@ -1032,17 +1080,25 @@ export default function DiscoveryPage() {
           description: category.desc,
           orderIndex: categoryIndex,
           questions: category.questions.map((question, questionIndex) => ({
-            type: question.type,
-            text: question.text,
-            orderIndex: questionIndex,
-            maxChoices: question.type === 'choice' ? question.max : null,
-            scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
-            scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
-            scaleMinLabel: question.type === 'scale' || question.type === 'likert' ? question.minLabel : null,
-            scaleMaxLabel: question.type === 'scale' || question.type === 'likert' ? question.maxLabel : null,
-            options: question.type === 'choice'
-              ? question.options.map(option => ({ label: option }))
-              : [],
+              type: question.type,
+              text: question.text,
+              orderIndex: questionIndex,
+              maxChoices: question.type === 'choice' ? question.max : null,
+              scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
+              scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
+              scaleMinLabel: question.type === 'likert'
+                ? encodeLikertLabels(question.minLabel, question.maxLabel, question.importanceMinLabel, question.importanceMaxLabel).scaleMinLabel
+                : question.type === 'scale'
+                  ? question.minLabel
+                  : null,
+              scaleMaxLabel: question.type === 'likert'
+                ? encodeLikertLabels(question.minLabel, question.maxLabel, question.importanceMinLabel, question.importanceMaxLabel).scaleMaxLabel
+                : question.type === 'scale'
+                  ? question.maxLabel
+                  : null,
+              options: question.type === 'choice'
+                ? question.options.map(option => ({ label: option }))
+                : [],
           })),
         })),
       }),
@@ -1213,7 +1269,7 @@ export default function DiscoveryPage() {
     }))
   }
 
-  function updateScaleLabels(categoryId: string, questionIndex: number, field: 'minLabel' | 'maxLabel', value: string) {
+  function updateScaleLabels(categoryId: string, questionIndex: number, field: 'minLabel' | 'maxLabel' | 'importanceMinLabel' | 'importanceMaxLabel', value: string) {
     setBuilderCategories(prev => prev.map(category => {
       if (category.id !== categoryId) return category
       return {
@@ -1286,6 +1342,8 @@ export default function DiscoveryPage() {
             text: q.text,
             minLabel: 'Inte alls enig',
             maxLabel: 'Mycket enig',
+            importanceMinLabel: 'Inte viktigt',
+            importanceMaxLabel: 'Mycket viktigt',
           }
         }),
       }
@@ -1840,7 +1898,7 @@ export default function DiscoveryPage() {
                             <strong>Likert-påstående:</strong> Skriv frågan som ett påstående, till exempel <em>Din chef ger dig ansvar</em>. Respondenten väljer först grad av instämmande och därefter hur viktigt påståendet är.
                           </div>
                           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-                            <Field label="Vänster etikett">
+                            <Field label="Enig vänster">
                               <input
                                 value={question.minLabel}
                                 onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'minLabel', event.target.value)}
@@ -1848,11 +1906,27 @@ export default function DiscoveryPage() {
                                 style={editorInputStyle}
                               />
                             </Field>
-                            <Field label="Höger etikett">
+                            <Field label="Enig höger">
                               <input
                                 value={question.maxLabel}
                                 onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'maxLabel', event.target.value)}
                                 placeholder="Mycket enig"
+                                style={editorInputStyle}
+                              />
+                            </Field>
+                            <Field label="Viktigt vänster">
+                              <input
+                                value={question.importanceMinLabel}
+                                onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'importanceMinLabel', event.target.value)}
+                                placeholder="Inte viktigt"
+                                style={editorInputStyle}
+                              />
+                            </Field>
+                            <Field label="Viktigt höger">
+                              <input
+                                value={question.importanceMaxLabel}
+                                onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'importanceMaxLabel', event.target.value)}
+                                placeholder="Mycket viktigt"
                                 style={editorInputStyle}
                               />
                             </Field>
@@ -2259,8 +2333,8 @@ export default function DiscoveryPage() {
                                   })}
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 310 }}>
-                                  <span>Inte viktigt</span>
-                                  <span>Mycket viktigt</span>
+                                  <span>{question.importanceMinLabel}</span>
+                                  <span>{question.importanceMaxLabel}</span>
                                 </div>
                               </div>
                             )}
