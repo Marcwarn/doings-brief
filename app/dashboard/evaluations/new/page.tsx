@@ -216,6 +216,10 @@ const followupStepTypeOptions: Array<{ value: FollowupStepType; label: string }>
   { value: 'message_questions', label: 'Meddelande med frågor' },
 ]
 
+function hasMeaningfulEvaluationDraft(questions: EvaluationDraftQuestion[]) {
+  return questions.some(question => question.text.trim().length > 0)
+}
+
 export default function NewEvaluationPage() {
   const sb = createClient()
   const [draftReady, setDraftReady] = useState(false)
@@ -273,6 +277,28 @@ export default function NewEvaluationPage() {
       }
     : null
   const activeFollowupStepsCount = followupSteps.filter(step => step.active).length
+  const hasMeaningfulDraftState = Boolean(
+    draftId
+    || customer.trim()
+    || label.trim()
+    || hasMeaningfulEvaluationDraft(customQuestions)
+    || customQuestionSetName.trim() !== 'Utvärderingsfrågor'
+    || activeTab !== 'setup'
+    || followupDeliveryMode !== 'manual'
+    || activeFollowupStepId !== initialFollowupSteps[0].id
+    || followupSteps.some((step, index) => {
+      const initialStep = initialFollowupSteps[index]
+      return !initialStep || JSON.stringify(step) !== JSON.stringify(initialStep)
+    })
+  )
+  const shouldShowDraftControls = !editId && (
+    Boolean(draftId)
+    || draftStatus === 'restored'
+    || draftStatus === 'server-saved'
+    || persistingDraft
+    || draftDirty
+    || (hasMeaningfulDraftState && draftStatus !== 'idle')
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -435,6 +461,12 @@ export default function NewEvaluationPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !draftReady || editId || created) return
+    if (!hasMeaningfulDraftState && !draftId) {
+      window.localStorage.removeItem('doings:evaluation-draft:new')
+      setDraftDirty(false)
+      setDraftStatus('idle')
+      return
+    }
 
     const draftPayload = JSON.stringify({
       customer,
@@ -442,11 +474,11 @@ export default function NewEvaluationPage() {
       collectEmail,
       customQuestionSetName,
       customQuestions,
-      activeTab,
-      followupSteps,
-      followupDeliveryMode,
-      activeFollowupStepId,
-    })
+    activeTab,
+    followupSteps,
+    followupDeliveryMode,
+    activeFollowupStepId,
+  })
 
     setDraftDirty(true)
     setDraftStatus('saving')
@@ -480,7 +512,24 @@ export default function NewEvaluationPage() {
     followupSteps,
     followupDeliveryMode,
     activeFollowupStepId,
+    hasMeaningfulDraftState,
+    draftId,
   ])
+
+  function resetEvaluationComposer() {
+    setCustomer('')
+    setLabel('')
+    setCollectEmail(true)
+    setCustomQuestionSetName('Utvärderingsfrågor')
+    setCustomQuestions([])
+    setActiveTab('setup')
+    setExpandedStarterIds([])
+    setActivePreviewQuestionIndex(0)
+    setFollowupSteps(initialFollowupSteps)
+    setActiveFollowupStepId(initialFollowupSteps[0].id)
+    setFollowupDeliveryMode('manual')
+    setError(null)
+  }
 
   async function clearDraft() {
     if (typeof window === 'undefined') return
@@ -494,6 +543,7 @@ export default function NewEvaluationPage() {
       window.location.assign('/dashboard/utvardering/skapa')
       return
     }
+    resetEvaluationComposer()
     setDraftDirty(false)
     setDraftStatus('idle')
   }
@@ -754,26 +804,26 @@ export default function NewEvaluationPage() {
             ? 'Det här utkastet är sparat i systemet och kan fortsättas härifrån.'
             : 'Välj kund först, sätt sedan frågor och publicera en publik länk med QR-kod för deltagarna.'}
         </p>
-        {!editId && (
+        {shouldShowDraftControls && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
             <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
               {draftStatus === 'restored'
-                ? 'Utkast återställt från din webbläsare.'
+                ? 'Ett tidigare utkast återställdes när sidan öppnades.'
                 : draftStatus === 'saving'
-                ? 'Sparar utkast…'
+                ? 'Sparar dina senaste ändringar…'
                 : draftStatus === 'server-saved'
-                ? 'Utkast sparat i systemet.'
+                ? 'Utkastet är sparat i systemet.'
                 : draftStatus === 'saved'
-                ? 'Tillfälligt sparat i den här webbläsaren.'
+                ? 'Dina senaste ändringar finns sparade lokalt.'
                 : draftId
-                ? 'Du kan fortsätta här eller spara om utkastet.'
-                : 'Påbörjat arbete sparas tillfälligt i den här webbläsaren tills du sparar utkastet i systemet.'}
+                ? 'Du arbetar i ett sparat utkast.'
+                : 'Dina ändringar sparas automatiskt medan du arbetar.'}
             </div>
             <button type="button" onClick={() => void saveDraftNow()} disabled={persistingDraft} style={ghostButtonStyle}>
-              {persistingDraft ? 'Sparar…' : 'Spara utkast'}
+              {persistingDraft ? 'Sparar…' : 'Spara i systemet'}
             </button>
             <button type="button" onClick={() => void clearDraft()} style={ghostButtonStyle}>
-              Rensa utkast
+              Börja om
             </button>
           </div>
         )}
