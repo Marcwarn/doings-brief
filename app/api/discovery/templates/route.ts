@@ -393,10 +393,10 @@ export async function POST(req: NextRequest) {
 
       return section.questions.map(question => ({
         section_id: sectionId,
-        type: question.type,
+        type: question.type === 'likert' ? 'scale' : question.type,
         text: question.text,
         order_index: question.orderIndex,
-        max_choices: question.maxChoices,
+        max_choices: question.type === 'likert' ? 0 : question.maxChoices,
         scale_min: question.scaleMin,
         scale_max: question.scaleMax,
         scale_min_label: question.scaleMinLabel,

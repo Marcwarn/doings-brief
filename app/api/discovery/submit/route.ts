@@ -18,6 +18,10 @@ type SubmittedResponse = {
   selectedOptions: string[]
 }
 
+function isStoredLikertQuestion(question: { type: string; max_choices: number | null }) {
+  return question.type === 'scale' && question.max_choices === 0
+}
+
 function asTrimmedString(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -36,6 +40,13 @@ function escHtml(value: string) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
+
+function serializeLikertValue(agreement: number | null, importance: number | null) {
+  return JSON.stringify({
+    agreement,
+    importance,
+  })
 }
 
 function normalizeSubmittedResponses(value: unknown) {
@@ -206,7 +217,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Ett eller flera svar matchar inte upplägget.' }, { status: 400 })
       }
 
-      if (question.type !== response.responseType) {
+      const questionIsLikert = isStoredLikertQuestion(question)
+
+      if (response.responseType === 'likert') {
+        if (!questionIsLikert) {
+          return NextResponse.json({ error: 'Svarstypen matchar inte frågan.' }, { status: 400 })
+        }
+      } else if (response.responseType === 'scale') {
+        if (question.type !== 'scale' || questionIsLikert) {
+          return NextResponse.json({ error: 'Svarstypen matchar inte frågan.' }, { status: 400 })
+        }
+      } else if (question.type !== response.responseType) {
         return NextResponse.json({ error: 'Svarstypen matchar inte frågan.' }, { status: 400 })
       }
 
@@ -271,16 +292,23 @@ export async function POST(req: NextRequest) {
         session_id: session.id,
         submission_entry_id: submissionEntry.id,
         question_id: response.questionId,
-        response_type: response.responseType,
-        text_value: response.textValue,
-        scale_value: response.scaleValue,
-        likert_agreement: response.likertAgreement ?? null,
-        likert_importance: response.likertImportance ?? null,
+        response_type: response.responseType === 'likert' ? 'scale' : response.responseType,
+        text_value: response.responseType === 'likert'
+          ? serializeLikertValue(response.likertAgreement, response.likertImportance)
+          : response.textValue,
+        scale_value: response.responseType === 'likert'
+          ? (response.likertAgreement ?? null)
+          : response.scaleValue,
       })))
       .select('id, question_id')
 
     if (insertResponsesError || !insertedResponses) {
       console.error('discovery submit insert responses error:', insertResponsesError)
+      await admin
+        .from('discovery_submission_entries')
+        .delete()
+        .eq('id', submissionEntry.id)
+        .catch(() => null)
       return NextResponse.json({ error: 'Kunde inte spara svaren.' }, { status: 500 })
     }
 
@@ -303,6 +331,16 @@ export async function POST(req: NextRequest) {
 
       if (insertOptionsError) {
         console.error('discovery submit insert options error:', insertOptionsError)
+        await admin
+          .from('discovery_responses')
+          .delete()
+          .eq('submission_entry_id', submissionEntry.id)
+          .catch(() => null)
+        await admin
+          .from('discovery_submission_entries')
+          .delete()
+          .eq('id', submissionEntry.id)
+          .catch(() => null)
         return NextResponse.json({ error: 'Kunde inte spara alla valda alternativ.' }, { status: 500 })
       }
     }
@@ -317,6 +355,21 @@ export async function POST(req: NextRequest) {
 
     if (sessionUpdateError) {
       console.error('discovery submit session update error:', sessionUpdateError)
+      await admin
+        .from('discovery_response_options')
+        .delete()
+        .in('response_id', insertedResponses.map(item => item.id))
+        .catch(() => null)
+      await admin
+        .from('discovery_responses')
+        .delete()
+        .eq('submission_entry_id', submissionEntry.id)
+        .catch(() => null)
+      await admin
+        .from('discovery_submission_entries')
+        .delete()
+        .eq('id', submissionEntry.id)
+        .catch(() => null)
       return NextResponse.json({ error: 'Kunde inte avsluta formuläret.' }, { status: 500 })
     }
 

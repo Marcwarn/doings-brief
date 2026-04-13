@@ -26,14 +26,16 @@ type DiscoverySessionDetailPayload = {
     orderIndex: number
     questions: Array<{
       id: string
-      type: 'open' | 'choice' | 'scale'
+      type: 'open' | 'choice' | 'scale' | 'likert'
       text: string
       orderIndex: number
       response: {
         id: string
-        responseType: 'open' | 'choice' | 'scale'
+        responseType: 'open' | 'choice' | 'scale' | 'likert'
         textValue: string | null
         scaleValue: number | null
+        likertAgreement: number | null
+        likertImportance: number | null
         selectedOptions: string[]
         createdAt: string
       } | null
@@ -152,6 +154,11 @@ function formatResponse(
   if (!response) return 'Inget svar ännu.'
   if (response.responseType === 'choice') return response.selectedOptions.join(', ') || 'Inget svar'
   if (response.responseType === 'scale') return response.scaleValue !== null ? `${response.scaleValue}` : 'Inget svar'
+  if (response.responseType === 'likert') {
+    const agreement = response.likertAgreement !== null ? `${response.likertAgreement}` : '—'
+    const importance = response.likertImportance !== null ? `${response.likertImportance}` : '—'
+    return `Instämmer: ${agreement} · Viktighet: ${importance}`
+  }
   return response.textValue || 'Inget svar'
 }
 

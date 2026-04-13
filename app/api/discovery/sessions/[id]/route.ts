@@ -4,6 +4,24 @@ import { getSupabaseAdminClient } from '@/lib/server-clients'
 
 export const dynamic = 'force-dynamic'
 
+function isStoredLikertQuestion(question: { type: string; max_choices: number | null }) {
+  return question.type === 'scale' && question.max_choices === 0
+}
+
+function parseLikertPayload(value: string | null) {
+  if (!value) return null
+
+  try {
+    const parsed = JSON.parse(value) as { agreement?: unknown; importance?: unknown }
+    const agreement = typeof parsed?.agreement === 'number' ? parsed.agreement : null
+    const importance = typeof parsed?.importance === 'number' ? parsed.importance : null
+    if (agreement === null && importance === null) return null
+    return { agreement, importance }
+  } catch {
+    return null
+  }
+}
+
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     const supabase = getSupabaseRequestClient()
@@ -109,28 +127,20 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       optionsByResponseId.set(option.response_id, bucket)
     }
 
-    const responseByQuestionId = new Map((responses || []).map(response => [
-      response.question_id,
-      {
-        id: response.id,
-        responseType: response.response_type,
-        textValue: response.text_value,
-        scaleValue: response.scale_value,
-        selectedOptions: optionsByResponseId.get(response.id) || [],
-        createdAt: response.created_at,
-      },
-    ]))
+    const rawResponseByQuestionId = new Map((responses || []).map(response => [response.question_id, response]))
 
     const questionsBySectionId = new Map<string, Array<{
       id: string
-      type: 'open' | 'choice' | 'scale'
+      type: 'open' | 'choice' | 'scale' | 'likert'
       text: string
       orderIndex: number
       response: {
         id: string
-        responseType: 'open' | 'choice' | 'scale'
+        responseType: 'open' | 'choice' | 'scale' | 'likert'
         textValue: string | null
         scaleValue: number | null
+        likertAgreement: number | null
+        likertImportance: number | null
         selectedOptions: string[]
         createdAt: string
       } | null
@@ -138,12 +148,29 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
     for (const question of questions || []) {
       const bucket = questionsBySectionId.get(question.section_id) || []
+      const rawResponse = rawResponseByQuestionId.get(question.id) || null
+      const questionIsLikert = isStoredLikertQuestion(question)
+      const likert = questionIsLikert && rawResponse
+        ? parseLikertPayload(rawResponse.text_value)
+        : null
+
       bucket.push({
         id: question.id,
-        type: question.type,
+        type: questionIsLikert ? 'likert' : question.type,
         text: question.text,
         orderIndex: question.order_index,
-        response: responseByQuestionId.get(question.id) || null,
+        response: rawResponse
+          ? {
+              id: rawResponse.id,
+              responseType: questionIsLikert ? 'likert' : rawResponse.response_type,
+              textValue: questionIsLikert ? null : rawResponse.text_value,
+              scaleValue: questionIsLikert ? null : rawResponse.scale_value,
+              likertAgreement: likert?.agreement ?? null,
+              likertImportance: likert?.importance ?? null,
+              selectedOptions: optionsByResponseId.get(rawResponse.id) || [],
+              createdAt: rawResponse.created_at,
+            }
+          : null,
       })
       questionsBySectionId.set(question.section_id, bucket)
     }

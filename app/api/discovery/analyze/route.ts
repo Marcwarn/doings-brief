@@ -8,6 +8,23 @@ const ANTHROPIC_BASE = 'https://api.anthropic.com/v1'
 
 type DiscoveryAiProvider = 'berget' | 'openai' | 'anthropic' | null
 
+function parseLikertPayload(value: string | null) {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(value) as { agreement?: unknown; importance?: unknown }
+    const agreement = typeof parsed?.agreement === 'number' ? parsed.agreement : null
+    const importance = typeof parsed?.importance === 'number' ? parsed.importance : null
+    if (agreement === null && importance === null) return null
+    return { agreement, importance }
+  } catch {
+    return null
+  }
+}
+
+function isStoredLikertQuestion(question: { type: string; max_choices: number | null }) {
+  return question.type === 'scale' && question.max_choices === 0
+}
+
 type DiscoveryAnalysisLens =
   | 'Gemensamma behov'
   | 'Skillnader i perspektiv'
@@ -377,7 +394,7 @@ export async function POST(req: NextRequest) {
     const { data: questions, error: questionsError } = sectionIds.length > 0
       ? await admin
           .from('discovery_questions')
-          .select('id, section_id, type, text, order_index')
+          .select('id, section_id, type, text, order_index, max_choices')
           .in('section_id', sectionIds)
           .order('order_index')
       : { data: [], error: null }
@@ -455,8 +472,15 @@ export async function POST(req: NextRequest) {
       if (!section) continue
 
       let answer = ''
+      const questionIsLikert = isStoredLikertQuestion(question)
+
       if (response.response_type === 'choice') {
         answer = (optionMap.get(response.id) || []).join(', ')
+      } else if (questionIsLikert) {
+        const likert = parseLikertPayload(response.text_value)
+        if (likert) {
+          answer = `Instämmer: ${likert.agreement ?? '—'} · Viktighet: ${likert.importance ?? '—'}`
+        }
       } else if (response.response_type === 'scale') {
         answer = typeof response.scale_value === 'number' ? `${response.scale_value}` : ''
       } else {

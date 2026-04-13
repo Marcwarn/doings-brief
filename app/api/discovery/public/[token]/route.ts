@@ -3,6 +3,10 @@ import { getSupabaseAdminClient } from '@/lib/server-clients'
 
 export const dynamic = 'force-dynamic'
 
+function isStoredLikertQuestion(question: { type: string; max_choices: number | null }) {
+  return question.type === 'scale' && question.max_choices === 0
+}
+
 export async function GET(_: NextRequest, { params }: { params: { token: string } }) {
   try {
     const admin = getSupabaseAdminClient()
@@ -89,7 +93,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
 
     const questionsBySectionId = new Map<string, Array<{
       id: string
-      type: 'open' | 'choice' | 'scale'
+      type: 'open' | 'choice' | 'scale' | 'likert'
       text: string
       orderIndex: number
       maxChoices: number | null
@@ -108,7 +112,7 @@ export async function GET(_: NextRequest, { params }: { params: { token: string 
       const bucket = questionsBySectionId.get(question.section_id) || []
       bucket.push({
         id: question.id,
-        type: question.type,
+        type: isStoredLikertQuestion(question) ? 'likert' : question.type,
         text: question.text,
         orderIndex: question.order_index,
         maxChoices: question.max_choices,
