@@ -307,6 +307,7 @@ export async function POST(req: NextRequest) {
     }
 
     let templateId = id
+    let shouldCreateNewVersion = false
 
     if (templateId) {
       const { data: existingTemplate, error: existingTemplateError } = await admin
@@ -323,33 +324,52 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Obehörig' }, { status: 403 })
       }
 
-      const { error: templateUpdateError } = await admin
-        .from('discovery_templates')
-        .update({
-          name,
-          intro_title: introTitle,
-          intro_text: introText,
-          audience_mode: audienceMode,
-          status,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', templateId)
-
-      if (templateUpdateError) {
-        console.error('discovery template update error:', templateUpdateError)
-        return NextResponse.json({ error: 'Kunde inte uppdatera upplägget.' }, { status: 500 })
-      }
-
-      const { error: deleteSectionsError } = await admin
-        .from('discovery_sections')
-        .delete()
+      const { count: existingSessionCount, error: existingSessionsError } = await admin
+        .from('discovery_sessions')
+        .select('id', { count: 'exact', head: true })
         .eq('template_id', templateId)
+        .eq('consultant_id', user.id)
 
-      if (deleteSectionsError) {
-        console.error('discovery section reset error:', deleteSectionsError)
+      if (existingSessionsError) {
+        console.error('discovery template session count error:', existingSessionsError)
         return NextResponse.json({ error: 'Kunde inte uppdatera upplägget.' }, { status: 500 })
       }
-    } else {
+
+      // Once a template has been sent, older sessions must keep their original question set.
+      // Create a fresh template version instead of mutating the existing one in place.
+      shouldCreateNewVersion = (existingSessionCount || 0) > 0
+
+      if (!shouldCreateNewVersion) {
+        const { error: templateUpdateError } = await admin
+          .from('discovery_templates')
+          .update({
+            name,
+            intro_title: introTitle,
+            intro_text: introText,
+            audience_mode: audienceMode,
+            status,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', templateId)
+
+        if (templateUpdateError) {
+          console.error('discovery template update error:', templateUpdateError)
+          return NextResponse.json({ error: 'Kunde inte uppdatera upplägget.' }, { status: 500 })
+        }
+
+        const { error: deleteSectionsError } = await admin
+          .from('discovery_sections')
+          .delete()
+          .eq('template_id', templateId)
+
+        if (deleteSectionsError) {
+          console.error('discovery section reset error:', deleteSectionsError)
+          return NextResponse.json({ error: 'Kunde inte uppdatera upplägget.' }, { status: 500 })
+        }
+      }
+    }
+
+    if (!templateId || shouldCreateNewVersion) {
       const { data: createdTemplate, error: templateInsertError } = await admin
         .from('discovery_templates')
         .insert({
