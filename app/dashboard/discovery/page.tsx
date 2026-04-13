@@ -1,7 +1,7 @@
 'use client'
 // @ts-nocheck
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { InlineError, PageLoader } from '@/app/dashboard/evaluations/ui'
 
@@ -462,6 +462,69 @@ function customerLabelForSession(session: {
   return session.clientOrganisation?.trim() || session.clientName.trim() || 'Okänd kund'
 }
 
+function buildTemplateDraftSnapshot(input: {
+  templateName: string
+  introTitle: string
+  introText: string
+  audienceMode: AudienceMode
+  builderCategories: DiscoveryCategory[]
+}) {
+  return JSON.stringify({
+    templateName: input.templateName.trim(),
+    introTitle: input.introTitle.trim(),
+    introText: input.introText.trim(),
+    audienceMode: input.audienceMode,
+    builderCategories: input.builderCategories.map(category => ({
+      id: category.id,
+      label: category.label.trim(),
+      desc: category.desc.trim(),
+      enabled: typeof category.enabled === 'boolean' ? category.enabled : true,
+      questions: category.questions.map(question => (
+        question.type === 'choice'
+          ? {
+              type: question.type,
+              text: question.text.trim(),
+              max: question.max,
+              options: question.options.map(option => option.trim()),
+            }
+          : {
+              type: question.type,
+              text: question.text.trim(),
+            }
+      )),
+    })),
+  })
+}
+
+function isAutosaveReady(input: {
+  templateName: string
+  introTitle: string
+  introText: string
+  builderCategories: DiscoveryCategory[]
+}) {
+  if (!input.templateName.trim() || !input.introTitle.trim() || !input.introText.trim()) {
+    return false
+  }
+
+  const enabledCategories = input.builderCategories.filter(category => category.enabled)
+  if (enabledCategories.length === 0) return false
+
+  return enabledCategories.every(category => {
+    if (!category.label.trim() || !category.desc.trim() || category.questions.length === 0) {
+      return false
+    }
+
+    return category.questions.every(question => {
+      if (!question.text.trim()) return false
+
+      if (question.type !== 'choice') return true
+
+      const options = question.options.map(option => option.trim()).filter(Boolean)
+      return options.length > 0 && question.max >= 1 && question.max <= options.length
+    })
+  })
+}
+
 export default function DiscoveryPage() {
   const [loading, setLoading] = useState(true)
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
@@ -476,7 +539,7 @@ export default function DiscoveryPage() {
   const [audienceMode, setAudienceMode] = useState<'shared' | 'leaders' | 'mixed'>(defaultAudienceMode)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
-  const [saveState, setSaveState] = useState<'idle' | 'saved'>('idle')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
   const [clientOrganisation, setClientOrganisation] = useState('')
@@ -504,6 +567,10 @@ export default function DiscoveryPage() {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisCached, setAnalysisCached] = useState(false)
   const [analysisStatus, setAnalysisStatus] = useState<DiscoveryAiStatus | null>(null)
+  const [lastSavedDraftSnapshot, setLastSavedDraftSnapshot] = useState<string | null>(null)
+  const [lastFailedDraftSnapshot, setLastFailedDraftSnapshot] = useState<string | null>(null)
+  const currentTemplateIdRef = useRef<string | null>(null)
+  const savePromiseRef = useRef<Promise<string | null> | null>(null)
 
   const enabledCategories = builderCategories.filter(category => category.enabled)
   const activeCategory = enabledCategories.find(category => category.id === activeId) || enabledCategories[0] || builderCategories[0]
@@ -672,9 +739,62 @@ export default function DiscoveryPage() {
     })
   }, [scopedDataSessions, selectedDataScope, selectedDataSectionIdOrDefault])
 
+  const draftSnapshot = useMemo(() => buildTemplateDraftSnapshot({
+    templateName,
+    introTitle,
+    introText,
+    audienceMode,
+    builderCategories,
+  }), [audienceMode, builderCategories, introText, introTitle, templateName])
+
+  const autosaveEnabled = useMemo(() => isAutosaveReady({
+    templateName,
+    introTitle,
+    introText,
+    builderCategories,
+  }), [builderCategories, introText, introTitle, templateName])
+  const hasUnsavedChanges = lastSavedDraftSnapshot !== null && draftSnapshot !== lastSavedDraftSnapshot
+
   useEffect(() => {
     void loadTemplateList()
   }, [])
+
+  useEffect(() => {
+    currentTemplateIdRef.current = currentTemplateId
+  }, [currentTemplateId])
+
+  useEffect(() => {
+    if (loading) return
+
+    if (lastSavedDraftSnapshot === null) {
+      setLastSavedDraftSnapshot(draftSnapshot)
+    }
+  }, [draftSnapshot, lastSavedDraftSnapshot, loading])
+
+  useEffect(() => {
+    if (loading || saving || sending) return
+    if (!autosaveEnabled || lastSavedDraftSnapshot === null) return
+    if (draftSnapshot === lastSavedDraftSnapshot) return
+    if (draftSnapshot === lastFailedDraftSnapshot) return
+
+    const timeoutId = window.setTimeout(() => {
+      void saveTemplate('draft', { silent: true })
+    }, 1200)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [autosaveEnabled, draftSnapshot, lastFailedDraftSnapshot, lastSavedDraftSnapshot, loading, saving, sending])
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   useEffect(() => {
     if (editorTab !== 'data' || !currentTemplateId) return
@@ -725,6 +845,8 @@ export default function DiscoveryPage() {
     setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
     setSuccessId(null)
     setSaveState('idle')
+    setLastSavedDraftSnapshot(null)
+    setLastFailedDraftSnapshot(null)
     setShowTemplatePicker(false)
     setTemplateQuery('')
     setDataPayload(null)
@@ -948,9 +1070,18 @@ export default function DiscoveryPage() {
       setResponseMode('named')
       const fallbackCategories = buildDefaultCategories(template.audienceMode || defaultAudienceMode)
       const loadedCategories = nextCategories.length > 0 ? nextCategories : fallbackCategories
+      const loadedAudienceMode = template.audienceMode || defaultAudienceMode
       setBuilderCategories(loadedCategories)
       setActiveId(loadedCategories[0]?.id || fallbackCategories[0].id)
       setAnswers(Object.fromEntries(loadedCategories.map(category => [category.id, {}])))
+      setLastSavedDraftSnapshot(buildTemplateDraftSnapshot({
+        templateName: template.name,
+        introTitle: template.introTitle,
+        introText: template.introText,
+        audienceMode: loadedAudienceMode,
+        builderCategories: loadedCategories,
+      }))
+      setLastFailedDraftSnapshot(null)
       setSuccessId(null)
       setSaveState('idle')
       setShowTemplatePicker(false)
@@ -978,25 +1109,47 @@ export default function DiscoveryPage() {
     }
   }
 
-  async function saveTemplate(status: 'draft' | 'active' = 'draft') {
-    setSaving(true)
-    setSaveState('idle')
-    setError(null)
-
-    try {
-      const savedTemplateId = await persistCurrentTemplate(status)
-      setCurrentTemplateId(savedTemplateId || null)
-      setSaveState('saved')
-      await loadTemplateList(savedTemplateId || undefined)
-
-      window.setTimeout(() => {
-        setSaveState(current => current === 'saved' ? 'idle' : current)
-      }, 3000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Kunde inte spara upplägget.')
-    } finally {
-      setSaving(false)
+  async function saveTemplate(status: 'draft' | 'active' = 'draft', options?: { silent?: boolean }) {
+    if (savePromiseRef.current) {
+      return savePromiseRef.current
     }
+
+    const snapshotAtRequest = draftSnapshot
+    const request = (async () => {
+      setSaving(true)
+      setSaveState('saving')
+      if (!options?.silent) {
+        setError(null)
+      }
+
+      try {
+        const savedTemplateId = await persistCurrentTemplate(status)
+        setCurrentTemplateId(savedTemplateId || null)
+        currentTemplateIdRef.current = savedTemplateId || null
+        setLastSavedDraftSnapshot(snapshotAtRequest)
+        setLastFailedDraftSnapshot(null)
+        setSaveState('saved')
+        await loadTemplateList(savedTemplateId || undefined)
+
+        window.setTimeout(() => {
+          setSaveState(current => current === 'saved' ? 'idle' : current)
+        }, 3000)
+        return savedTemplateId || null
+      } catch (err) {
+        setLastFailedDraftSnapshot(snapshotAtRequest)
+        setSaveState('error')
+        if (!options?.silent) {
+          setError(err instanceof Error ? err.message : 'Kunde inte spara upplägget.')
+        }
+        return null
+      } finally {
+        setSaving(false)
+        savePromiseRef.current = null
+      }
+    })()
+
+    savePromiseRef.current = request
+    return request
   }
 
   async function sendTemplate() {
@@ -1004,7 +1157,17 @@ export default function DiscoveryPage() {
     setSendResults(null)
     setCopiedShareUrl(null)
 
-    if (!currentTemplateId) {
+    const activeSave = savePromiseRef.current
+    if (activeSave) {
+      await activeSave
+    }
+
+    let templateIdForSend = currentTemplateIdRef.current
+    if (autosaveEnabled && (hasUnsavedChanges || !templateIdForSend)) {
+      templateIdForSend = await saveTemplate('draft')
+    }
+
+    if (!templateIdForSend) {
       setSendError('Spara upplägget innan du skickar det.')
       return
     }
@@ -1461,6 +1624,18 @@ export default function DiscoveryPage() {
                 })}
               </div>
 
+              <div style={{ marginBottom: 14, fontSize: 12, color: saveState === 'error' ? '#8e244c' : 'var(--text-3)' }}>
+                {saveState === 'saving'
+                  ? 'Sparar utkast…'
+                  : saveState === 'saved'
+                  ? 'Utkast sparat'
+                  : saveState === 'error'
+                  ? 'Autosave misslyckades. Försök spara igen.'
+                  : hasUnsavedChanges
+                  ? 'Osparade ändringar'
+                  : 'Alla ändringar sparade'}
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {editorTab === 'setup' && (
                   <>
@@ -1478,8 +1653,8 @@ export default function DiscoveryPage() {
                         <button type="button" onClick={() => setShowTemplatePicker(current => !current)} style={secondaryButtonStyle}>
                           {showTemplatePicker ? 'Stäng tidigare' : 'Öppna tidigare'}
                         </button>
-                        <button type="button" onClick={() => void saveTemplate('draft')} disabled={saving || Boolean(loadingTemplateId)} style={primaryButtonStyle(saving || Boolean(loadingTemplateId))}>
-                          {saving ? 'Sparar…' : saveState === 'saved' ? 'Sparat' : 'Spara upplägg'}
+                        <button type="button" onClick={() => void saveTemplate('draft')} disabled={saving || sending || Boolean(loadingTemplateId)} style={primaryButtonStyle(saving || sending || Boolean(loadingTemplateId))}>
+                          {saving ? 'Sparar…' : saveState === 'saved' ? 'Sparat' : saveState === 'error' ? 'Försök igen' : 'Spara upplägg'}
                         </button>
                       </div>
 
