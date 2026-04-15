@@ -53,6 +53,17 @@ Suggested release sentence:
 
 Use only the canonical brief API and UI flow.
 
+Canonical UI:
+- `app/dashboard/send/page.tsx`
+- `app/brief/[token]/page.tsx`
+- `app/dashboard/briefs/page.tsx`
+- `app/dashboard/briefs/[id]/page.tsx`
+
+Canonical API:
+- `app/api/briefs/send-invite/route.ts`
+- `app/api/briefs/submit/route.ts`
+- `app/api/briefs/summarize/route.ts`
+
 - [ ] Canonical invite route is confirmed
 - [ ] Canonical submit route is confirmed
 - [ ] UI links use canonical routes only
@@ -64,6 +75,10 @@ Known overlapping routes to resolve or explicitly deprecate:
 - `app/api/briefs/send-invite/route.ts`
 - `app/api/submit-brief/route.ts`
 - `app/api/briefs/submit/route.ts`
+
+For this release, treat these as legacy and non-canonical:
+- `app/api/send-brief-invite/route.ts`
+- `app/api/submit-brief/route.ts`
 
 ## Trust and user safety
 

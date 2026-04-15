@@ -5,6 +5,11 @@ The first `Brief` release is acceptable when one consultant can use the flow end
 
 ## Pass criteria
 
+### 0. Canonical path
+- The shipped `Brief` flow uses the canonical UI and API path only
+- `app/api/briefs/send-invite/route.ts` is the invite route used for the release
+- `app/api/briefs/submit/route.ts` is the submit route used for the release
+- Legacy routes are not used for new release work
 ### 1. Send
 - A consultant can create and send a brief from the dashboard
 - At least one recipient receives a valid brief link

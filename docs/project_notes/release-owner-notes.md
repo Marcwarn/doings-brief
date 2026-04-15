@@ -37,6 +37,7 @@ Out of scope:
 ## Canonical surfaces
 UI:
 - `app/dashboard/send/page.tsx`
+- `app/brief/[token]/page.tsx`
 - `app/dashboard/briefs/page.tsx`
 - `app/dashboard/briefs/[id]/page.tsx`
 
@@ -45,8 +46,12 @@ API:
 - `app/api/briefs/submit/route.ts`
 - `app/api/briefs/summarize/route.ts`
 
+Legacy and non-canonical:
+- `app/api/send-brief-invite/route.ts`
+- `app/api/submit-brief/route.ts`
+
 ## Current blockers
-- [ ] Canonical brief routes are fully agreed
+- [x] Canonical brief routes are fully agreed
 - [ ] Token validity behavior matches user-facing copy
 - [ ] Relevant smoke tests are green
 - [ ] Manual end-to-end pass is green
@@ -76,16 +81,14 @@ API:
 - Verified by: Codex + Marcus session
 
 ## Open decisions
-- Which route set is canonical for brief invite and submit?
 - What exact token-validity promise is acceptable in v1?
 - What is the release/no-release threshold if smoke tests are flaky?
 
 ## Immediate next step
 Run the brief release gate in this order:
-1. confirm canonical brief routes
-2. run `npx tsc --noEmit` and `npm run lint`
-3. run `npm run test:batch-send`, `npm run test:ai-summary`, and `npm run test:word-export`
-4. do one manual end-to-end brief pass
+1. run `npx tsc --noEmit` and `npm run lint`
+2. run `npm run test:batch-send`, `npm run test:ai-summary`, and `npm run test:word-export`
+3. do one manual end-to-end brief pass
 
 ## Notes
 - Keep this file short.

@@ -45,6 +45,7 @@ The consultant gets usable pre-meeting input quickly enough to improve the next 
 ## Canonical surfaces
 UI:
 - `app/dashboard/send/page.tsx`
+- `app/brief/[token]/page.tsx`
 - `app/dashboard/briefs/page.tsx`
 - `app/dashboard/briefs/[id]/page.tsx`
 
@@ -52,6 +53,10 @@ API:
 - `app/api/briefs/send-invite/route.ts`
 - `app/api/briefs/submit/route.ts`
 - `app/api/briefs/summarize/route.ts`
+
+Legacy and non-canonical:
+- `app/api/send-brief-invite/route.ts`
+- `app/api/submit-brief/route.ts`
 
 ## Known risks to resolve or explicitly accept
 - token validity behavior must match copy
