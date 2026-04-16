@@ -9,7 +9,7 @@ type DiscoveryQuestion =
   | { type: 'open'; text: string }
   | { type: 'scale'; text: string; minLabel: string; maxLabel: string }
   | { type: 'choice'; text: string; max: number; options: string[] }
-  | { type: 'likert'; text: string; minLabel: string; maxLabel: string; importanceMinLabel: string; importanceMaxLabel: string }
+  | { type: 'likert'; text: string; minLabel: string; maxLabel: string }
 
 type DiscoveryCategory = {
   id: string
@@ -21,7 +21,6 @@ type DiscoveryCategory = {
 
 type AudienceMode = 'shared' | 'leaders' | 'mixed'
 type DiscoveryResponseMode = 'named' | 'anonymous'
-type DiscoveryWorkspaceMode = 'create' | 'data'
 
 type DiscoveryTemplateSummary = {
   id: string
@@ -68,8 +67,6 @@ type DiscoveryTemplateDetail = {
         scaleMax: number | null
         scaleMinLabel: string | null
         scaleMaxLabel: string | null
-        likertImportanceMinLabel?: string | null
-        likertImportanceMaxLabel?: string | null
         options: Array<{
           id: string
           label: string
@@ -77,49 +74,6 @@ type DiscoveryTemplateDetail = {
         }>
       }>
     }>
-  }
-}
-
-function encodeLikertLabels(
-  agreementMinLabel: string | null,
-  agreementMaxLabel: string | null,
-  importanceMinLabel: string | null,
-  importanceMaxLabel: string | null
-) {
-  return {
-    scaleMinLabel: JSON.stringify({
-      axis: 'agreement',
-      agreement: agreementMinLabel,
-      importance: importanceMinLabel,
-    }),
-    scaleMaxLabel: JSON.stringify({
-      axis: 'agreement',
-      agreement: agreementMaxLabel,
-      importance: importanceMaxLabel,
-    }),
-  }
-}
-
-function decodeLikertLabelPair(minLabel: string | null, maxLabel: string | null) {
-  const defaults = {
-    agreementMinLabel: minLabel || 'Inte alls enig',
-    agreementMaxLabel: maxLabel || 'Mycket enig',
-    importanceMinLabel: 'Inte viktigt',
-    importanceMaxLabel: 'Mycket viktigt',
-  }
-
-  try {
-    const parsedMin = minLabel ? JSON.parse(minLabel) as { agreement?: unknown; importance?: unknown } : null
-    const parsedMax = maxLabel ? JSON.parse(maxLabel) as { agreement?: unknown; importance?: unknown } : null
-
-    return {
-      agreementMinLabel: typeof parsedMin?.agreement === 'string' && parsedMin.agreement.trim() ? parsedMin.agreement : defaults.agreementMinLabel,
-      agreementMaxLabel: typeof parsedMax?.agreement === 'string' && parsedMax.agreement.trim() ? parsedMax.agreement : defaults.agreementMaxLabel,
-      importanceMinLabel: typeof parsedMin?.importance === 'string' && parsedMin.importance.trim() ? parsedMin.importance : defaults.importanceMinLabel,
-      importanceMaxLabel: typeof parsedMax?.importance === 'string' && parsedMax.importance.trim() ? parsedMax.importance : defaults.importanceMaxLabel,
-    }
-  } catch {
-    return defaults
   }
 }
 
@@ -428,42 +382,6 @@ function buildDefaultCategories(mode: AudienceMode): DiscoveryCategory[] {
   })
 }
 
-function normalizeQuestionText(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ')
-}
-
-function questionFingerprint(question: DiscoveryQuestion) {
-  return `${question.type}:${normalizeQuestionText(question.text)}`
-}
-
-function restoreMissingDefaultCategories(
-  currentCategories: DiscoveryCategory[],
-  nextMode: AudienceMode
-): DiscoveryCategory[] {
-  const defaultCategories = buildDefaultCategories(nextMode)
-
-  const mergedDefaults = defaultCategories.map(defaultCategory => {
-    const currentCategory = currentCategories.find(category => category.id === defaultCategory.id)
-    if (!currentCategory) return defaultCategory
-
-    const defaultFingerprints = new Set(defaultCategory.questions.map(questionFingerprint))
-    const customQuestions = currentCategory.questions
-      .filter(question => !defaultFingerprints.has(questionFingerprint(question)))
-      .map(cloneQuestion)
-
-    return {
-      ...cloneCategory(currentCategory),
-      questions: [...defaultCategory.questions.map(cloneQuestion), ...customQuestions],
-    }
-  })
-
-  const extraCategories = currentCategories
-    .filter(category => !defaultCategories.some(defaultCategory => defaultCategory.id === category.id))
-    .map(cloneCategory)
-
-  return [...mergedDefaults, ...extraCategories]
-}
-
 type LikertAnswerState = {
   agreement?: string
   importance?: string
@@ -499,20 +417,13 @@ function customerLabelForSession(session: {
   return session.clientOrganisation?.trim() || session.clientName.trim() || 'Okänd kund'
 }
 
-export default function DiscoveryPage({
-  initialWorkspaceMode = 'data',
-}: {
-  initialWorkspaceMode?: DiscoveryWorkspaceMode
-}) {
+export default function DiscoveryPage() {
   const [loading, setLoading] = useState(true)
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [templateQuery, setTemplateQuery] = useState('')
-  const [workspaceMode, setWorkspaceMode] = useState<DiscoveryWorkspaceMode>(initialWorkspaceMode)
-  const [editorTab, setEditorTab] = useState<'setup' | 'questions' | 'send' | 'data'>(
-    initialWorkspaceMode === 'data' ? 'data' : 'setup'
-  )
+  const [editorTab, setEditorTab] = useState<'questions' | 'setup' | 'send' | 'data'>('questions')
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('Perspektiv')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
@@ -705,17 +616,6 @@ export default function DiscoveryPage({
     }
   }, [dataThemeCards, scopedDataSessions])
 
-  const navigationTabs: Array<{
-    id: 'setup' | 'questions' | 'send' | 'data'
-    label: string
-  }> = workspaceMode === 'data'
-    ? [{ id: 'data', label: 'Kunder & data' }]
-    : [
-        { id: 'setup', label: 'Upplägg' },
-        { id: 'questions', label: 'Frågor' },
-        { id: 'send', label: 'Skicka' },
-      ]
-
   const rawDataSessions = useMemo(() => {
     const baseSessions = selectedDataScope === 'none'
       ? []
@@ -730,17 +630,6 @@ export default function DiscoveryPage({
   useEffect(() => {
     void loadTemplateList()
   }, [])
-
-  useEffect(() => {
-    setWorkspaceMode(initialWorkspaceMode)
-  }, [initialWorkspaceMode])
-
-  useEffect(() => {
-    setEditorTab(current => {
-      if (workspaceMode === 'data') return 'data'
-      return current === 'data' ? 'setup' : current
-    })
-  }, [workspaceMode])
 
   useEffect(() => {
     if (editorTab !== 'data' || !currentTemplateId) return
@@ -969,20 +858,17 @@ export default function DiscoveryPage({
               return {
                 type: 'scale' as const,
                 text: question.text,
-                minLabel: question.scaleMinLabel || 'I låg grad',
-                maxLabel: question.scaleMaxLabel || 'I hög grad',
+                minLabel: question.scaleMinLabel || 'Håller inte alls',
+                maxLabel: question.scaleMaxLabel || 'Håller helt',
               }
             }
 
             if (question.type === 'likert') {
-              const likertLabels = decodeLikertLabelPair(question.scaleMinLabel, question.scaleMaxLabel)
               return {
                 type: 'likert' as const,
                 text: question.text,
-                minLabel: likertLabels.agreementMinLabel,
-                maxLabel: likertLabels.agreementMaxLabel,
-                importanceMinLabel: likertLabels.importanceMinLabel,
-                importanceMaxLabel: likertLabels.importanceMaxLabel,
+                minLabel: question.scaleMinLabel || 'Håller inte med',
+                maxLabel: question.scaleMaxLabel || 'Håller med',
               }
             }
 
@@ -1050,7 +936,43 @@ export default function DiscoveryPage({
     setError(null)
 
     try {
-      const savedTemplateId = await persistCurrentTemplate(status)
+      const response = await fetch('/api/discovery/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentTemplateId,
+          name: templateName,
+          introTitle,
+          introText,
+          audienceMode,
+          status,
+          sections: builderCategories.filter(category => category.enabled).map((category, categoryIndex) => ({
+            label: category.label,
+            description: category.desc,
+            orderIndex: categoryIndex,
+            questions: category.questions.map((question, questionIndex) => ({
+              type: question.type,
+              text: question.text,
+              orderIndex: questionIndex,
+              maxChoices: question.type === 'choice' ? question.max : null,
+              scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
+              scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
+              scaleMinLabel: question.type === 'scale' || question.type === 'likert' ? question.minLabel : null,
+              scaleMaxLabel: question.type === 'scale' || question.type === 'likert' ? question.maxLabel : null,
+              options: question.type === 'choice'
+                ? question.options.map(option => ({ label: option }))
+                : [],
+            })),
+          })),
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Kunde inte spara upplägget.')
+      }
+
+      const savedTemplateId = typeof payload?.templateId === 'string' ? payload.templateId : currentTemplateId
       setCurrentTemplateId(savedTemplateId || null)
       setSaveState('saved')
       await loadTemplateList(savedTemplateId || undefined)
@@ -1086,19 +1008,11 @@ export default function DiscoveryPage({
     setSending(true)
 
     try {
-      const savedTemplateId = await persistCurrentTemplate('active')
-      if (!savedTemplateId) {
-        throw new Error('Kunde inte spara den senaste versionen av discoveryt innan utskick.')
-      }
-
-      setCurrentTemplateId(savedTemplateId)
-      await loadTemplateList(savedTemplateId)
-
       const response = await fetch('/api/discovery/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          templateId: savedTemplateId,
+          templateId: currentTemplateId,
           organisation: clientOrganisation,
           responseMode,
           recipients,
@@ -1128,54 +1042,6 @@ export default function DiscoveryPage({
     } finally {
       setSending(false)
     }
-  }
-
-  async function persistCurrentTemplate(status: 'draft' | 'active') {
-    const response = await fetch('/api/discovery/templates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: currentTemplateId,
-        name: templateName,
-        introTitle,
-        introText,
-        audienceMode,
-        status,
-        sections: builderCategories.filter(category => category.enabled).map((category, categoryIndex) => ({
-          label: category.label,
-          description: category.desc,
-          orderIndex: categoryIndex,
-          questions: category.questions.map((question, questionIndex) => ({
-              type: question.type,
-              text: question.text,
-              orderIndex: questionIndex,
-              maxChoices: question.type === 'choice' ? question.max : null,
-              scaleMin: question.type === 'scale' || question.type === 'likert' ? 1 : null,
-              scaleMax: question.type === 'scale' || question.type === 'likert' ? 5 : null,
-              scaleMinLabel: question.type === 'likert'
-                ? encodeLikertLabels(question.minLabel, question.maxLabel, question.importanceMinLabel, question.importanceMaxLabel).scaleMinLabel
-                : question.type === 'scale'
-                  ? question.minLabel
-                  : null,
-              scaleMaxLabel: question.type === 'likert'
-                ? encodeLikertLabels(question.minLabel, question.maxLabel, question.importanceMinLabel, question.importanceMaxLabel).scaleMaxLabel
-                : question.type === 'scale'
-                  ? question.maxLabel
-                  : null,
-              options: question.type === 'choice'
-                ? question.options.map(option => ({ label: option }))
-                : [],
-          })),
-        })),
-      }),
-    })
-
-    const payload = await response.json().catch(() => null)
-    if (!response.ok) {
-      throw new Error(payload?.error || 'Kunde inte spara upplägget.')
-    }
-
-    return typeof payload?.templateId === 'string' ? payload.templateId : currentTemplateId
   }
 
   function setScale(categoryId: string, questionIndex: number, value: string) {
@@ -1250,15 +1116,6 @@ export default function DiscoveryPage({
 
   function applyAudienceDefaults(nextMode: AudienceMode) {
     const nextCategories = buildDefaultCategories(nextMode)
-    setBuilderCategories(nextCategories)
-    setActiveId(currentActiveId => nextCategories.some(category => category.id === currentActiveId) ? currentActiveId : nextCategories[0].id)
-    setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
-    setSuccessId(null)
-    setSaveState('idle')
-  }
-
-  function restoreAudienceDefaults(nextMode: AudienceMode) {
-    const nextCategories = restoreMissingDefaultCategories(builderCategories, nextMode)
     setBuilderCategories(nextCategories)
     setActiveId(currentActiveId => nextCategories.some(category => category.id === currentActiveId) ? currentActiveId : nextCategories[0].id)
     setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
@@ -1344,7 +1201,7 @@ export default function DiscoveryPage({
     }))
   }
 
-  function updateScaleLabels(categoryId: string, questionIndex: number, field: 'minLabel' | 'maxLabel' | 'importanceMinLabel' | 'importanceMaxLabel', value: string) {
+  function updateScaleLabels(categoryId: string, questionIndex: number, field: 'minLabel' | 'maxLabel', value: string) {
     setBuilderCategories(prev => prev.map(category => {
       if (category.id !== categoryId) return category
       return {
@@ -1408,17 +1265,15 @@ export default function DiscoveryPage({
             return {
               type: 'scale' as const,
               text: q.text,
-              minLabel: 'I låg grad',
-              maxLabel: 'I hög grad',
+              minLabel: 'Håller inte alls',
+              maxLabel: 'Håller helt',
             }
           }
           return {
             type: 'likert' as const,
             text: q.text,
-            minLabel: 'Inte alls enig',
-            maxLabel: 'Mycket enig',
-            importanceMinLabel: 'Inte viktigt',
-            importanceMaxLabel: 'Mycket viktigt',
+            minLabel: 'Håller inte med',
+            maxLabel: 'Håller med',
           }
         }),
       }
@@ -1503,48 +1358,19 @@ export default function DiscoveryPage({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <Link
-                    href="/dashboard/discovery/skapa"
-                    style={workspaceMode === 'create' ? activeWorkspaceLinkStyle : inactiveWorkspaceLinkStyle}
-                  >
-                    Skapa
-                  </Link>
-                  <Link
-                    href="/dashboard/discovery"
-                    style={workspaceMode === 'data' ? activeWorkspaceLinkStyle : inactiveWorkspaceLinkStyle}
-                  >
-                    Kunder & data
-                  </Link>
-                </div>
-
-                <div style={{
-                  borderRadius: 14,
-                  border: '1px solid var(--border)',
-                  background: workspaceMode === 'data' ? 'rgba(14,14,12,0.03)' : 'rgba(198,35,104,0.04)',
-                  padding: '12px 14px',
-                  display: 'grid',
-                  gap: 4,
-                }}>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
-                    {workspaceMode === 'data' ? 'Läsläge' : 'Skapa-läge'}
-                  </div>
-                  <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>
-                    {workspaceMode === 'data'
-                      ? 'Här läser du inkomna svar per kund, växlar mellan översikt, råsvar och insikter och förbereder analys.'
-                      : 'Här bygger, justerar och skickar du discovery-upplägg. Kunddata och analys ligger i ett separat läsläge.'}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {navigationTabs.map(tab => {
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {[
+                  { id: 'questions', label: 'Frågor' },
+                  { id: 'setup', label: 'Upplägg' },
+                  { id: 'send', label: 'Skicka' },
+                  { id: 'data', label: 'Data' },
+                ].map(tab => {
                   const active = editorTab === tab.id
                   return (
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setEditorTab(tab.id as 'setup' | 'questions' | 'send' | 'data')}
+                      onClick={() => setEditorTab(tab.id as 'questions' | 'setup' | 'send' | 'data')}
                       style={{
                         flex: 1,
                         borderRadius: 999,
@@ -1563,7 +1389,6 @@ export default function DiscoveryPage({
                     </button>
                   )
                 })}
-                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1571,10 +1396,10 @@ export default function DiscoveryPage({
                   <>
                     <div style={{ display: 'grid', gap: 10, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
                       <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        Kund och upplägg
+                        Upplägget
                       </div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                        Börja med att välja kund eller organisation. Här styr du också vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
+                        Här styr du vilket discovery du arbetar i, namnet på upplägget och den övergripande introduktionen.
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button type="button" onClick={() => resetBuilder()} style={secondaryButtonStyle}>
@@ -1689,22 +1514,15 @@ export default function DiscoveryPage({
 
                     <div style={{ marginTop: -6, marginBottom: 4 }}>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                        Målgruppen sparas på upplägget. Standardfrågorna kan läggas tillbaka utan att egna frågor försvinner, eller ersätta hela upplägget om du vill börja om från rekommendationen.
+                        Målgruppen sparas på upplägget. Du kan också ladda rekommenderade standardfrågor för den valda målgruppen utan att bygga om allt för hand.
                       </div>
                       <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => restoreAudienceDefaults(audienceMode)}
-                          style={secondaryButtonStyle}
-                        >
-                          Lägg tillbaka standardfrågor
-                        </button>
                         <button
                           type="button"
                           onClick={() => applyAudienceDefaults(audienceMode)}
                           style={secondaryButtonStyle}
                         >
-                          Byt ut mot rekommenderade frågor
+                          Ladda rekommenderade frågor
                         </button>
                         <div style={{ fontSize: 11.5, color: 'var(--text-3)', alignSelf: 'center' }}>
                           Påverkar främst Ledarskap, Change management, AI readiness och Vision & mål.
@@ -2010,35 +1828,19 @@ export default function DiscoveryPage({
                             <strong>Likert-påstående:</strong> Skriv frågan som ett påstående, till exempel <em>Din chef ger dig ansvar</em>. Respondenten väljer först grad av instämmande och därefter hur viktigt påståendet är.
                           </div>
                           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-                            <Field label="Enig vänster">
+                            <Field label="Vänster etikett">
                               <input
                                 value={question.minLabel}
                                 onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'minLabel', event.target.value)}
-                                placeholder="Inte alls enig"
+                                placeholder="Håller inte med"
                                 style={editorInputStyle}
                               />
                             </Field>
-                            <Field label="Enig höger">
+                            <Field label="Höger etikett">
                               <input
                                 value={question.maxLabel}
                                 onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'maxLabel', event.target.value)}
-                                placeholder="Mycket enig"
-                                style={editorInputStyle}
-                              />
-                            </Field>
-                            <Field label="Viktigt vänster">
-                              <input
-                                value={question.importanceMinLabel}
-                                onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'importanceMinLabel', event.target.value)}
-                                placeholder="Inte viktigt"
-                                style={editorInputStyle}
-                              />
-                            </Field>
-                            <Field label="Viktigt höger">
-                              <input
-                                value={question.importanceMaxLabel}
-                                onChange={event => updateScaleLabels(activeCategory.id, questionIndex, 'importanceMaxLabel', event.target.value)}
-                                placeholder="Mycket viktigt"
+                                placeholder="Håller med"
                                 style={editorInputStyle}
                               />
                             </Field>
@@ -2137,9 +1939,6 @@ export default function DiscoveryPage({
                           <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
                             Öppna alla inkomna svar
                           </Link>
-                          <Link href="/dashboard/discovery/skapa" style={responsesLinkStyle}>
-                            Till skapa-läget
-                          </Link>
                         </div>
                       </>
                     )}
@@ -2149,7 +1948,7 @@ export default function DiscoveryPage({
             </div>
           </aside>
 
-          {workspaceMode === 'data' ? (
+          {editorTab === 'data' ? (
             <DiscoveryDataCanvas
               currentTemplateId={currentTemplateId}
               loading={dataLoading}
@@ -2448,8 +2247,8 @@ export default function DiscoveryPage({
                                   })}
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: 'var(--text-3)', maxWidth: 310 }}>
-                                  <span>{question.importanceMinLabel}</span>
-                                  <span>{question.importanceMaxLabel}</span>
+                                  <span>Inte viktigt</span>
+                                  <span>Mycket viktigt</span>
                                 </div>
                               </div>
                             )}
@@ -2634,7 +2433,6 @@ function DiscoveryDataCanvas({
   analysisCached: boolean
   analysisStatus: DiscoveryAiStatus | null
 }) {
-  const [dataView, setDataView] = useState<'overview' | 'answers' | 'insights'>('overview')
   const selectedCustomerGroup = selectedSessionId.startsWith('customer:')
     ? customerGroups.find(group => `customer:${group.key}` === selectedSessionId) || null
     : null
@@ -2882,30 +2680,6 @@ function DiscoveryDataCanvas({
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => setDataView('overview')}
-              style={dataView === 'overview' ? activeDataTabStyle : inactiveDataTabButtonStyle}
-            >
-              Översikt
-            </button>
-            <button
-              type="button"
-              onClick={() => setDataView('answers')}
-              style={dataView === 'answers' ? activeDataTabStyle : inactiveDataTabButtonStyle}
-            >
-              Svar
-            </button>
-            <button
-              type="button"
-              onClick={() => setDataView('insights')}
-              style={dataView === 'insights' ? activeDataTabStyle : inactiveDataTabButtonStyle}
-            >
-              Insikter
-            </button>
-          </div>
-
           <div style={summaryGridStyle}>
             <DataSummaryCard label="Inbjudna" value={`${overview.invitedCount}`} sublabel="För vald kund" />
             <DataSummaryCard label="Svar inkomna" value={`${overview.submittedCount}`} sublabel="För vald kund" />
@@ -2915,16 +2689,16 @@ function DiscoveryDataCanvas({
             <DataSummaryCard label="Olika perspektiv" value={`${overview.splitCount}`} sublabel="Teman med splittring" />
           </div>
 
-          {dataView === 'overview' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.25fr) minmax(300px, 0.75fr)', gap: 18, alignItems: 'start' }}>
             <div style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={dataSectionLabelStyle}>Översikt</div>
-                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                      Temakorten hjälper dig hitta var just den här kundens discovery ger tydliga signaler, var det finns splittring och vad som bör läsas vidare.
+                    <div>
+                      <div style={dataSectionLabelStyle}>Teman</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Temakorten hjälper dig hitta var just den här kundens discovery ger tydliga signaler och var det fortfarande finns olika perspektiv.
+                      </div>
                     </div>
-                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -2981,19 +2755,15 @@ function DiscoveryDataCanvas({
                   })}
                 </div>
               </section>
-            </div>
-          )}
 
-          {dataView === 'answers' && (
-            <div style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={dataSectionLabelStyle}>Svar</div>
-                    <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                      Här läser du underlaget bakom discoveryt. Filtrera på tema för att fokusera samtalet eller öppna ett enskilt svar i sin helhet.
+                    <div>
+                      <div style={dataSectionLabelStyle}>Råsvar</div>
+                      <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                      Råsvaren är bevislagret bakom sammanfattningen för den valda kunden.
+                      </div>
                     </div>
-                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gap: 10 }}>
@@ -3061,14 +2831,12 @@ function DiscoveryDataCanvas({
                 </div>
               </section>
             </div>
-          )}
 
-          {dataView === 'insights' && (
             <aside style={{ display: 'grid', gap: 18 }}>
               <section style={dataPanelStyle}>
-                <div style={dataSectionLabelStyle}>Insikter</div>
+                <div style={dataSectionLabelStyle}>Analysvyer</div>
                 <div style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.6, marginTop: 4 }}>
-                  Här tolkar du materialet för vald kund. AI-analysen ska hjälpa dig se mönster och skillnader, men alltid med tydlig väg tillbaka till råsvaren.
+                  AI-analysen använder samma urval som datavyn och ska hjälpa dig läsa materialet ur ett tydligt perspektiv utan att tappa kontakten med råsvaren.
                 </div>
                 <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
                   {discoveryAnalysisLenses.map(label => {
@@ -3222,7 +2990,7 @@ function DiscoveryDataCanvas({
                 </div>
               </section>
             </aside>
-          )}
+          </div>
         </div>
       </div>
     </section>
@@ -3458,34 +3226,6 @@ const pickerPanelStyle: React.CSSProperties = {
   borderRadius: 14,
   background: 'var(--bg)',
   padding: '14px',
-}
-
-const activeWorkspaceLinkStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '10px 14px',
-  borderRadius: 999,
-  textDecoration: 'none',
-  border: '1px solid rgba(14,14,12,0.92)',
-  background: 'rgba(14,14,12,0.92)',
-  color: '#fff',
-  fontSize: 12.5,
-  fontWeight: 700,
-}
-
-const inactiveWorkspaceLinkStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '10px 14px',
-  borderRadius: 999,
-  textDecoration: 'none',
-  border: '1px solid var(--border)',
-  background: 'rgba(14,14,12,0.03)',
-  color: 'var(--text-2)',
-  fontSize: 12.5,
-  fontWeight: 600,
 }
 
 const dataPanelStyle: React.CSSProperties = {
