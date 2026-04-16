@@ -21,6 +21,7 @@ type DiscoveryCategory = {
 
 type AudienceMode = 'shared' | 'leaders' | 'mixed'
 type DiscoveryResponseMode = 'named' | 'anonymous'
+type DiscoveryWorkspaceMode = 'create' | 'data'
 
 type DiscoveryTemplateSummary = {
   id: string
@@ -427,6 +428,42 @@ function buildDefaultCategories(mode: AudienceMode): DiscoveryCategory[] {
   })
 }
 
+function normalizeQuestionText(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function questionFingerprint(question: DiscoveryQuestion) {
+  return `${question.type}:${normalizeQuestionText(question.text)}`
+}
+
+function restoreMissingDefaultCategories(
+  currentCategories: DiscoveryCategory[],
+  nextMode: AudienceMode
+): DiscoveryCategory[] {
+  const defaultCategories = buildDefaultCategories(nextMode)
+
+  const mergedDefaults = defaultCategories.map(defaultCategory => {
+    const currentCategory = currentCategories.find(category => category.id === defaultCategory.id)
+    if (!currentCategory) return defaultCategory
+
+    const defaultFingerprints = new Set(defaultCategory.questions.map(questionFingerprint))
+    const customQuestions = currentCategory.questions
+      .filter(question => !defaultFingerprints.has(questionFingerprint(question)))
+      .map(cloneQuestion)
+
+    return {
+      ...cloneCategory(currentCategory),
+      questions: [...defaultCategory.questions.map(cloneQuestion), ...customQuestions],
+    }
+  })
+
+  const extraCategories = currentCategories
+    .filter(category => !defaultCategories.some(defaultCategory => defaultCategory.id === category.id))
+    .map(cloneCategory)
+
+  return [...mergedDefaults, ...extraCategories]
+}
+
 type LikertAnswerState = {
   agreement?: string
   importance?: string
@@ -462,13 +499,20 @@ function customerLabelForSession(session: {
   return session.clientOrganisation?.trim() || session.clientName.trim() || 'Okänd kund'
 }
 
-export default function DiscoveryPage() {
+export default function DiscoveryPage({
+  initialWorkspaceMode = 'data',
+}: {
+  initialWorkspaceMode?: DiscoveryWorkspaceMode
+}) {
   const [loading, setLoading] = useState(true)
   const [loadingTemplateId, setLoadingTemplateId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<DiscoveryTemplateSummary[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [templateQuery, setTemplateQuery] = useState('')
-  const [editorTab, setEditorTab] = useState<'setup' | 'questions' | 'send' | 'data'>('setup')
+  const [workspaceMode, setWorkspaceMode] = useState<DiscoveryWorkspaceMode>(initialWorkspaceMode)
+  const [editorTab, setEditorTab] = useState<'setup' | 'questions' | 'send' | 'data'>(
+    initialWorkspaceMode === 'data' ? 'data' : 'setup'
+  )
   const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null)
   const [templateName, setTemplateName] = useState('Perspektiv')
   const [introTitle, setIntroTitle] = useState(defaultIntroTitle)
@@ -661,6 +705,17 @@ export default function DiscoveryPage() {
     }
   }, [dataThemeCards, scopedDataSessions])
 
+  const navigationTabs: Array<{
+    id: 'setup' | 'questions' | 'send' | 'data'
+    label: string
+  }> = workspaceMode === 'data'
+    ? [{ id: 'data', label: 'Kunder & data' }]
+    : [
+        { id: 'setup', label: 'Upplägg' },
+        { id: 'questions', label: 'Frågor' },
+        { id: 'send', label: 'Skicka' },
+      ]
+
   const rawDataSessions = useMemo(() => {
     const baseSessions = selectedDataScope === 'none'
       ? []
@@ -675,6 +730,17 @@ export default function DiscoveryPage() {
   useEffect(() => {
     void loadTemplateList()
   }, [])
+
+  useEffect(() => {
+    setWorkspaceMode(initialWorkspaceMode)
+  }, [initialWorkspaceMode])
+
+  useEffect(() => {
+    setEditorTab(current => {
+      if (workspaceMode === 'data') return 'data'
+      return current === 'data' ? 'setup' : current
+    })
+  }, [workspaceMode])
 
   useEffect(() => {
     if (editorTab !== 'data' || !currentTemplateId) return
@@ -1191,6 +1257,15 @@ export default function DiscoveryPage() {
     setSaveState('idle')
   }
 
+  function restoreAudienceDefaults(nextMode: AudienceMode) {
+    const nextCategories = restoreMissingDefaultCategories(builderCategories, nextMode)
+    setBuilderCategories(nextCategories)
+    setActiveId(currentActiveId => nextCategories.some(category => category.id === currentActiveId) ? currentActiveId : nextCategories[0].id)
+    setAnswers(Object.fromEntries(nextCategories.map(category => [category.id, {}])))
+    setSuccessId(null)
+    setSaveState('idle')
+  }
+
   function updateCategoryField(categoryId: string, field: 'label' | 'desc', value: string) {
     setBuilderCategories(prev => prev.map(category => (
       category.id === categoryId ? { ...category, [field]: value } : category
@@ -1428,13 +1503,42 @@ export default function DiscoveryPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                {[
-                  { id: 'setup', label: 'Upplägg' },
-                  { id: 'questions', label: 'Frågor' },
-                  { id: 'send', label: 'Skicka' },
-                  { id: 'data', label: 'Data' },
-                ].map(tab => {
+              <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Link
+                    href="/dashboard/discovery/skapa"
+                    style={workspaceMode === 'create' ? activeWorkspaceLinkStyle : inactiveWorkspaceLinkStyle}
+                  >
+                    Skapa
+                  </Link>
+                  <Link
+                    href="/dashboard/discovery"
+                    style={workspaceMode === 'data' ? activeWorkspaceLinkStyle : inactiveWorkspaceLinkStyle}
+                  >
+                    Kunder & data
+                  </Link>
+                </div>
+
+                <div style={{
+                  borderRadius: 14,
+                  border: '1px solid var(--border)',
+                  background: workspaceMode === 'data' ? 'rgba(14,14,12,0.03)' : 'rgba(198,35,104,0.04)',
+                  padding: '12px 14px',
+                  display: 'grid',
+                  gap: 4,
+                }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+                    {workspaceMode === 'data' ? 'Läsläge' : 'Skapa-läge'}
+                  </div>
+                  <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)' }}>
+                    {workspaceMode === 'data'
+                      ? 'Här läser du inkomna svar per kund, växlar mellan översikt, råsvar och insikter och förbereder analys.'
+                      : 'Här bygger, justerar och skickar du discovery-upplägg. Kunddata och analys ligger i ett separat läsläge.'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {navigationTabs.map(tab => {
                   const active = editorTab === tab.id
                   return (
                     <button
@@ -1459,6 +1563,7 @@ export default function DiscoveryPage() {
                     </button>
                   )
                 })}
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1584,15 +1689,22 @@ export default function DiscoveryPage() {
 
                     <div style={{ marginTop: -6, marginBottom: 4 }}>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--text-3)' }}>
-                        Målgruppen sparas på upplägget. Du kan också ladda rekommenderade standardfrågor för den valda målgruppen utan att bygga om allt för hand.
+                        Målgruppen sparas på upplägget. Standardfrågorna kan läggas tillbaka utan att egna frågor försvinner, eller ersätta hela upplägget om du vill börja om från rekommendationen.
                       </div>
                       <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => restoreAudienceDefaults(audienceMode)}
+                          style={secondaryButtonStyle}
+                        >
+                          Lägg tillbaka standardfrågor
+                        </button>
                         <button
                           type="button"
                           onClick={() => applyAudienceDefaults(audienceMode)}
                           style={secondaryButtonStyle}
                         >
-                          Ladda rekommenderade frågor
+                          Byt ut mot rekommenderade frågor
                         </button>
                         <div style={{ fontSize: 11.5, color: 'var(--text-3)', alignSelf: 'center' }}>
                           Påverkar främst Ledarskap, Change management, AI readiness och Vision & mål.
@@ -2025,6 +2137,9 @@ export default function DiscoveryPage() {
                           <Link href="/dashboard/discovery/responses" style={responsesLinkStyle}>
                             Öppna alla inkomna svar
                           </Link>
+                          <Link href="/dashboard/discovery/skapa" style={responsesLinkStyle}>
+                            Till skapa-läget
+                          </Link>
                         </div>
                       </>
                     )}
@@ -2034,7 +2149,7 @@ export default function DiscoveryPage() {
             </div>
           </aside>
 
-          {editorTab === 'data' ? (
+          {workspaceMode === 'data' ? (
             <DiscoveryDataCanvas
               currentTemplateId={currentTemplateId}
               loading={dataLoading}
@@ -3343,6 +3458,34 @@ const pickerPanelStyle: React.CSSProperties = {
   borderRadius: 14,
   background: 'var(--bg)',
   padding: '14px',
+}
+
+const activeWorkspaceLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '10px 14px',
+  borderRadius: 999,
+  textDecoration: 'none',
+  border: '1px solid rgba(14,14,12,0.92)',
+  background: 'rgba(14,14,12,0.92)',
+  color: '#fff',
+  fontSize: 12.5,
+  fontWeight: 700,
+}
+
+const inactiveWorkspaceLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '10px 14px',
+  borderRadius: 999,
+  textDecoration: 'none',
+  border: '1px solid var(--border)',
+  background: 'rgba(14,14,12,0.03)',
+  color: 'var(--text-2)',
+  fontSize: 12.5,
+  fontWeight: 600,
 }
 
 const dataPanelStyle: React.CSSProperties = {
