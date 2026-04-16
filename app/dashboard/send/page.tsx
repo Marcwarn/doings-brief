@@ -235,6 +235,10 @@ function buildQuestionSetName(organisation: string) {
   return organisation.trim() ? `${organisation.trim()} · Frågor ${date}` : `Nytt frågebatteri ${date}`
 }
 
+function hasMeaningfulQuestionDraft(questions: QuestionDraft[]) {
+  return questions.some(question => question.text.trim().length > 0)
+}
+
 function SendBriefInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -408,6 +412,26 @@ function SendBriefInner() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !draftReady || sent) return
+    const hasMeaningfulDraftState = Boolean(
+      draftId
+      || selectedSet
+      || clientOrg.trim()
+      || recipientsInput.trim()
+      || internalLabel.trim()
+      || contextNote.trim()
+      || customSetName.trim()
+      || hasMeaningfulQuestionDraft(customQuestions)
+      || activeTab !== 'setup'
+      || introTitle !== 'Några korta frågor'
+      || introText !== 'Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.'
+    )
+
+    if (!hasMeaningfulDraftState && !draftId) {
+      window.localStorage.removeItem('doings:debrief-draft:new')
+      setDraftDirty(false)
+      setDraftStatus('idle')
+      return
+    }
 
     const draftPayload = JSON.stringify({
       selectedSet,
@@ -456,7 +480,25 @@ function SendBriefInner() {
     introText,
     internalLabel,
     contextNote,
+    draftId,
   ])
+
+  function resetComposer() {
+    setSelectedSet('')
+    setQuestions([])
+    setCustomSetName('')
+    setCustomQuestions([{ text: '' }, { text: '' }])
+    setClientOrg('')
+    setRecipientsInput('')
+    setActiveTab('setup')
+    setActivePreviewQuestionIndex(0)
+    setIntroTitle('Några korta frågor')
+    setIntroText('Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.')
+    setInternalLabel('')
+    setContextNote('')
+    setError('')
+    setImportMessage('')
+  }
 
   async function clearDraft() {
     if (typeof window === 'undefined') return
@@ -470,6 +512,7 @@ function SendBriefInner() {
       window.location.assign('/dashboard/send')
       return
     }
+    resetComposer()
     setDraftDirty(false)
     setDraftStatus('idle')
   }
@@ -560,6 +603,27 @@ function SendBriefInner() {
   }, [recipientsInput])
   const firstPreviewRecipient = parsedRecipientsPreview[0] || null
   const activeQuestions = customQuestions.map(question => question.text.trim()).filter(Boolean)
+  const hasMeaningfulDraftState = Boolean(
+    draftId
+    || selectedSet
+    || clientOrg.trim()
+    || recipientsInput.trim()
+    || internalLabel.trim()
+    || contextNote.trim()
+    || customSetName.trim()
+    || hasMeaningfulQuestionDraft(customQuestions)
+    || activeTab !== 'setup'
+    || introTitle !== 'Några korta frågor'
+    || introText !== 'Hjälp oss få en snabbare bild inför nästa steg. Det tar bara några minuter att svara.'
+  )
+  const shouldShowDraftControls = !sent && (
+    Boolean(draftId)
+    || draftStatus === 'restored'
+    || draftStatus === 'server-saved'
+    || persistingDraft
+    || draftDirty
+    || (hasMeaningfulDraftState && draftStatus !== 'idle')
+  )
   const previewQuestionIndex = activeQuestions.length === 0
     ? 0
     : Math.min(activePreviewQuestionIndex, activeQuestions.length - 1)
@@ -903,27 +967,29 @@ function SendBriefInner() {
             ? 'Det här utkastet är sparat i systemet och kan fortsättas härifrån.'
             : 'Skicka ett kort underlag till en eller flera personer inför nästa steg.'}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-          <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-            {draftStatus === 'restored'
-              ? 'Utkast återställt från din webbläsare.'
-              : draftStatus === 'saving'
-              ? 'Sparar utkast…'
-              : draftStatus === 'server-saved'
-              ? 'Utkast sparat i systemet.'
-              : draftStatus === 'saved'
-              ? 'Tillfälligt sparat i den här webbläsaren.'
-              : draftId
-              ? 'Du kan fortsätta här eller spara om utkastet.'
-              : 'Påbörjat arbete sparas tillfälligt i den här webbläsaren tills du sparar utkastet i systemet.'}
+        {shouldShowDraftControls && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+            <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+              {draftStatus === 'restored'
+                ? 'Ett tidigare utkast återställdes när sidan öppnades.'
+                : draftStatus === 'saving'
+                ? 'Sparar dina senaste ändringar…'
+                : draftStatus === 'server-saved'
+                ? 'Utkastet är sparat i systemet.'
+                : draftStatus === 'saved'
+                ? 'Dina senaste ändringar finns sparade lokalt.'
+                : draftId
+                ? 'Du arbetar i ett sparat utkast.'
+                : 'Dina ändringar sparas automatiskt medan du arbetar.'}
+            </div>
+            <button type="button" onClick={() => void saveDraftNow()} disabled={persistingDraft} style={ghostActionStyle}>
+              {persistingDraft ? 'Sparar…' : 'Spara som utkast'}
+            </button>
+            <button type="button" onClick={() => void clearDraft()} style={ghostActionStyle}>
+              Börja om
+            </button>
           </div>
-          <button type="button" onClick={() => void saveDraftNow()} disabled={persistingDraft} style={ghostActionStyle}>
-            {persistingDraft ? 'Sparar…' : 'Spara utkast'}
-          </button>
-          <button type="button" onClick={() => void clearDraft()} style={ghostActionStyle}>
-            Rensa utkast
-          </button>
-        </div>
+        )}
       </div>
 
       <BriefSubnav active="send" />
